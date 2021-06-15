@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace BTCPayServer.Plugins.LNbank.Migrations
+namespace BTCPayServer.Plugins.LNbank.Data.Migrations
 {
     public partial class Initial : Migration
     {
@@ -50,14 +50,26 @@ namespace BTCPayServer.Plugins.LNbank.Migrations
                         principalSchema: "BTCPayServer.Plugins.LNbank",
                         principalTable: "Wallets",
                         principalColumn: "WalletId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_InvoiceId",
+                schema: "BTCPayServer.Plugins.LNbank",
+                table: "Transactions",
+                column: "InvoiceId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_WalletId",
                 schema: "BTCPayServer.Plugins.LNbank",
                 table: "Transactions",
                 column: "WalletId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Wallets_UserId",
+                schema: "BTCPayServer.Plugins.LNbank",
+                table: "Wallets",
+                column: "UserId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

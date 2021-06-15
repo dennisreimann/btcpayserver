@@ -46,7 +46,17 @@ namespace BTCPayServer.Plugins.LNbank
                     }
                 }
             }
-
+            
+            modelBuilder.Entity<Wallet>().HasIndex(o => o.UserId);
+            modelBuilder.Entity<Transaction>().HasIndex(o => o.InvoiceId);
+            modelBuilder.Entity<Transaction>().HasIndex(o => o.WalletId);
+            
+            modelBuilder
+                .Entity<Transaction>()
+                .HasOne(o => o.Wallet)
+                .WithMany(w => w.Transactions)
+                .OnDelete(DeleteBehavior.Cascade);
+            
             modelBuilder
                 .Entity<Transaction>()
                 .Property(e => e.Amount)

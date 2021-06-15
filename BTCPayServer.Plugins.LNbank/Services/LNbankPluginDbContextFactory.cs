@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Options;
 
-namespace BTCPayServer.Plugins.LNbank
+namespace BTCPayServer.Plugins.LNbank.Services
 {
     
     public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<LNbankPluginDbContext>

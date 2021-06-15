@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace BTCPayServer.Plugins.LNbank.Migrations
+namespace BTCPayServer.Plugins.LNbank.Data.Migrations
 {
     [DbContext(typeof(LNbankPluginDbContext))]
     partial class LNbankPluginDbContextModelSnapshot : ModelSnapshot
@@ -53,6 +53,8 @@ namespace BTCPayServer.Plugins.LNbank.Migrations
 
                     b.HasKey("TransactionId");
 
+                    b.HasIndex("InvoiceId");
+
                     b.HasIndex("WalletId");
 
                     b.ToTable("Transactions");
@@ -76,6 +78,8 @@ namespace BTCPayServer.Plugins.LNbank.Migrations
 
                     b.HasKey("WalletId");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Wallets");
                 });
 
@@ -83,7 +87,8 @@ namespace BTCPayServer.Plugins.LNbank.Migrations
                 {
                     b.HasOne("BTCPayServer.Plugins.LNbank.Data.Models.Wallet", "Wallet")
                         .WithMany("Transactions")
-                        .HasForeignKey("WalletId");
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 #pragma warning restore 612, 618
         }
