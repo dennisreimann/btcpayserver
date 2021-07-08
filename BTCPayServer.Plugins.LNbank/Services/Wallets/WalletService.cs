@@ -72,7 +72,7 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
         public async Task<Transaction> Receive(Wallet wallet, long amount, string description) =>
             await Receive(wallet, amount, description, LightningInvoiceCreateRequest.ExpiryDefault);
 
-        public async Task<Transaction> Receive(Wallet wallet, long amount, string description, TimeSpan expiry)
+        private async Task<Transaction> Receive(Wallet wallet, long amount, string description, TimeSpan expiry)
         {
             await using var dbContext = _dbContextFactory.CreateContext();
             if (amount <= 0) throw new ArgumentException(nameof(amount));

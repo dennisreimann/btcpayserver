@@ -10,8 +10,8 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="..\BTCPayServer.Abstractions\BTCPayServer.Abstractions.csproj" />
-    <EmbeddedResource Include="Resources\**" />
     <ProjectReference Include="..\BTCPayServer.Data\BTCPayServer.Data.csproj" />
+    <EmbeddedResource Include="Resources\**" />
     <EmbeddedResource Remove="Authentication\**" />
     <EmbeddedResource Remove="Controllers\API\**" />
   </ItemGroup>
@@ -19,10 +19,6 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="3.1.4">
     </PackageReference>
     <PackageReference Include="QRCoder" Version="1.4.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <_ContentIncludedByDefault Remove="wwwroot\img\btcpay-logo.svg" />
-    <_ContentIncludedByDefault Remove="Views\LNbank\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Authentication\**" />

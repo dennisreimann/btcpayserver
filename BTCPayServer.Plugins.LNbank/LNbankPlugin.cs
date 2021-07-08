@@ -2,6 +2,7 @@
 using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Abstractions.Models;
 using BTCPayServer.Abstractions.Services;
+using BTCPayServer.Client;
 using BTCPayServer.Plugins.LNbank.Extensions;
 using BTCPayServer.Plugins.LNbank.Hubs;
 using BTCPayServer.Plugins.LNbank.Services;
@@ -13,8 +14,8 @@ namespace BTCPayServer.Plugins.LNbank
 {
     public class LNbankPlugin : BaseBTCPayServerPlugin
     {
+        public override string Name { get; } = "LNbank";
         public override string Identifier { get; } = "BTCPayServer.Plugins.LNbank";
-        public override string Name { get; } = "LNbank Plugin!";
         public override string Description { get; } = "This is a description of the loaded test extension!";
 
         public override void Execute(IServiceCollection services)
@@ -26,7 +27,6 @@ namespace BTCPayServer.Plugins.LNbank
                 var factory = provider.GetRequiredService<LNbankPluginDbContextFactory>();
                 factory.ConfigureBuilder(o);
             });
-            
             services.AddAppServices();
             services.AddAppAuthorization();
             
