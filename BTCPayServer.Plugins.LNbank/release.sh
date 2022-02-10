@@ -6,9 +6,11 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+# Configuration
 version=$1
 versionName="v$version"
 remoteName="dennisreimann"
+remoteRepo="btcpayserver"
 remoteBranch="plugins"
 pluginsBranch="lnbank-$versionName"
 pluginsDir="../../plugins/"
@@ -22,6 +24,7 @@ if [ -z "$changes" ]; then
   exit 1
 fi
 
+# We're good, let's roll …
 printf "\n\n=====> Update version and package plugin\n\n"
 sed -i "s%<AssemblyVersion>.*</AssemblyVersion>%<AssemblyVersion>$version</AssemblyVersion>%g" ./BTCPayServer.Plugins.LNbank.csproj
 sed -i "s%<PackageVersion>.*</PackageVersion>%<PackageVersion>$version</PackageVersion>%g" ./BTCPayServer.Plugins.LNbank.csproj
@@ -42,14 +45,14 @@ git commit -a -m "$tagDesc"
 git push $remoteName $pluginsBranch
 
 printf "\n\n=====> Create plugin pull request\n\n"
-gh pr create --title "$tagDesc" --body "# $tagDesc\n\n$changes"
+gh pr create --title "$tagDesc" --body "$changes"
 cd -
 
 printf "\n\n=====> Commit and tag\n\n"
 git commit -a -m "$tagDesc"
-git tag $tagName -a -m $tagDesc
+git tag "$tagName" -a -m "$tagDesc"
 git push $remoteName $remoteBranch
-git push $remoteName refs/tags/$tagName
+git push $remoteName "refs/tags/$tagName"
 
 printf "\n\n=====> Create release\n\n"
-gh release create $versionName --notes "$changes"
+gh release create "$tagName" --notes "$changes" -R "$remoteName/$remoteRepo"
