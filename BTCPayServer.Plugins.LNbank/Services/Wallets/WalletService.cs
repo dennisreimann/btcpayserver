@@ -125,45 +125,42 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
 
         public async Task Send(Wallet wallet, BOLT11PaymentRequest bolt11, string paymentRequest)
         {
-            await using var dbContext = _dbContextFactory.CreateContext();
-            var amount = bolt11.MinimumAmount;
-
             if (bolt11.ExpiryDate <= DateTimeOffset.UtcNow)
             {
                 throw new Exception($"Payment request already expired at {bolt11.ExpiryDate}.");
             }
 
-            if (wallet.Balance < amount)
-            {
-                var balanceSats = wallet.Balance.ToUnit(LightMoneyUnit.Satoshi);
-                var amountSats = amount.ToUnit(LightMoneyUnit.Satoshi);
-                throw new Exception($"Insufficient balance: {balanceSats} sats, tried to send {amountSats} sats.");
-            }
-
-            // try internal payment and fall back to paying via the node
-            Transaction internalReceivingTransaction = await GetTransaction(new TransactionQuery
-            {
-                PaymentRequest = paymentRequest, HasInvoiceId = true
-            });
+            // check if the invoice exists already
+            var transaction = await ValidatePaymentRequest(paymentRequest);
+            var amount = bolt11.MinimumAmount;
+            var balanceSats = wallet.Balance.ToUnit(LightMoneyUnit.Satoshi);
+            var amountSats = amount.ToUnit(LightMoneyUnit.Satoshi);
+            var isInternal = !string.IsNullOrEmpty(transaction?.InvoiceId);
             
-            if (internalReceivingTransaction != null)
+            // check balance
+            if (isInternal)
             {
-                if (internalReceivingTransaction.IsExpired)
+                if (wallet.Balance < amount)
                 {
-                    throw new Exception($"Payment request already expired at {internalReceivingTransaction.ExpiresAt}.");
-                }
-                if (internalReceivingTransaction.IsPaid)
-                {
-                    throw new Exception("Payment request has already been paid.");
+                    throw new Exception($"Insufficient balance: {balanceSats} sats, tried to send {amountSats} sats.");
                 }
             }
             else
             {
+                // TODO: Handle fees properly
+                // - Estimate fee by probing
+                // - Set fee limits, needs implementation in Lightning client
+                var amountWithFee = amount;
+                if (wallet.Balance < amountWithFee)
+                {
+                    throw new Exception($"Insufficient balance: {balanceSats} sats, tried to send {amountSats} sats.");
+                }
                 await _btcpayService.PayLightningInvoice(new LightningInvoicePayRequest {PaymentRequest = paymentRequest});
+                // TODO: Account for actual fees
             }
             
+            await using var dbContext = _dbContextFactory.CreateContext();
             var executionStrategy = dbContext.Database.CreateExecutionStrategy();
-
             await executionStrategy.ExecuteAsync(async () =>
             {
                 // https://docs.microsoft.com/en-us/ef/core/saving/transactions#controlling-transactions
@@ -183,9 +180,9 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
                     });
                     await dbContext.SaveChangesAsync();
 
-                    if (internalReceivingTransaction != null)
+                    if (transaction != null)
                     {
-                        await MarkTransactionPaid(internalReceivingTransaction, amount, now);
+                        await MarkTransactionPaid(transaction, amount, now);
                     }
                     await dbTransaction.CommitAsync();
                 }
@@ -194,6 +191,21 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
                     await dbTransaction.RollbackAsync();
                 }
             });
+        }
+
+        public async Task<Transaction> ValidatePaymentRequest(string paymentRequest)
+        {
+            Transaction transaction = await GetTransaction(new TransactionQuery
+            {
+                PaymentRequest = paymentRequest
+            });
+
+            return transaction switch
+            {
+                { IsExpired: true } => throw new Exception($"Payment request already expired at {transaction.ExpiresAt}."),
+                { IsPaid: true } => throw new Exception("Payment request has already been paid."),
+                _ => transaction
+            };
         }
 
         public async Task AddOrUpdateWallet(Wallet wallet)
@@ -216,7 +228,6 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
             }
             await dbContext.SaveChangesAsync();
         }
-        
 
         public async Task RemoveWallet(Wallet wallet)
         {
@@ -285,7 +296,7 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
                 queryable = queryable.Where(t => t.PaymentRequest == query.PaymentRequest);
             }
 
-            return queryable.SingleOrDefault();
+            return await queryable.FirstOrDefaultAsync();
         }
 
         public async Task UpdateTransaction(Transaction transaction)
@@ -363,7 +374,7 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
 
         public async Task Cancel(string invoiceId)
         {
-            var transaction = await GetTransaction(new TransactionQuery() { InvoiceId = invoiceId });
+            var transaction = await GetTransaction(new TransactionQuery { InvoiceId = invoiceId });
             if (transaction.SetCancelled())
             {
                 await UpdateTransaction(transaction);

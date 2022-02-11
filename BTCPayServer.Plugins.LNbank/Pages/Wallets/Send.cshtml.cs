@@ -53,7 +53,15 @@ public class SendModel : BasePageModel
         if (Wallet == null) return NotFound();
         if (!ModelState.IsValid) return Page();
 
-        Bolt11 = WalletService.ParsePaymentRequest(PaymentRequest);
+        try
+        {            
+            Bolt11 = WalletService.ParsePaymentRequest(PaymentRequest);
+            await WalletService.ValidatePaymentRequest(PaymentRequest);
+        }
+        catch (Exception exception)
+        {
+            ErrorMessage = exception.Message;
+        }
 
         return Page();
     }
@@ -78,9 +86,7 @@ public class SendModel : BasePageModel
         }
         catch (Exception exception)
         {
-            ErrorMessage = string.IsNullOrEmpty(exception.Message)
-                ? "Payment failed."
-                : exception.Message;
+            ErrorMessage = exception.Message;
         }
 
         return Page();
