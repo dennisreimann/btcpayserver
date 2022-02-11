@@ -78,7 +78,9 @@ public class SendModel : BasePageModel
         }
         catch (Exception exception)
         {
-            ErrorMessage = exception.Message;
+            ErrorMessage = string.IsNullOrEmpty(exception.Message)
+                ? "Payment failed."
+                : exception.Message;
         }
 
         return Page();

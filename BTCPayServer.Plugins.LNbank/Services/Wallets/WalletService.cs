@@ -115,7 +115,7 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
                 Amount = data.Amount,
                 ExpiresAt = data.ExpiresAt,
                 PaymentRequest = data.BOLT11,
-                Description = description?? descriptionHash.ToString()
+                Description = description ?? descriptionHash?.ToString() ?? string.Empty
             });
             
             await dbContext.SaveChangesAsync();

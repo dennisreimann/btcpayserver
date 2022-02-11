@@ -25,7 +25,7 @@ namespace BTCPayServer.Plugins.LNbank.Services
             return await client.CreateLightningInvoice(CryptoCode, new CreateLightningInvoiceRequest
             {
                 Amount = req.Amount,
-                Description = req.Description,
+                Description = req.Description ?? req.DescriptionHash?.ToString() ?? string.Empty,
                 Expiry = req.Expiry,
                 PrivateRouteHints = req.PrivateRouteHints
             });
