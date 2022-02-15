@@ -1,5 +1,4 @@
 @page "/plugins/lnbank/wallets/{walletId?}"
-@using BTCPayServer.Lightning
 @using System.Globalization
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.IndexModel
 
@@ -19,7 +18,7 @@
                     <a asp-route-walletId="@wallet.WalletId" role="tab" class="nav-link d-flex justify-content-between align-items-center @(wallet == Model.SelectedWallet ? "active" : "")" aria-selected="@(wallet == Model.SelectedWallet ? "true" : "false")">
                         <span class="wallet-name">@wallet.Name</span>
                         <span class="badge bg-light">
-                            @wallet.Balance.ToUnit(LightMoneyUnit.Satoshi) sats
+                            @Helpers.Sats(wallet.Balance)
                         </span>
                     </a>
                 }
@@ -36,7 +35,7 @@
                     <div class="mb-3">
                         <h3 class="mb-1">@Model.SelectedWallet.Name</h3>
                         <div class="text-muted fw-semibold" id="LNbank-WalletBalance">
-                            @Model.SelectedWallet.Balance.ToUnit(LightMoneyUnit.Satoshi) sats
+                            @Helpers.Sats(Model.SelectedWallet.Balance)
                         </div>
                     </div>
                     <div class="d-flex gap-3 align-items-stretch mb-3">
@@ -78,14 +77,13 @@
                                         @transaction.Description
                                     </td>
                                     <td class="text-nowrap text-end transaction-amount">
-                                        @transaction.Amount.ToUnit(LightMoneyUnit.Satoshi)
-                                        sats
+                                        @Helpers.Sats(transaction.Amount)
                                     </td>
                                     <td class="text-nowrap text-end">
                                         @if (transaction.IsPaid)
                                         {
                                             <span class="text-@(transaction.AmountSettled > 0 ? "success" : "danger") transaction-settled">
-                                                @transaction.AmountSettled.ToUnit(LightMoneyUnit.Satoshi) sats
+                                                @Helpers.Sats(transaction.AmountSettled)
                                             </span>
                                         }
                                         else

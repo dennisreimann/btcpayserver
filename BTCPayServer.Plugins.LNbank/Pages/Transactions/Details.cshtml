@@ -20,8 +20,7 @@
     @if (Model.Transaction.IsPaid)
     {
         <h3 id="LNbank-TransactionSettled" class="text-@(Model.Transaction.AmountSettled > 0 ? "success" : "danger")">
-            @Model.Transaction.AmountSettled.ToUnit(LightMoneyUnit.Satoshi)
-            sats
+            @Helpers.Sats(Model.Transaction.AmountSettled)
             @Model.Transaction.Status
         </h3>
         <h4 class="h4 text-muted">
@@ -34,8 +33,7 @@
     else
     {
         <h3 id="LNbank-TransactionAmount" class="text-@(Model.Transaction.IsExpired ? "info" : "warning")">
-            @Model.Transaction.Amount.ToUnit(LightMoneyUnit.Satoshi)
-            sats
+            @Helpers.Sats(Model.Transaction.Amount)
             @Model.Transaction.Status
         </h3>
         <h4 class="h4 text-muted">

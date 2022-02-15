@@ -30,8 +30,7 @@
             @if (Model.Transaction.IsPaid)
             {
                 <h2 class="text-success">
-                    @Model.Transaction.AmountSettled.ToUnit(LightMoneyUnit.Satoshi)
-                    sats
+                    @Helpers.Sats(Model.Transaction.AmountSettled)
                     @Model.Transaction.Status
                 </h2>
                 <h3 class="h4 text-muted">
@@ -44,8 +43,7 @@
             else
             {
                 <h2 class="text-@(Model.Transaction.IsExpired ? "danger" : "warning")">
-                    @Model.Transaction.Amount.ToUnit(LightMoneyUnit.Satoshi)
-                    sats
+                    @Helpers.Sats(Model.Transaction.Amount)
                     @Model.Transaction.Status
                 </h2>
                 <h3 class="h4 text-muted">
