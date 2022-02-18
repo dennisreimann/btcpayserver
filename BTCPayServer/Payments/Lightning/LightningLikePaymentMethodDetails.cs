@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using BTCPayServer.Lightning;
 using NBitcoin;
+using Newtonsoft.Json.Linq;
 
 namespace BTCPayServer.Payments.Lightning
 {
@@ -39,6 +41,11 @@ namespace BTCPayServer.Payments.Lightning
         public virtual string GetAdditionalDataPartialName()
         {
             return null;
+        }
+
+        public virtual Dictionary<string, JObject> GetAdditionalData()
+        {
+            return new();
         }
     }
 }

@@ -15,6 +15,7 @@ using BTCPayServer.Views.Stores;
 using BTCPayServer.Views.Wallets;
 using Microsoft.Extensions.Configuration;
 using NBitcoin;
+using NBitcoin.RPC;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
@@ -376,6 +377,8 @@ namespace BTCPayServer.Tests
             {
                 GoToUrl($"/stores/{storeId}/");
                 StoreId = storeId;
+                if (WalletId != null)
+                    WalletId = new WalletId(storeId, WalletId.CryptoCode);
             }
                 
             Driver.FindElement(By.Id("StoreNav-StoreSettings")).Click();
@@ -400,9 +403,9 @@ namespace BTCPayServer.Tests
         public void GoToWalletSettings(string cryptoCode = "BTC")
         {
             Driver.FindElement(By.Id($"StoreNav-Wallet{cryptoCode}")).Click();
-            if (Driver.PageSource.Contains("id=\"SectionNav-Settings\""))
+            if (Driver.PageSource.Contains("id=\"WalletNav-Settings\""))
             {
-                Driver.FindElement(By.Id("SectionNav-Settings")).Click();
+                Driver.FindElement(By.Id("WalletNav-Settings")).Click();
             }
         }
 
@@ -422,7 +425,7 @@ namespace BTCPayServer.Tests
             Driver.FindElement(By.Id($"StoreSelectorMenuItem-{storeId}")).Click();
         }
 
-        public void GoToInvoiceCheckout(string? invoiceId = null)
+        public void GoToInvoiceCheckout(string invoiceId = null)
         {
             invoiceId ??= InvoiceId;
             Driver.FindElement(By.Id("StoreNav-Invoices")).Click();
@@ -507,7 +510,7 @@ namespace BTCPayServer.Tests
         }
         string InvoiceId;
 
-        public async Task FundStoreWallet(WalletId walletId = null, int coins = 1, decimal denomination = 1m)
+        public async Task<string> FundStoreWallet(WalletId walletId = null, int coins = 1, decimal denomination = 1m)
         {
             walletId ??= WalletId;
             GoToWallet(walletId, WalletsNavPages.Receive);
@@ -516,8 +519,21 @@ namespace BTCPayServer.Tests
             var address = BitcoinAddress.Create(addressStr, ((BTCPayNetwork)Server.NetworkProvider.GetNetwork(walletId.CryptoCode)).NBitcoinNetwork);
             for (var i = 0; i < coins; i++)
             {
-                await Server.ExplorerNode.SendToAddressAsync(address, Money.Coins(denomination));
+                bool mined = false;
+                retry:
+                try
+                {
+                    await Server.ExplorerNode.SendToAddressAsync(address, Money.Coins(denomination));
+                }
+                catch (RPCException) when (!mined)
+                {
+                    mined = true;
+                    await Server.ExplorerNode.GenerateAsync(1);
+                    goto retry;
+                }
             }
+            Driver.Navigate().Refresh();
+            return addressStr;
         }
 
         private void CheckForJSErrors()
@@ -547,9 +563,14 @@ namespace BTCPayServer.Tests
         {
             walletId ??= WalletId;
             Driver.Navigate().GoToUrl(new Uri(ServerUri, $"wallets/{walletId}"));
-            if (navPages != WalletsNavPages.Transactions)
+            if (navPages == WalletsNavPages.PSBT)
             {
-                Driver.FindElement(By.Id($"SectionNav-{navPages}")).Click();
+                Driver.FindElement(By.Id("WalletNav-Send")).Click();
+                Driver.FindElement(By.Id("PSBT")).Click();
+            }
+            else if (navPages != WalletsNavPages.Transactions)
+            {
+                Driver.FindElement(By.Id($"WalletNav-{navPages}")).Click();
             }
         }
 

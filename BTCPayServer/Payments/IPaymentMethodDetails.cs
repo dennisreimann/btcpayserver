@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
+
 namespace BTCPayServer.Payments
 {
     /// <summary>
@@ -19,5 +22,6 @@ namespace BTCPayServer.Payments
 
         bool Activated { get; set; }
         virtual string GetAdditionalDataPartialName() => null;
+        virtual Dictionary<string,JObject> GetAdditionalData() => new();
     }
 }
