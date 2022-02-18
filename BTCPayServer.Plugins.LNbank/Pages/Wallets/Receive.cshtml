@@ -33,6 +33,10 @@
         <input asp-for="Description" class="form-control" style="max-width:70ch;" />
         <span asp-validation-for="Description" class="text-danger"></span>
     </div>
+    <div class="form-group form-check">
+      <input asp-for="AttachDescription" class="form-check-input" type="checkbox">
+      <label asp-for="AttachDescription" class="form-label"></label>
+    </div>
     <div class="form-group">
         <label asp-for="Amount" class="form-label" data-required></label>
         <input asp-for="Amount" class="form-control text-end hide-number-spin" type="number" style="width:15ch;" required />

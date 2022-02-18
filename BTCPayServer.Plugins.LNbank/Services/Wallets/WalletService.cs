@@ -88,13 +88,13 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
             return await FilterWallets(dbContext.Wallets.AsQueryable(), walletsQuery).FirstOrDefaultAsync();
         }
 
-        public async Task<Transaction> Receive(Wallet wallet, long amount, string description, bool privateRouteHints) =>
-            await Receive(wallet, amount, description, null, privateRouteHints, LightningInvoiceCreateRequest.ExpiryDefault);
+        public async Task<Transaction> Receive(Wallet wallet, long amount, string description, bool attachDescription, bool privateRouteHints) =>
+            await Receive(wallet, amount, description, null, attachDescription, privateRouteHints);
         
         public async Task<Transaction> Receive(Wallet wallet, long amount, uint256 descriptionHash, bool privateRouteHints) =>
-            await Receive(wallet, amount, null, descriptionHash, privateRouteHints, LightningInvoiceCreateRequest.ExpiryDefault);
+            await Receive(wallet, amount, null, descriptionHash, false, privateRouteHints);
 
-        private async Task<Transaction> Receive(Wallet wallet, long amount, string description, uint256 descriptionHash, bool privateRouteHints, TimeSpan expiry)
+        private async Task<Transaction> Receive(Wallet wallet, long amount, string description, uint256 descriptionHash, bool attachDescription, bool privateRouteHints)
         {
             await using var dbContext = _dbContextFactory.CreateContext();
             if (amount <= 0) throw new ArgumentException(nameof(amount));
@@ -102,9 +102,8 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
             var data = await _btcpayService.CreateLightningInvoice(new LightningInvoiceCreateRequest
             {
                 Amount = amount,
-                Description = description,
+                Description = attachDescription ? description : null,
                 DescriptionHash = descriptionHash,
-                Expiry = expiry,
                 PrivateRouteHints = privateRouteHints
             });
 

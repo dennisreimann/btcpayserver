@@ -42,7 +42,7 @@ namespace BTCPayServer.Plugins.LNbank.Controllers.API
             }
             else
             {
-                transaction = await _walletService.Receive(Wallet, req.Amount, req.Description, req.PrivateRouteHints);
+                transaction = await _walletService.Receive(Wallet, req.Amount, req.Description, true, req.PrivateRouteHints);
             }
           
             var data = ToLightningInvoiceData(transaction);

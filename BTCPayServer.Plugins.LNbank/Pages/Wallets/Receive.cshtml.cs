@@ -20,6 +20,9 @@ public class ReceiveModel : BasePageModel
     public Wallet Wallet { get; set; }
     [BindProperty]
     public string Description { get; set; }
+    [BindProperty] 
+    [DisplayName("Attach description to payment request")]
+    public bool AttachDescription { get; set; }
     [BindProperty]
     [DisplayName("Amount in sats")]
     [Required]
@@ -61,7 +64,7 @@ public class ReceiveModel : BasePageModel
         try
         {
             var amount = LightMoney.Satoshis(Amount).MilliSatoshi;
-            var transaction = await WalletService.Receive(Wallet, amount, Description, PrivateRouteHints);
+            var transaction = await WalletService.Receive(Wallet, amount, Description, AttachDescription, PrivateRouteHints);
             var transactionId = transaction.TransactionId;
             return RedirectToPage("/Transactions/Details", new { walletId, transactionId });
         }
