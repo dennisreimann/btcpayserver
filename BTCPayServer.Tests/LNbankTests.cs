@@ -30,10 +30,6 @@ namespace BTCPayServer.Tests
             await s.StartAsync();
             s.RegisterNewUser(true);
             
-            // Check plugin
-            s.Driver.FindElement(By.Id("Nav-AddPlugin")).Click();
-            Assert.Contains("id=\"BTCPayServer.Plugins.LNbank\"", s.Driver.PageSource);
-            
             // Setup store LN node with LNbank
             s.CreateNewStore();
             s.Driver.FindElement(By.Id("StoreNav-LightningBTC")).Click();
@@ -62,7 +58,7 @@ namespace BTCPayServer.Tests
             
             // Wallet
             Assert.Contains("0 sats", s.Driver.FindElement(By.Id("LNbank-WalletBalance")).Text);
-            Assert.Contains("There are no transactions, yet.", s.Driver.FindElement(By.Id("LNbank-WalletTransactions")).Text);
+            Assert.Contains("There are no transactions yet.", s.Driver.FindElement(By.Id("LNbank-WalletTransactions")).Text);
             Assert.Single(s.Driver.FindElements(By.CssSelector("#LNbank-Wallets a")));
             s.Driver.FindElement(By.CssSelector("#LNbank-Wallets a")).Click();
             s.Driver.FindElement(By.Id("LNbank-WalletSettings")).Click();
@@ -82,46 +78,60 @@ namespace BTCPayServer.Tests
             Assert.Contains(description, s.Driver.FindElement(By.Id("LNbank-TransactionDescription")).Text);
             Assert.Contains("21 sats unpaid", s.Driver.FindElement(By.Id("LNbank-TransactionAmount")).Text);
             var bolt11 = s.Driver.FindElement(By.Id("LNbank-CopyPaymentRequest")).GetAttribute("data-clipboard");
+            var shareUrl = s.Driver.FindElement(By.Id("LNbank-CopyShareUrl")).GetAttribute("data-clipboard");
             Assert.StartsWith("ln", bolt11);
             s.Driver.FindElement(By.Id("LNbank-Back")).Click();
             
             // List
+            var listUrl = s.Driver.Url;
             Assert.Single(s.Driver.FindElements(By.CssSelector("#LNbank-WalletTransactions tr")));
             Assert.Contains("21 sats", s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-amount")).Text);
+            Assert.Contains(description, s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-description")).Text);
             Assert.Contains("unpaid", s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-status")).Text);
             Assert.Contains("0 sats", s.Driver.FindElement(By.Id("LNbank-WalletBalance")).Text);
             
+            // Share
+            s.GoToUrl(shareUrl);
+            Assert.Contains(description, s.Driver.FindElement(By.Id("LNbank-TransactionDescription")).Text);
+            Assert.Contains("21 sats unpaid", s.Driver.FindElement(By.Id("LNbank-TransactionAmount")).Text);
+            
             // Pay invoice
-            /*
             var resp = await s.Server.CustomerLightningD.Pay(bolt11);
             Assert.Equal(PayResult.Ok, resp.Result);
-            Thread.Sleep(5000);
-            s.Driver.Navigate().Refresh();
-            Thread.Sleep(5000);
-            s.Driver.Navigate().Refresh();
+            TestUtils.Eventually(() =>
+            {
+                s.Driver.Navigate().Refresh();
+                Assert.Contains("21 sats paid", s.Driver.FindElement(By.Id("LNbank-TransactionSettled")).Text);
+            });
+            
+            // List
+            s.GoToUrl(listUrl);
             Assert.Single(s.Driver.FindElements(By.CssSelector("#LNbank-WalletTransactions tr")));
             Assert.Contains("21 sats", s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-settled")).Text);
-            Assert.Contains("paid", s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-status")).Text);
             Assert.Contains("21 sats", s.Driver.FindElement(By.Id("LNbank-WalletBalance")).Text);
             
             // Send
-            var amount = LightMoney.Satoshis(5000);
-            var invoice = await s.Server.MerchantLnd.Client.CreateInvoice(amount, "Donation", TimeSpan.FromHours(1));
+            var amount = LightMoney.Satoshis(5);
+            var invoice = await s.Server.CustomerLightningD.CreateInvoice(amount, "Donation", TimeSpan.FromHours(1));
             
             s.Driver.FindElement(By.Id("LNbank-WalletSend")).Click();
             s.Driver.FindElement(By.Id("PaymentRequest")).SendKeys(invoice.BOLT11);
             s.Driver.FindElement(By.Id("LNbank-Decode")).Click();
             
             // Confirm
-            Assert.Contains("Donation", s.Driver.FindElement(By.Id("LNbank-Description")).Text);
+            Assert.Contains("Donation", s.Driver.FindElement(By.Id("Description")).GetAttribute("value"));
             Assert.Contains("5 sats", s.Driver.FindElement(By.Id("LNbank-Amount")).Text);
+            s.Driver.FindElement(By.Id("Description")).SendKeys(" for Uncle Jim");
             s.Driver.FindElement(By.Id("LNbank-Send")).Click();
             
+            /*
             // List
             Assert.Equal(2, s.Driver.FindElements(By.CssSelector("#LNbank-WalletTransactions tr")).Count);
             Assert.Contains("21 sats", s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-amount")).Text);
             Assert.Contains("unpaid", s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-status")).Text);
-            Assert.Contains("16 sats", s.Driver.FindElement(By.Id("LNbank-WalletBalance")).Text);*/
+            Assert.Contains("Donation for Uncle Jim", s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-description")).Text);
+            Assert.Contains("16 sats", s.Driver.FindElement(By.Id("LNbank-WalletBalance")).Text);
+            */
         }
     }
 }
