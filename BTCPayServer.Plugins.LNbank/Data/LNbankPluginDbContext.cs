@@ -79,6 +79,13 @@ namespace BTCPayServer.Plugins.LNbank
                 .HasConversion(
                     v => v.MilliSatoshi,
                     v => new LightMoney(v));
+
+            modelBuilder
+                .Entity<Transaction>()
+                .Property(e => e.RoutingFee)
+                .HasConversion(
+                    v => v.MilliSatoshi,
+                    v => new LightMoney(v));
         }
     }
 

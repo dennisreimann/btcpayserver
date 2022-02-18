@@ -6,5 +6,6 @@ namespace BTCPayServer.Plugins.LNbank.Services
     {
         [Required]
         public string PaymentRequest { get; set; }
+        public float? MaxFeePercent { get; set; }
     }
 }

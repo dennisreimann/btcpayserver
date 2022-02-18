@@ -31,12 +31,13 @@ namespace BTCPayServer.Plugins.LNbank.Services
             });
         }
         
-        public async Task PayLightningInvoice(LightningInvoicePayRequest req)
+        public async Task<LightningPaymentData> PayLightningInvoice(LightningInvoicePayRequest req)
         {
             var client = await Client();
-            await client.PayLightningInvoice(CryptoCode, new PayLightningInvoiceRequest
+            return await client.PayLightningInvoice(CryptoCode, new PayLightningInvoiceRequest
             {
-                BOLT11 = req.PaymentRequest
+                BOLT11 = req.PaymentRequest,
+                MaxFeePercent = req.MaxFeePercent
             });
         }
 

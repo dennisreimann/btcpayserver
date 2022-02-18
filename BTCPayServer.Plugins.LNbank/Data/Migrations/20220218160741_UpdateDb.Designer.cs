@@ -3,6 +3,7 @@ using System;
 using BTCPayServer.Plugins.LNbank;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BTCPayServer.Plugins.LNbank.Data.Migrations
 {
     [DbContext(typeof(LNbankPluginDbContext))]
-    partial class LNbankPluginDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220218160741_UpdateDb")]
+    partial class UpdateDb
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -71,9 +73,6 @@ namespace BTCPayServer.Plugins.LNbank.Data.Migrations
                     b.Property<string>("PaymentRequest")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<long?>("RoutingFee")
-                        .HasColumnType("bigint");
 
                     b.Property<string>("WalletId")
                         .HasColumnType("text");

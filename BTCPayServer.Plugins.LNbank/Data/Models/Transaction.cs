@@ -17,6 +17,7 @@ namespace BTCPayServer.Plugins.LNbank.Data.Models
         public LightMoney Amount { get; set; }
         [DisplayName("Settled amount")]
         public LightMoney AmountSettled { get; set; }
+        public LightMoney RoutingFee { get; set; }
         public string Description { get; set; }
         [DisplayName("Payment Request")]
         [Required]
@@ -61,17 +62,13 @@ namespace BTCPayServer.Plugins.LNbank.Data.Models
         {
             get
             {
-                switch (Status)
+                return Status switch
                 {
-                    case StatusPaid:
-                        return LightningInvoiceStatus.Paid;
-                    case StatusUnpaid:
-                        return LightningInvoiceStatus.Unpaid;
-                    case StatusExpired:
-                        return LightningInvoiceStatus.Expired;
-                    default:
-                        throw new NotSupportedException($"'{Status}' cannot be mapped to any LightningInvoiceStatus");
-                }
+                    StatusPaid => LightningInvoiceStatus.Paid,
+                    StatusUnpaid => LightningInvoiceStatus.Unpaid,
+                    StatusExpired => LightningInvoiceStatus.Expired,
+                    _ => throw new NotSupportedException($"'{Status}' cannot be mapped to any LightningInvoiceStatus")
+                };
             }
         }
 
@@ -89,7 +86,6 @@ namespace BTCPayServer.Plugins.LNbank.Data.Models
             if (IsUnpaid || IsExpired) return false;
             ExplicitStatus = StatusCancelled;
             return true;
-
         }
     }
 }

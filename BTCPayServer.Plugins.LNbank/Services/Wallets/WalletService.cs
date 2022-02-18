@@ -123,40 +123,42 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
             return entry.Entity;
         }
 
-        public async Task Send(Wallet wallet, BOLT11PaymentRequest bolt11, string paymentRequest)
+        public async Task Send(Wallet wallet, BOLT11PaymentRequest bolt11, string paymentRequest, float maxFeePercent = 3)
         {
             if (bolt11.ExpiryDate <= DateTimeOffset.UtcNow)
             {
                 throw new Exception($"Payment request already expired at {bolt11.ExpiryDate}.");
             }
 
+            // check balance
+            LightMoney routingFee = null;
+            var amount = bolt11.MinimumAmount;
+            if (wallet.Balance < amount)
+            {
+                throw new Exception($"Insufficient balance: {Sats(wallet.Balance)}, tried to send {Sats(amount)}.");
+            }
+
             // check if the invoice exists already
             var transaction = await ValidatePaymentRequest(paymentRequest);
-            var amount = bolt11.MinimumAmount;
-            var balanceSats = wallet.Balance.ToUnit(LightMoneyUnit.Satoshi);
-            var amountSats = amount.ToUnit(LightMoneyUnit.Satoshi);
             var isInternal = !string.IsNullOrEmpty(transaction?.InvoiceId);
-            
-            // check balance
-            if (isInternal)
+            if (!isInternal)
             {
-                if (wallet.Balance < amount)
-                {
-                    throw new Exception($"Insufficient balance: {balanceSats} sats, tried to send {amountSats} sats.");
-                }
-            }
-            else
-            {
-                // TODO: Handle fees properly
-                // - Estimate fee by probing
-                // - Set fee limits, needs implementation in Lightning client
-                var amountWithFee = amount;
+                // Account for fees
+                var maxFeeAmount = LightMoney.Satoshis(amount.ToUnit(LightMoneyUnit.Satoshi) * (decimal)maxFeePercent / 100);
+                var amountWithFee = amount + maxFeeAmount;
                 if (wallet.Balance < amountWithFee)
                 {
-                    throw new Exception($"Insufficient balance: {balanceSats} sats, tried to send {amountSats} sats.");
+                    throw new Exception($"Insufficient balance: {Sats(wallet.Balance)}, tried to send {Sats(amount)} and need to keep a fee reserve of {Sats(maxFeeAmount)}.");
                 }
-                await _btcpayService.PayLightningInvoice(new LightningInvoicePayRequest {PaymentRequest = paymentRequest});
-                // TODO: Account for actual fees
+                var result = await _btcpayService.PayLightningInvoice(new LightningInvoicePayRequest
+                {
+                    PaymentRequest = paymentRequest,
+                    MaxFeePercent = maxFeePercent
+                });
+                
+                // Set amount to actual total amount paid, including fees
+                amount = result.TotalAmount;
+                routingFee = result.FeeAmount;
             }
             
             await using var dbContext = _dbContextFactory.CreateContext();
@@ -174,6 +176,7 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
                         PaymentRequest = paymentRequest,
                         Amount = amount,
                         AmountSettled = new LightMoney(amount.MilliSatoshi * -1),
+                        RoutingFee = routingFee,
                         ExpiresAt = bolt11.ExpiryDate,
                         Description = bolt11.ShortDescription,
                         PaidAt = now
@@ -296,7 +299,7 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
                 queryable = queryable.Where(t => t.PaymentRequest == query.PaymentRequest);
             }
 
-            return await queryable.FirstOrDefaultAsync();
+            return queryable.FirstOrDefault();
         }
 
         public async Task UpdateTransaction(Transaction transaction)
@@ -390,5 +393,7 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
                 });
             }
         }
+        
+        private static string Sats(LightMoney amount) => $"{Math.Round(amount.ToUnit(LightMoneyUnit.Satoshi))} sats";
     }
 }
