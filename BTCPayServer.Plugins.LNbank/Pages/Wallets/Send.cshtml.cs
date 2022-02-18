@@ -23,6 +23,8 @@ public class SendModel : BasePageModel
     [DisplayName("Payment Request")]
     [Required]
     public string PaymentRequest { get; set; }
+    [BindProperty]
+    public string Description { get; set; }
     public string ErrorMessage { get; set; }
 
     public SendModel(
@@ -56,6 +58,7 @@ public class SendModel : BasePageModel
         try
         {            
             Bolt11 = WalletService.ParsePaymentRequest(PaymentRequest);
+            Description = Bolt11.ShortDescription;
             await WalletService.ValidatePaymentRequest(PaymentRequest);
         }
         catch (Exception exception)
@@ -81,7 +84,7 @@ public class SendModel : BasePageModel
 
         try
         {
-            await WalletService.Send(Wallet, Bolt11, PaymentRequest);
+            await WalletService.Send(Wallet, Bolt11, PaymentRequest, Description);
             return RedirectToPage("./Index", new { walletId });
         }
         catch (Exception exception)

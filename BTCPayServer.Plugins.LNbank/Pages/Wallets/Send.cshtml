@@ -45,35 +45,24 @@
     else
     {
         <input asp-for="PaymentRequest" type="hidden" required/>
-
-        <div>
-            <dl class="row">
-                <dt class="col-sm-2">
-                    Expiry
-                </dt>
-                <dd class="col-sm-10">
-                    @Model.Bolt11.ExpiryDate.ToTimeAgo()
-                    (@Model.Bolt11.ExpiryDate)
-                </dd>
-                @if (!string.IsNullOrEmpty(Model.Bolt11.ShortDescription))
-                {
-                    <dt class="col-sm-2">
-                        Description
-                    </dt>
-                    <dd class="col-sm-10" id="LNbank-Description">
-                        @Model.Bolt11.ShortDescription
-                    </dd>
-                }
-                <dt class="col-sm-2">
-                    Amount
-                </dt>
-                <dd class="col-sm-10" id="LNbank-Amount">
-                    @Helpers.Sats(Model.Bolt11.MinimumAmount)
-                </dd>
-            </dl>
-        </div>
+        <dl class="row mb-0">
+            <dt>Amount</dt>
+            <dd id="LNbank-Amount">@Helpers.Sats(Model.Bolt11.MinimumAmount)</dd>
+            <dt>Expiry</dt>
+            <dd>@Model.Bolt11.ExpiryDate.ToTimeAgo() (@Model.Bolt11.ExpiryDate)</dd>
+            @if (hasError && !string.IsNullOrEmpty(Model.Bolt11.ShortDescription))
+            {
+                <dt>Description</dt>
+                <dd id="LNbank-Description">@Model.Bolt11.ShortDescription</dd>
+            }
+        </dl>
         @if (!hasError)
         {
+            <div class="form-group">
+                <label asp-for="Description" class="form-label"></label>
+                <input asp-for="Description" class="form-control" style="max-width:70ch;" />
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
             <div class="form-group">
                 <button type="submit" class="btn btn-primary" id="LNbank-Send">
                     Send @Helpers.Sats(Model.Bolt11.MinimumAmount)

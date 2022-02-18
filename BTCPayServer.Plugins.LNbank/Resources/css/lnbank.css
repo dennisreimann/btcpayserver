@@ -39,6 +39,16 @@ main p {
     max-width: 40em;
 }
 
+main dt {
+    color: var(--btcpay-form-text-label);
+    font-weight: var(--btcpay-body-font-weight);
+    margin-bottom: var(--btcpay-space-xs);
+}
+
+main dd {
+    margin-bottom: var(--btcpay-space-m);
+}
+
 main svg[role="img"]:not(.icon) {
     width: 1em;
     height: 1em;

@@ -59,7 +59,7 @@ namespace BTCPayServer.Plugins.LNbank.Controllers.API
 
             try
             {
-                await _walletService.Send(Wallet, bolt11, paymentRequest);
+                await _walletService.Send(Wallet, bolt11, paymentRequest, bolt11.ShortDescription);
                 var response = new PayResponse(PayResult.Ok);
                 return Ok(response);
             }
