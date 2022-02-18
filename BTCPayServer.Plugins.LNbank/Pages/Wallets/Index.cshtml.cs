@@ -8,6 +8,7 @@ using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BTCPayServer.Plugins.LNbank.Pages.Wallets;
 
@@ -22,7 +23,7 @@ public class IndexModel : BasePageModel
         UserManager<ApplicationUser> userManager, 
         WalletService walletService) : base(userManager, walletService) {}
 
-    public async Task OnGetAsync(string walletId)
+    public async Task<IActionResult> OnGetAsync(string walletId)
     {
         Wallets = await WalletService.GetWallets(new WalletsQuery
         {
@@ -32,12 +33,24 @@ public class IndexModel : BasePageModel
         var list = Wallets.ToList();
         if (!list.Any())
         {
-            RedirectToRoute("./Create");
+            return RedirectToRoute("./Create");
         }
-        else if (walletId != null)
+        
+        if (walletId == null && list.Count == 1)
         {
-            SelectedWallet = list.FirstOrDefault(w => w.WalletId == walletId) ?? list.First();
-            Transactions = SelectedWallet?.Transactions.OrderByDescending(t => t.CreatedAt);
+            return RedirectToPage("./Index", new { list.First().WalletId });
         }
+        
+        if (walletId != null)
+        {
+            SelectedWallet = list.FirstOrDefault(w => w.WalletId == walletId);
+            if (SelectedWallet == null)
+            {
+                return NotFound();
+            }
+            Transactions = SelectedWallet.Transactions.OrderByDescending(t => t.CreatedAt);
+        }
+        
+        return Page();
     }
 }
