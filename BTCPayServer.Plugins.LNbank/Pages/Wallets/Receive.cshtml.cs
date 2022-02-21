@@ -65,8 +65,7 @@ public class ReceiveModel : BasePageModel
         {
             var amount = LightMoney.Satoshis(Amount).MilliSatoshi;
             var transaction = await WalletService.Receive(Wallet, amount, Description, AttachDescription, PrivateRouteHints);
-            var transactionId = transaction.TransactionId;
-            return RedirectToPage("/Transactions/Details", new { walletId, transactionId });
+            return RedirectToPage("/Wallets/Wallet", new { walletId });
         }
         catch (Exception exception)
         {
