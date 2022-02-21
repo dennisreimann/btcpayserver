@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client;
@@ -8,18 +9,19 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BTCPayServer.Plugins.LNbank.Pages.Wallets;
+namespace BTCPayServer.Plugins.LNbank.Pages.Transactions;
 
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
-public class EditModel : BasePageModel
+public class DetailsModel : BasePageModel
 {
     public Wallet Wallet { get; set; }
+    public Transaction Transaction { get; set; }
 
-    public EditModel(
+    public DetailsModel(
         UserManager<ApplicationUser> userManager, 
         WalletService walletService) : base(userManager, walletService) {}
 
-    public async Task<IActionResult> OnGetAsync(string walletId)
+    public async Task<IActionResult> OnGetAsync(string walletId, string transactionId)
     {
         Wallet = await WalletService.GetWallet(new WalletQuery {
             UserId = UserId,
@@ -28,30 +30,10 @@ public class EditModel : BasePageModel
         });
 
         if (Wallet == null) return NotFound();
+        
+        Transaction = Wallet.Transactions.FirstOrDefault(t => t.TransactionId == transactionId);
 
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostAsync(string walletId)
-    {
-        if (!ModelState.IsValid)
-        {
-            return Page();
-        }
-
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
-        if (Wallet == null) return NotFound();
-
-        if (await TryUpdateModelAsync(Wallet, "wallet", w => w.Name))
-        {
-            await WalletService.AddOrUpdateWallet(Wallet);
-            return RedirectToPage("./Wallet", new { walletId });
-        }
+        if (Transaction == null) return NotFound();
 
         return Page();
     }

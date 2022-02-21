@@ -122,7 +122,7 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
             return entry.Entity;
         }
 
-        public async Task Send(Wallet wallet, BOLT11PaymentRequest bolt11, string paymentRequest, string description, float maxFeePercent = 3)
+        public async Task<Transaction> Send(Wallet wallet, BOLT11PaymentRequest bolt11, string paymentRequest, string description, float maxFeePercent = 3)
         {
             if (bolt11.ExpiryDate <= DateTimeOffset.UtcNow)
             {
@@ -169,7 +169,7 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
                 try
                 {
                     var now = DateTimeOffset.UtcNow;
-                    await dbContext.Transactions.AddAsync(new Transaction
+                    var entry = await dbContext.Transactions.AddAsync(new Transaction
                     {
                         WalletId = wallet.WalletId,
                         PaymentRequest = paymentRequest,
@@ -187,12 +187,18 @@ namespace BTCPayServer.Plugins.LNbank.Services.Wallets
                         await MarkTransactionPaid(transaction, amount, now);
                     }
                     await dbTransaction.CommitAsync();
+
+                    return entry.Entity;
                 }
                 catch (Exception)
                 {
                     await dbTransaction.RollbackAsync();
                 }
+
+                return null;
             });
+
+            return null;
         }
 
         public async Task<Transaction> ValidatePaymentRequest(string paymentRequest)

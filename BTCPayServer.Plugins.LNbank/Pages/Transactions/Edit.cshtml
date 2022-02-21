@@ -2,10 +2,12 @@
 @model BTCPayServer.Plugins.LNbank.Pages.Transactions.EditModel
 
 @{
-    ViewData.SetActivePage(LNbankNavPages.Transactions, "Edit your transaction");
+    ViewData.SetActivePage(LNbankNavPages.Transactions, "Edit transaction");
 }
 
-<h2 class="mt-1 mb-4">@ViewData["Title"]</h2>
+<partial name="_WalletHeader" model="Model.Wallet"/>
+
+<h3 class="mb-4">@ViewData["Title"]</h3>
 
 <div class="row">
     <div class="col-xl-8">
@@ -22,7 +24,3 @@
         </form>
     </div>
 </div>
-
-<p>
-    <a asp-page="/Wallets/Wallet" asp-route-walletId="@Model.WalletId" class="text-secondary">Back to Wallet</a>
-</p>

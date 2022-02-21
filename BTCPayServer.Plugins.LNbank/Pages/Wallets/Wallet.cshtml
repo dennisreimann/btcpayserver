@@ -6,26 +6,8 @@
     ViewData.SetActivePage(LNbankNavPages.Wallets, Model.Wallet.Name);
 }
 
-<div class="sticky-header-setup"></div>
-<div class="sticky-header d-sm-flex align-items-center justify-content-between">
-    <a class="unobtrusive-link">
-        <h2 asp-page="./Wallet" asp-route-walletId="@Model.Wallet.WalletId"  class="mb-1">@Model.Wallet.Name</h2>
-        <div class="text-muted fw-semibold" id="LNbank-WalletBalance">
-            @Helpers.Sats(Model.Wallet.Balance)
-        </div>
-    </a>
-    <div class="d-flex gap-3 mt-3 mt-sm-0">
-        <a asp-page="./Send" asp-route-walletId="@Model.Wallet.WalletId" class="btn btn-primary d-inline-flex align-items-center" id="LNbank-WalletSend">
-            Send
-        </a>
-        <a asp-page="./Receive" asp-route-walletId="@Model.Wallet.WalletId" class="btn btn-primary d-inline-flex align-items-center" id="LNbank-WalletReceive">
-            Receive
-        </a>
-        <a asp-page="./Details" asp-route-walletId="@Model.Wallet.WalletId" class="btn btn-secondary d-inline-flex align-items-center" id="LNbank-WalletSettings">
-            @await Component.InvokeAsync("Icon", new { symbol = "settings" })
-        </a>
-    </div>
-</div>
+<partial name="_WalletHeader" model="Model.Wallet"/>
+
 @if (Model.Transactions.Any())
 {
     <div class="row">

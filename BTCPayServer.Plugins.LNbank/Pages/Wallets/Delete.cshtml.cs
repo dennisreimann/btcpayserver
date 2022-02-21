@@ -36,7 +36,8 @@ public class DeleteModel : BasePageModel
     {
         Wallet = await WalletService.GetWallet(new WalletQuery {
             UserId = UserId,
-            WalletId = walletId
+            WalletId = walletId,
+            IncludeTransactions = true
         });
 
         if (Wallet == null) return NotFound();

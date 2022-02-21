@@ -5,17 +5,18 @@
     ViewData.SetActivePage(LNbankNavPages.Wallets, Model.Wallet.Name);
 }
 
-<header>
-    <h2 id="LNbank-WalletName">@ViewData["Title"]</h2>
-    <div>
-        <a asp-page="./Edit" asp-route-walletId="@Model.Wallet.WalletId" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center mx-1">
-            Edit
-        </a>
-    </div>
-</header>
-
+<partial name="_WalletHeader" model="Model.Wallet"/>
 
 <dl class="row">
+    <dt class="col-sm-3 col-xl-2">
+        @Html.DisplayNameFor(model => model.Wallet.Name)
+    </dt>
+    <dd class="col-sm-9 col-xl-10">
+        <span id="LNbank-WalletName">@Model.Wallet.Name</span>
+        <a asp-page="./Edit" asp-route-walletId="@Model.Wallet.WalletId" class="ms-2">
+            Edit
+        </a>
+    </dd>
     <dt class="col-sm-3 col-xl-2">
         @Html.DisplayNameFor(model => model.Wallet.WalletId)
     </dt>
@@ -39,6 +40,6 @@
     </dd>
 </dl>
 
-<p>
-    <a asp-page="./Index" asp-route-walletId="@Model.Wallet.WalletId" class="text-secondary" id="LNbank-Back">Back to Wallet</a>
-</p>
+<a asp-page="./Delete" asp-route-walletId="@Model.Wallet.WalletId" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center mx-1">
+    Delete Wallet
+</a>

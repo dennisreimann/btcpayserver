@@ -5,14 +5,7 @@
     ViewData.SetActivePage(LNbankNavPages.Wallets, "Edit your wallet");
 }
 
-<header>
-    <h2>@ViewData["Title"]</h2>
-    <div>
-        <a asp-page="./Delete" asp-route-walletId="@Model.Wallet.WalletId" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center mx-1">
-            Delete
-        </a>
-    </div>
-</header>
+<partial name="_WalletHeader" model="Model.Wallet"/>
 
 <div class="row">
     <div class="col-xl-8">
@@ -29,7 +22,3 @@
         </form>
     </div>
 </div>
-
-<p>
-    <a asp-page="./Index" asp-route-walletId="@Model.Wallet.WalletId" class="text-secondary">Back to Wallet</a>
-</p>
