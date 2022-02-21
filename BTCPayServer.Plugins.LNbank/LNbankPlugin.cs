@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Abstractions.Models;
 using BTCPayServer.Abstractions.Services;
@@ -22,7 +22,7 @@ namespace BTCPayServer.Plugins.LNbank
             new IBTCPayServerPlugin.PluginDependency()
             {
                 Identifier = nameof(BTCPayServer),
-                Condition = ">=1.4.6.0"
+                Condition = ">=1.4.7.0"
             }
         };
 
