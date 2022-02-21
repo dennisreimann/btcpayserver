@@ -6,30 +6,30 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using BTCPayServer.Lightning;
 
-namespace BTCPayServer.Plugins.LNbank.Data.Models
+namespace BTCPayServer.Plugins.LNbank.Data.Models;
+
+public class Wallet
 {
-    public class Wallet
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [DisplayName("Wallet ID")]
+    public string WalletId { get; set; }
+
+    [DisplayName("User ID")] public string UserId { get; set; }
+    [Required]
+    public string Name { get; set; }
+    [DisplayName("Creation date")]
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public List<Transaction> Transactions { get; set; } = new List<Transaction>();
+
+    public LightMoney Balance
     {
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [DisplayName("Wallet ID")]
-        public string WalletId { get; set; }
-
-        [DisplayName("User ID")] public string UserId { get; set; }
-        [Required] public string Name { get; set; }
-        [DisplayName("Creation date")] public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-
-        public List<Transaction> Transactions { get; set; } = new List<Transaction>();
-
-        public LightMoney Balance
+        get
         {
-            get
-            {
-                return Transactions
-                    .Where(t => t.AmountSettled != null)
-                    .Aggregate(new LightMoney(0), (total, t) => total + t.AmountSettled);
-            }
+            return Transactions
+                .Where(t => t.AmountSettled != null)
+                .Aggregate(new LightMoney(0), (total, t) => total + t.AmountSettled);
         }
-
-        public List<AccessKey> AccessKeys { get; set; } = new List<AccessKey>();
     }
+
+    public List<AccessKey> AccessKeys { get; set; } = new List<AccessKey>();
 }

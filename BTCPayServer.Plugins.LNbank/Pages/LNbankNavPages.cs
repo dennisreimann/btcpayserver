@@ -1,11 +1,10 @@
-namespace BTCPayServer.Plugins.LNbank.Pages
+namespace BTCPayServer.Plugins.LNbank.Pages;
+
+public enum LNbankNavPages
 {
-    public enum LNbankNavPages
-    {
-        Wallets,
-        Send,
-        Receive,
-        Transactions,
-        Share
-    }
+    Wallets,
+    Send,
+    Receive,
+    Transactions,
+    Share
 }

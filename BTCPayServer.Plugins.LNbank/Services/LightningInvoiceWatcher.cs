@@ -6,53 +6,52 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace BTCPayServer.Plugins.LNbank.Services
+namespace BTCPayServer.Plugins.LNbank.Services;
+
+public class LightningInvoiceWatcher : BackgroundService
 {
-    public class LightningInvoiceWatcher : BackgroundService
+    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly ILogger<LightningInvoiceWatcher> _logger;
+
+    public LightningInvoiceWatcher(
+        IServiceScopeFactory serviceScopeFactory,
+        ILogger<LightningInvoiceWatcher> logger)
     {
-        private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly ILogger<LightningInvoiceWatcher> _logger;
+        _serviceScopeFactory = serviceScopeFactory;
+        _logger = logger;
+    }
 
-        public LightningInvoiceWatcher(
-            IServiceScopeFactory serviceScopeFactory,
-            ILogger<LightningInvoiceWatcher> logger)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation(nameof(LightningInvoiceWatcher) + " starting");
+
+        while (!cancellationToken.IsCancellationRequested)
         {
-            _serviceScopeFactory = serviceScopeFactory;
-            _logger = logger;
-        }
-
-        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
-        {
-            _logger.LogInformation(nameof(LightningInvoiceWatcher) + " starting");
-
-            while (!cancellationToken.IsCancellationRequested)
+            using (var scope = _serviceScopeFactory.CreateScope())
             {
-                using (var scope = _serviceScopeFactory.CreateScope())
+                var walletService = scope.ServiceProvider.GetRequiredService<WalletService>();
+
+                var transactions = await walletService.GetPendingTransactions();
+                var list = transactions.ToList();
+                int count = list.Count;
+
+                if (count > 0)
                 {
-                    var walletService = scope.ServiceProvider.GetRequiredService<WalletService>();
+                    // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                    _logger.LogDebug(nameof(LightningInvoiceWatcher) + " processing " + count + " transactions");
 
-                    var transactions = await walletService.GetPendingTransactions();
-                    var list = transactions.ToList();
-                    int count = list.Count;
-
-                    if (count > 0)
-                    {
-                        // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-                        _logger.LogDebug(nameof(LightningInvoiceWatcher) + " processing " + count + " transactions");
-
-                        await Task.WhenAll(list.Select(transaction => walletService.CheckPendingTransaction(transaction, cancellationToken)));
-                    }
-
-                    await Task.Delay(5_000, cancellationToken);
+                    await Task.WhenAll(list.Select(transaction => walletService.CheckPendingTransaction(transaction, cancellationToken)));
                 }
+
+                await Task.Delay(5_000, cancellationToken);
             }
         }
+    }
 
-        public override async Task StopAsync(CancellationToken cancellationToken)
-        {
-            _logger.LogInformation(nameof(LightningInvoiceWatcher) + " stopping");
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation(nameof(LightningInvoiceWatcher) + " stopping");
 
-            await Task.CompletedTask;
-        }
+        await Task.CompletedTask;
     }
 }

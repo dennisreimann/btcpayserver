@@ -1,11 +1,10 @@
-namespace BTCPayServer.Plugins.LNbank.Services.Wallets
+namespace BTCPayServer.Plugins.LNbank.Services.Wallets;
+
+public class WalletQuery
 {
-    public class WalletQuery
-    {
-        public string UserId { get; set; }
-        public string WalletId { get; set; }
-        public string AccessKey { get; set; }
-        public bool IncludeTransactions { get; set; }
-        public bool IncludeAccessKeys { get; set; }
-    }
+    public string UserId { get; set; }
+    public string WalletId { get; set; }
+    public string AccessKey { get; set; }
+    public bool IncludeTransactions { get; set; }
+    public bool IncludeAccessKeys { get; set; }
 }

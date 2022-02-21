@@ -2,7 +2,7 @@ using System;
 using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Abstractions.Models;
 using BTCPayServer.Abstractions.Services;
-using BTCPayServer.Client;
+using BTCPayServer.Plugins.LNbank.Data;
 using BTCPayServer.Plugins.LNbank.Extensions;
 using BTCPayServer.Plugins.LNbank.Hubs;
 using BTCPayServer.Plugins.LNbank.Services;
@@ -19,7 +19,7 @@ namespace BTCPayServer.Plugins.LNbank
         public override string Description { get; } = "Use the BTCPay Server Lightning node in custodial mode and give users access via custodial layer 3 wallets.";
         public override IBTCPayServerPlugin.PluginDependency[] Dependencies { get; } = new[]
         {
-            new IBTCPayServerPlugin.PluginDependency()
+            new IBTCPayServerPlugin.PluginDependency
             {
                 Identifier = nameof(BTCPayServer),
                 Condition = ">=1.4.7.0"
@@ -44,7 +44,7 @@ namespace BTCPayServer.Plugins.LNbank
         public override void Execute(IApplicationBuilder applicationBuilder, IServiceProvider applicationBuilderApplicationServices)
         {
             base.Execute(applicationBuilder, applicationBuilderApplicationServices);
-            applicationBuilderApplicationServices.GetService<LNbankPluginDbContextFactory>().CreateContext().Database.Migrate();
+            applicationBuilderApplicationServices.GetService<LNbankPluginDbContextFactory>()?.CreateContext().Database.Migrate();
 
             applicationBuilder.UseEndpoints(endpoints =>
             {

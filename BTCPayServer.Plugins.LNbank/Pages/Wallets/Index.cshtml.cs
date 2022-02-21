@@ -36,7 +36,7 @@ public class IndexModel : BasePageModel
         
         if (walletId == null && list.Count == 1)
         {
-            return RedirectToPage("./Index", new { list.First().WalletId });
+            return RedirectToPage("./Wallet", new { list.First().WalletId });
         }
         
         return Page();

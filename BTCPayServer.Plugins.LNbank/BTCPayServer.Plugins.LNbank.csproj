@@ -8,8 +8,8 @@
     <Title>LNbank</Title>
     <Authors>d11n</Authors>
     <Description>Use the BTCPay Server Lightning node in custodial mode and give users access via custodial layer 3 wallets.</Description>
-    <PackageProjectUrl>https://github.com/dennisreimann/btcpayserver/tree/lnbank</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/dennisreimann/btcpayserver/tree/lnbank</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/dennisreimann/btcpayserver/tree/plugins</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dennisreimann/btcpayserver/tree/plugins</RepositoryUrl>
     <LangVersion>10</LangVersion>
     <PackageVersion>1.1.0</PackageVersion>
 
