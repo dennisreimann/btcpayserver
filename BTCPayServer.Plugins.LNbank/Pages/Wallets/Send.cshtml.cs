@@ -25,7 +25,6 @@ public class SendModel : BasePageModel
     public string PaymentRequest { get; set; }
     [BindProperty]
     public string Description { get; set; }
-    public string ErrorMessage { get; set; }
 
     public SendModel(
         UserManager<ApplicationUser> userManager, 
@@ -63,7 +62,7 @@ public class SendModel : BasePageModel
         }
         catch (Exception exception)
         {
-            ErrorMessage = exception.Message;
+            TempData[WellKnownTempData.ErrorMessage] = exception.Message;
         }
 
         return Page();
@@ -85,11 +84,12 @@ public class SendModel : BasePageModel
         try
         {
             await WalletService.Send(Wallet, Bolt11, PaymentRequest, Description);
+            TempData[WellKnownTempData.SuccessMessage] = "Payment sent.";
             return RedirectToPage("./Index", new { walletId });
         }
         catch (Exception exception)
         {
-            ErrorMessage = exception.Message;
+            TempData[WellKnownTempData.ErrorMessage] = exception.Message;
         }
 
         return Page();

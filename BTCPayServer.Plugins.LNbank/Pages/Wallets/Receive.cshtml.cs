@@ -31,7 +31,6 @@ public class ReceiveModel : BasePageModel
     [BindProperty]
     [DisplayName("Add routing hints for private channels")]
     public bool PrivateRouteHints { get; set; }
-    public string ErrorMessage { get; set; }
 
     public ReceiveModel(
         UserManager<ApplicationUser> userManager, 
@@ -65,11 +64,11 @@ public class ReceiveModel : BasePageModel
         {
             var amount = LightMoney.Satoshis(Amount).MilliSatoshi;
             var transaction = await WalletService.Receive(Wallet, amount, Description, AttachDescription, PrivateRouteHints);
-            return RedirectToPage("/Wallets/Wallet", new { walletId });
+            return RedirectToPage("/Transaction/Details", new { walletId, transaction.TransactionId });
         }
         catch (Exception exception)
         {
-            ErrorMessage = string.IsNullOrEmpty(exception.Message)
+            TempData[WellKnownTempData.ErrorMessage] = string.IsNullOrEmpty(exception.Message)
                 ? "Invoice creation failed."
                 : exception.Message;
         }

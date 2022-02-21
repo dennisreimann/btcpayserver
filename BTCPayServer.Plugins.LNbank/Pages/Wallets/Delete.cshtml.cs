@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client;
@@ -41,8 +42,15 @@ public class DeleteModel : BasePageModel
         });
 
         if (Wallet == null) return NotFound();
+        
+        if (Wallet.Balance > 0)
+        {
+            TempData[WellKnownTempData.ErrorMessage] = "This wallet still has a balance.";
+            return Page();
+        }
 
         await WalletService.RemoveWallet(Wallet);
+        TempData[WellKnownTempData.SuccessMessage] = "Wallet removed.";
 
         return RedirectToPage("./Index");
     }
