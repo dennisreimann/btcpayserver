@@ -34,7 +34,13 @@ cd bin/packed
 sha256sum BTCPayServer.Plugins.LNbank.btcpay* > SHA256SUMS
 gpg  --armor --sign SHA256SUMS
 shasums=$(cat SHA256SUMS)
-notes="${changes}\n\n## SHA256SUMS\n\n${shasums}"
+notes="${changes}
+
+### SHA256SUMS
+
+```
+${shasums}
+```"
 cd -
 
 printf "\n\n=====> Prepare plugins repo\n\n"
