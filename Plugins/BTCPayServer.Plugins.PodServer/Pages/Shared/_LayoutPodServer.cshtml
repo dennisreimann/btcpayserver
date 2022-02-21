@@ -1,0 +1,17 @@
+﻿@{
+    Layout = "_Layout";
+}
+
+@section PageHeadContent {
+    <partial name="_LayoutPodServerHead" />
+    @await RenderSectionAsync("Styles", false)
+}
+
+@section PageFootContent {
+    <partial name="_LayoutPodServerFoot" />
+    @await RenderSectionAsync("Scripts", false)
+}
+
+<div class="container">
+    @RenderBody()
+</div>
