@@ -1,37 +1,37 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using BTCPayServer.Data;
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client;
-using BTCPayServer.Data;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BTCPayServer.Plugins.LNbank.Pages.Transactions;
+namespace BTCPayServer.Plugins.LNbank.Pages.Wallets;
 
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
-public class DetailsModel : BasePageModel
+public class WalletModel : BasePageModel
 {
-    public string WalletId { get; set; }
-    public Transaction Transaction { get; set; }
+    public Wallet Wallet { get; set; }
+    public IEnumerable<Transaction> Transactions { get; set; }
 
-    public DetailsModel(
+    public WalletModel(
         UserManager<ApplicationUser> userManager, 
         WalletService walletService) : base(userManager, walletService) {}
 
-    public async Task<IActionResult> OnGetAsync(string walletId, string transactionId)
+    public async Task<IActionResult> OnGetAsync(string walletId)
     {
-        WalletId = walletId;
-        Transaction = await WalletService.GetTransaction(new TransactionQuery
-        {
+        Wallet = await WalletService.GetWallet(new WalletQuery {
             UserId = UserId,
             WalletId = walletId,
-            TransactionId = transactionId
+            IncludeTransactions = true
         });
-
-        if (Transaction == null) return NotFound();
-
+        
+        Transactions = Wallet.Transactions.OrderByDescending(t => t.CreatedAt);
+        
         return Page();
     }
 }

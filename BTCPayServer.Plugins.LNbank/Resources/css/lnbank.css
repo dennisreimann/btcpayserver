@@ -31,8 +31,7 @@ main section > .container {
 
 main section .row .table {
     width: 100%;
-    margin-left: 0;
-    margin-right: 0;
+    margin-top: 0;
 }
 
 main p {

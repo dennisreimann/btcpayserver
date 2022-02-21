@@ -16,8 +16,6 @@ namespace BTCPayServer.Plugins.LNbank.Pages.Wallets;
 public class IndexModel : BasePageModel
 {
     public IEnumerable<Wallet> Wallets { get; set; }
-    public Wallet SelectedWallet { get; set; }
-    public IEnumerable<Transaction> Transactions { get; set; }
 
     public IndexModel(
         UserManager<ApplicationUser> userManager, 
@@ -39,16 +37,6 @@ public class IndexModel : BasePageModel
         if (walletId == null && list.Count == 1)
         {
             return RedirectToPage("./Index", new { list.First().WalletId });
-        }
-        
-        if (walletId != null)
-        {
-            SelectedWallet = list.FirstOrDefault(w => w.WalletId == walletId);
-            if (SelectedWallet == null)
-            {
-                return NotFound();
-            }
-            Transactions = SelectedWallet.Transactions.OrderByDescending(t => t.CreatedAt);
         }
         
         return Page();

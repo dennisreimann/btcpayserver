@@ -1,118 +1,27 @@
-@page "/plugins/lnbank/wallets/{walletId?}"
-@using System.Globalization
+@page "/plugins/lnbank/wallets"
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.IndexModel
 
 @{
-    ViewData.SetActivePage(LNbankNavPages.Wallets, Model.SelectedWallet != null ? $"LNbank {Model.SelectedWallet.Name}": "LNbank Wallets");
+    ViewData.SetActivePage(LNbankNavPages.Wallets, "LNbank Wallets");
 }
 
-<h2 class="mt-1 mb-4">LNbank Wallets</h2>
+<h2 class="mt-1 mb-4">@ViewData["Title"]</h2>
 
-@if (Model.Wallets.Any())
-{
-    <div class="row">
-        <div class="col-12 col-xl-3 mb-5 mb-xl-0">
-            <div class="nav flex-column nav-pills mb-3" id="LNbank-Wallets" role="tablist" aria-orientation="vertical">
-                @foreach (var wallet in Model.Wallets)
-                {
-                    <a asp-route-walletId="@wallet.WalletId" role="tab" class="nav-link d-flex justify-content-between align-items-center @(wallet == Model.SelectedWallet ? "active" : "")" aria-selected="@(wallet == Model.SelectedWallet ? "true" : "false")">
-                        <span class="wallet-name">@wallet.Name</span>
-                        <span class="badge bg-light">
-                            @Helpers.Sats(wallet.Balance)
-                        </span>
-                    </a>
-                }
-            </div>
-
-            <a asp-page="./Create" class="text-secondary d-inline-flex align-items-center ps-3" id="LNbank-CreateWallet">
-                Create a wallet
+<ul class="nav flex-column" id="LNbank-Wallets" style="max-width:16rem;">
+    @foreach (var wallet in Model.Wallets)
+    {
+        <li class="nav-item mb-3">
+            <a asp-page="./Wallet"  asp-route-walletId="@wallet.WalletId" class="nav-link d-flex align-items-center justify-content-between p-0">
+                <span class="wallet-name me-2">@wallet.Name</span>
+                <span class="badge bg-light">
+                    @Helpers.Sats(wallet.Balance)
+                </span>
             </a>
-        </div>
-        @if (Model.SelectedWallet != null)
-        {
-            <div class="col-12 col-xl-9">
-                <header class="d-grid d-sm-flex align-items-center justify-content-between mb-0">
-                    <div class="mb-3">
-                        <h3 class="mb-1">@Model.SelectedWallet.Name</h3>
-                        <div class="text-muted fw-semibold" id="LNbank-WalletBalance">
-                            @Helpers.Sats(Model.SelectedWallet.Balance)
-                        </div>
-                    </div>
-                    <div class="d-flex gap-3 align-items-stretch mb-3">
-                        <a asp-page="./Send" asp-route-walletId="@Model.SelectedWallet.WalletId" class="btn btn-primary d-inline-flex align-items-center" id="LNbank-WalletSend">
-                            Send
-                        </a>
-                        <a asp-page="./Receive" asp-route-walletId="@Model.SelectedWallet.WalletId" class="btn btn-primary d-inline-flex align-items-center" id="LNbank-WalletReceive">
-                            Receive
-                        </a>
-                        <a asp-page="./Details" asp-route-walletId="@Model.SelectedWallet.WalletId" class="btn btn-secondary d-inline-flex align-items-center" id="LNbank-WalletSettings">
-                            @await Component.InvokeAsync("Icon", new { symbol = "settings" })
-                        </a>
-                    </div>
-                </header>
-                @if (Model.Transactions.Any())
-                {
-                    <div class="table-responsive-md">
-                        <table class="table table-sm table-hover">
-                            <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Description</th>
-                                <th class="text-end">Amount</th>
-                                <th class="text-end">Settled</th>
-                            </tr>
-                            </thead>
-                            <tbody id="LNbank-WalletTransactions">
-                            @foreach (var transaction in Model.Transactions)
-                            {
-                                <tr>
-                                    <td>
-                                        <a asp-page="/Transactions/Details" asp-route-walletId="@Model.SelectedWallet.WalletId" asp-route-transactionId="@transaction.TransactionId" class="transaction-details">
-                                            <time datetime="@transaction.CreatedAt.ToString("o", CultureInfo.InvariantCulture)">
-                                                @transaction.CreatedAt.ToTimeAgo()
-                                            </time>
-                                        </a>
-                                    </td>
-                                    <td class="transaction-description">
-                                        @transaction.Description
-                                    </td>
-                                    <td class="text-nowrap text-end transaction-amount">
-                                        @Helpers.Sats(transaction.Amount)
-                                    </td>
-                                    <td class="text-nowrap text-end">
-                                        @if (transaction.IsPaid)
-                                        {
-                                            <span class="text-@(transaction.AmountSettled > 0 ? "success" : "danger") transaction-settled">
-                                                @Helpers.Sats(transaction.AmountSettled)
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-@(transaction.IsExpired ? "info" : "warning") transaction-status">
-                                                @transaction.Status
-                                            </span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-                else
-                {
-                    <p id="LNbank-WalletTransactions" class="text-secondary">There are no transactions yet.</p>
-                }
-            </div>
-        }
-    </div>
-}
-else
-{
-    <p class="text-secondary">You don't have a wallet yet.</p>
-
-    <a asp-page="./Create" class="btn btn-primary d-inline-flex align-items-center">
-        Create a wallet
-    </a>
-}
-
+        </li>
+    }
+    <li class="nav-item">
+        <a asp-page="./Create" class="nav-link p-0" id="LNbank-CreateWallet">
+            Create a wallet
+        </a>
+    </li>
+</ul>

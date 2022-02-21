@@ -1,0 +1,84 @@
+@page "/plugins/lnbank/wallets/{walletId}"
+@using System.Globalization
+@model BTCPayServer.Plugins.LNbank.Pages.Wallets.WalletModel
+
+@{
+    ViewData.SetActivePage(LNbankNavPages.Wallets, Model.Wallet.Name);
+}
+
+<div class="sticky-header-setup"></div>
+<div class="sticky-header d-sm-flex align-items-center justify-content-between">
+    <a class="unobtrusive-link">
+        <h2 asp-page="./Wallet" asp-route-walletId="@Model.Wallet.WalletId"  class="mb-1">@Model.Wallet.Name</h2>
+        <div class="text-muted fw-semibold" id="LNbank-WalletBalance">
+            @Helpers.Sats(Model.Wallet.Balance)
+        </div>
+    </a>
+    <div class="d-flex gap-3 mt-3 mt-sm-0">
+        <a asp-page="./Send" asp-route-walletId="@Model.Wallet.WalletId" class="btn btn-primary d-inline-flex align-items-center" id="LNbank-WalletSend">
+            Send
+        </a>
+        <a asp-page="./Receive" asp-route-walletId="@Model.Wallet.WalletId" class="btn btn-primary d-inline-flex align-items-center" id="LNbank-WalletReceive">
+            Receive
+        </a>
+        <a asp-page="./Details" asp-route-walletId="@Model.Wallet.WalletId" class="btn btn-secondary d-inline-flex align-items-center" id="LNbank-WalletSettings">
+            @await Component.InvokeAsync("Icon", new { symbol = "settings" })
+        </a>
+    </div>
+</div>
+@if (Model.Transactions.Any())
+{
+    <div class="row">
+        <div class="col table-responsive-md">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-end">Settled</th>
+                </tr>
+                </thead>
+                <tbody id="LNbank-WalletTransactions">
+                @foreach (var transaction in Model.Transactions)
+                {
+                    <tr>
+                        <td>
+                            <a asp-page="/Transactions/Details" asp-route-walletId="@Model.Wallet.WalletId" asp-route-transactionId="@transaction.TransactionId" class="transaction-details">
+                                <time datetime="@transaction.CreatedAt.ToString("o", CultureInfo.InvariantCulture)">
+                                    @transaction.CreatedAt.ToTimeAgo()
+                                </time>
+                            </a>
+                        </td>
+                        <td class="transaction-description">
+                            @transaction.Description
+                        </td>
+                        <td class="text-nowrap text-end transaction-amount">
+                            @Helpers.Sats(transaction.Amount)
+                        </td>
+                        <td class="text-nowrap text-end">
+                            @if (transaction.IsPaid)
+                            {
+                                <span class="text-@(transaction.AmountSettled > 0 ? "success" : "danger") transaction-settled">
+                                    @Helpers.Sats(transaction.AmountSettled)
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="text-@(transaction.IsExpired ? "info" : "warning") transaction-status">
+                                    @transaction.Status
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <p id="LNbank-WalletTransactions" class="text-secondary">There are no transactions yet.</p>
+}
+
