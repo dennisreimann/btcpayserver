@@ -241,7 +241,7 @@ namespace BTCPayServer
                 return NotFound();
             }
 
-            var lnAddress = username is null ? null : $"{username}@{Request.Host.ToString()}";
+            var lnAddress = username is null ? null : $"{username}@{Request.Host}";
             List<string[]> lnurlMetadata = new List<string[]>();
 
             var i = await _invoiceController.CreateInvoiceCoreRaw(
@@ -306,6 +306,8 @@ namespace BTCPayServer
             {
                 return NotFound();
             }
+            if (comment is not null)
+                comment = comment.Truncate(2000);
 
             var pmi = new PaymentMethodId(cryptoCode, PaymentTypes.LNURLPay);
             var i = await _invoiceRepository.GetInvoice(invoiceId, true);
