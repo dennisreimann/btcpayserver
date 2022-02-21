@@ -51,7 +51,7 @@ public class EditModel : BasePageModel
         if (await TryUpdateModelAsync(Transaction, "transaction", t => t.Description))
         {
             await WalletService.UpdateTransaction(Transaction);
-            return RedirectToPage("/Wallets/Index", new { walletId });
+            return RedirectToPage("/Wallets/Wallet", new { walletId });
         }
 
         return Page();

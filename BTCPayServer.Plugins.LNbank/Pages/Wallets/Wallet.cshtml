@@ -42,7 +42,7 @@
                 <tbody id="LNbank-WalletTransactions">
                 @foreach (var transaction in Model.Transactions)
                 {
-                    <tr>
+                    <tr id="LNbank-Transaction-@transaction.TransactionId">
                         <td>
                             <a asp-page="/Transactions/Details" asp-route-walletId="@Model.Wallet.WalletId" asp-route-transactionId="@transaction.TransactionId" class="transaction-details">
                                 <time datetime="@transaction.CreatedAt.ToString("o", CultureInfo.InvariantCulture)">
@@ -50,8 +50,11 @@
                                 </time>
                             </a>
                         </td>
-                        <td class="transaction-description">
-                            @transaction.Description
+                        <td>
+                            <span class="transaction-description">@transaction.Description</span>
+                            <a asp-page="/Transactions/Edit" asp-route-walletId="@Model.Wallet.WalletId" asp-route-transactionId="@transaction.TransactionId" class="transaction-edit">
+                                Edit
+                            </a>
                         </td>
                         <td class="text-nowrap text-end transaction-amount">
                             @Helpers.Sats(transaction.Amount)
@@ -59,9 +62,18 @@
                         <td class="text-nowrap text-end">
                             @if (transaction.IsPaid)
                             {
-                                <span class="text-@(transaction.AmountSettled > 0 ? "success" : "danger") transaction-settled">
-                                    @Helpers.Sats(transaction.AmountSettled)
-                                </span>
+                                @if (transaction.RoutingFee != null)
+                                {
+                                    <span class="text-@(transaction.AmountSettled > 0 ? "success" : "danger") transaction-settled" data-bs-toggle="tooltip" data-bs-placement="left" title="Includes @Helpers.Millisats(transaction.RoutingFee) routing fee">
+                                        @Helpers.Sats(transaction.AmountSettled)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-@(transaction.AmountSettled > 0 ? "success" : "danger") transaction-settled">
+                                        @Helpers.Sats(transaction.AmountSettled)
+                                    </span>
+                                }
                             }
                             else
                             {

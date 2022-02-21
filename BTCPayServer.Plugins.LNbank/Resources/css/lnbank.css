@@ -52,3 +52,11 @@ main svg[role="img"]:not(.icon) {
     width: 1em;
     height: 1em;
 }
+
+main table .transaction-edit {
+    visibility: hidden;
+}
+
+main table tr:hover .transaction-edit {
+    visibility: visible;
+}
