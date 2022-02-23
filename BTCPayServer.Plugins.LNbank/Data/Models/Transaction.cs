@@ -29,12 +29,13 @@ public class Transaction
     [DisplayName("Payment date")]
     public DateTimeOffset? PaidAt { get; set; }
     public Wallet Wallet { get; set; }
+    public string ExplicitStatus { get; set; }
 
     private const string StatusPaid = "paid";
     private const string StatusUnpaid = "unpaid";
     private const string StatusExpired = "expired";
     private const string StatusCancelled = "cancelled";
-    private string ExplicitStatus { get; set; }
+    
     public string Status
     {
         get
@@ -59,16 +60,13 @@ public class Transaction
 
     public LightningInvoiceStatus LightningInvoiceStatus
     {
-        get
+        get => Status switch
         {
-            return Status switch
-            {
-                StatusPaid => LightningInvoiceStatus.Paid,
-                StatusUnpaid => LightningInvoiceStatus.Unpaid,
-                StatusExpired => LightningInvoiceStatus.Expired,
-                _ => throw new NotSupportedException($"'{Status}' cannot be mapped to any LightningInvoiceStatus")
-            };
-        }
+            StatusPaid => LightningInvoiceStatus.Paid,
+            StatusUnpaid => LightningInvoiceStatus.Unpaid,
+            StatusExpired => LightningInvoiceStatus.Expired,
+            _ => throw new NotSupportedException($"'{Status}' cannot be mapped to any LightningInvoiceStatus")
+        };
     }
 
     public bool IsPaid => Status == StatusPaid;

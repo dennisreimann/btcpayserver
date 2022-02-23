@@ -19,17 +19,16 @@ public class Wallet
     public string Name { get; set; }
     [DisplayName("Creation date")]
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-    public List<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 
     public LightMoney Balance
     {
-        get
-        {
-            return Transactions
+        get => Transactions
                 .Where(t => t.AmountSettled != null)
                 .Aggregate(new LightMoney(0), (total, t) => total + t.AmountSettled);
-        }
     }
 
-    public List<AccessKey> AccessKeys { get; set; } = new List<AccessKey>();
+    public ICollection<AccessKey> AccessKeys { get; set; } = new List<AccessKey>();
+
+    public bool IsSoftDeleted { get; set; }
 }

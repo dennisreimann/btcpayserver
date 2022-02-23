@@ -47,17 +47,19 @@ public class LNbankPluginDbContext : DbContext
                 }
             }
         }
-            
+
         modelBuilder.Entity<Wallet>().HasIndex(o => o.UserId);
         modelBuilder.Entity<AccessKey>().HasIndex(o => o.WalletId);
         modelBuilder.Entity<Transaction>().HasIndex(o => o.InvoiceId);
         modelBuilder.Entity<Transaction>().HasIndex(o => o.WalletId);
             
+        modelBuilder.Entity<Wallet>().HasQueryFilter(w => !w.IsSoftDeleted);
+        
         modelBuilder
             .Entity<AccessKey>()
             .HasOne(o => o.Wallet)
             .WithMany(w => w.AccessKeys)
-            .OnDelete(DeleteBehavior.Cascade);    
+            .OnDelete(DeleteBehavior.Cascade);
             
         modelBuilder
             .Entity<Transaction>()

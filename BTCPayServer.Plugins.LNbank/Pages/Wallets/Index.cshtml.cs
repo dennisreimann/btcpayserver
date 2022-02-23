@@ -34,11 +34,6 @@ public class IndexModel : BasePageModel
             return RedirectToRoute("./Create");
         }
         
-        if (walletId == null && list.Count == 1)
-        {
-            return RedirectToPage("./Wallet", new { list.First().WalletId });
-        }
-        
         return Page();
     }
 }

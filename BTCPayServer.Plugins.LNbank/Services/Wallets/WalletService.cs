@@ -224,7 +224,7 @@ public class WalletService
         if (string.IsNullOrEmpty(wallet.WalletId))
         {
             wallet.AccessKeys ??= new List<AccessKey>();
-            wallet.AccessKeys.Add(new AccessKey()
+            wallet.AccessKeys.Add(new AccessKey
             {
                 Key = Encoders.Hex.EncodeData(RandomUtils.GetBytes(20))
             });
@@ -240,9 +240,13 @@ public class WalletService
 
     public async Task RemoveWallet(Wallet wallet)
     {
+        /*
         await using var dbContext = _dbContextFactory.CreateContext();
         dbContext.Wallets.Remove(wallet);
         await dbContext.SaveChangesAsync();
+        */
+        wallet.IsSoftDeleted = true;
+        await AddOrUpdateWallet(wallet);
     }
 
     public async Task<IEnumerable<Transaction>> GetPendingTransactions()
