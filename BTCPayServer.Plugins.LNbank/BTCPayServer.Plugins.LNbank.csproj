@@ -12,10 +12,8 @@
     <RepositoryUrl>https://github.com/dennisreimann/btcpayserver/tree/plugins</RepositoryUrl>
     <LangVersion>10</LangVersion>
     <PackageVersion>1.1.0</PackageVersion>
-
   </PropertyGroup>
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="..\BTCPayServer.Abstractions\BTCPayServer.Abstractions.csproj" />
     <ProjectReference Include="..\BTCPayServer.Common\BTCPayServer.Common.csproj" />
     <ProjectReference Include="..\BTCPayServer.Data\BTCPayServer.Data.csproj" />
