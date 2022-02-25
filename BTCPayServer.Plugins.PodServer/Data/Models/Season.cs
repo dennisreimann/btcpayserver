@@ -4,15 +4,22 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BTCPayServer.Plugins.PodServer.Data.Models;
 
-public class Podcast
+public class Season
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [DisplayName("Podcast ID")]
+    [DisplayName("Season ID")]
+    public string SeasonId { get; set; }
+    
+    // Relations
+    [Required]
     public string PodcastId { get; set; }
 
-    [DisplayName("User ID")] public string UserId { get; set; }
+    public Podcast Podcast { get; set; }
+    
+    // Properties
     [Required]
-    public string Name { get; set; }
+    public int Number { get; set; }
 
-    public List<Episode> Episodes { get; set; } = new List<Episode>();
+    [MaxLength(128)]
+    public string Name { get; set; }
 }
