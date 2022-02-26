@@ -2,5 +2,9 @@ namespace BTCPayServer.Plugins.PodServer.Pages;
 
 public enum PodServerNavPages
 {
-    Index
+    EditPodcast,
+    Podcasts,
+    Podcast,
+    EditEpisode,
+    Episode
 }

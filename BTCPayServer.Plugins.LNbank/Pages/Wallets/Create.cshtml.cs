@@ -7,7 +7,6 @@ using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace BTCPayServer.Plugins.LNbank.Pages.Wallets;
 

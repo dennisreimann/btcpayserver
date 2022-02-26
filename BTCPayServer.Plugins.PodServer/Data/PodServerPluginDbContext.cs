@@ -43,10 +43,6 @@ public class PodServerPluginDbContext : DbContext
                 }
             }
         }
-            
-        modelBuilder.Entity<Podcast>().HasIndex(o => o.UserId);
-        modelBuilder.Entity<Season>().HasIndex(o => o.PodcastId);
-        modelBuilder.Entity<Episode>().HasIndex(o => o.PodcastId);
         
         modelBuilder
             .Entity<Contribution>()

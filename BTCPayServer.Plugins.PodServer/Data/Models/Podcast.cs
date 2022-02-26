@@ -29,13 +29,14 @@ public class Podcast
     
     [Required]
     public string Language { get; set; }
+    public string Category { get; set; }
     
-    [Required]
     public string MainImage { get; set; }
     
     public string Owner { get; set; }
     
     public string Email { get; set; }
     
+    [DisplayName("Website URL")]
     public string Url { get; set; }
 }

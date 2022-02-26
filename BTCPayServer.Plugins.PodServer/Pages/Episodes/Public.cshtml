@@ -1,0 +1,17 @@
+@page "/plugins/podserver/episodes/{episodeId}/public"
+@model BTCPayServer.Plugins.PodServer.Pages.Episodes.PublicModel
+
+@{
+    Layout = "_LayoutSimple";
+    ViewData.SetActivePage(PodServerNavPages.Episode, Model.Episode.Title);
+}
+
+<div class="sticky-header-setup"></div>
+<div class="sticky-header d-sm-flex align-items-center justify-content-between mb-2">
+    <h1 class="mb-0">@ViewData["Title"]</h1>
+    <div class="d-flex gap-3 mt-3 mt-sm-0">
+        <a asp-page="/Podcasts/Public" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0">@Model.Podcast.Title</a>
+    </div>
+</div>
+
+<p>@Model.Episode.Description</p>

@@ -1,0 +1,21 @@
+@page "/plugins/podserver/podcasts/{podcastId}/episodes/{episodeId}"
+@model BTCPayServer.Plugins.PodServer.Pages.Episodes.EpisodeModel
+
+@{
+    ViewData.SetActivePage(PodServerNavPages.Episode, Model.Episode.Title);
+}
+
+<div class="sticky-header-setup"></div>
+<div class="sticky-header d-sm-flex align-items-center justify-content-between mb-2">
+    <h2 class="mb-0">@ViewData["Title"]</h2>
+    <div class="d-flex gap-3 mt-3 mt-sm-0">
+        <a asp-page="/Episodes/Create" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary order-sm-1" role="button" id="EditEpisode">
+            Edit
+        </a>
+        <a class="btn btn-secondary" asp-page="./Public" asp-route-episodeId="@Model.Episode.EpisodeId" id="ViewEpisode" target="episode_@Model.Episode.EpisodeId">View</a>
+    </div>
+</div>
+
+<partial name="_StatusMessage" />
+
+<p>@Model.Episode.Description</p>

@@ -15,6 +15,12 @@ public class Episode
     
     public string Description { get; set; }
     
+    [DisplayName("Publish date")]
+    public DateTimeOffset PublishedAt { get; set; }
+    
+    [DisplayName("Last update")]
+    public DateTimeOffset LastUpdatedAt { get; set; }
+    
     public string ImageUrl { get; set; }
     
     public int Number { get; set; }

@@ -1,4 +1,5 @@
 using BTCPayServer.Data;
+using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -8,11 +9,14 @@ namespace BTCPayServer.Plugins.PodServer.Pages;
 public abstract class BasePageModel : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    protected readonly PodcastService PodcastService;
     protected string UserId => _userManager.GetUserId(User);
         
     protected BasePageModel(
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        PodcastService podcastService)
     {
         _userManager = userManager;
+        PodcastService = podcastService;
     }
 }

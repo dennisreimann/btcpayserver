@@ -1,0 +1,19 @@
+@page "/plugins/podserver/podcasts/{podcastId}/delete"
+@model BTCPayServer.Plugins.PodServer.Pages.Podcasts.DeleteModel
+
+@{
+    ViewData.SetActivePage(PodServerNavPages.EditPodcast, Model.Podcast.Title);
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+<h2 class="mt-1 mb-4">@ViewData["Title"]</h2>
+
+<p>Are you sure you want to delete this podcast?</p>
+
+<form method="post">
+    <input type="submit" value="Delete" class="btn btn-danger" id="Delete" />
+</form>
+

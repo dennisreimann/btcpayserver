@@ -37,7 +37,7 @@ namespace BTCPayServer.Plugins.PodServer
         public override void Execute(IApplicationBuilder applicationBuilder, IServiceProvider applicationBuilderApplicationServices)
         {
             base.Execute(applicationBuilder, applicationBuilderApplicationServices);
-            applicationBuilderApplicationServices.GetService<PodServerPluginDbContextFactory>().CreateContext().Database.Migrate();
+            applicationBuilderApplicationServices.GetService<PodServerPluginDbContextFactory>()?.CreateContext().Database.Migrate();
         }
     }
 }

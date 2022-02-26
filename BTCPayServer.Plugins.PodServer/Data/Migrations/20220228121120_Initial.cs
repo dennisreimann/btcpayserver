@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -21,7 +22,8 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     Title = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false),
                     Language = table.Column<string>(type: "text", nullable: false),
-                    MainImage = table.Column<string>(type: "text", nullable: false),
+                    Category = table.Column<string>(type: "text", nullable: true),
+                    MainImage = table.Column<string>(type: "text", nullable: true),
                     Owner = table.Column<string>(type: "text", nullable: true),
                     Email = table.Column<string>(type: "text", nullable: true),
                     Url = table.Column<string>(type: "text", nullable: true)
@@ -89,6 +91,8 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     EpisodeId = table.Column<string>(type: "text", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
+                    PublishedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    LastUpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     ImageUrl = table.Column<string>(type: "text", nullable: true),
                     Number = table.Column<int>(type: "integer", nullable: false),
                     PodcastId = table.Column<string>(type: "text", nullable: false),

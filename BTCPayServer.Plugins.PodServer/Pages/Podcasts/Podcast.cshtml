@@ -1,0 +1,66 @@
+@page "/plugins/podserver/podcasts/{podcastId}"
+@using System.Globalization
+@model BTCPayServer.Plugins.PodServer.Pages.Podcasts.PodcastModel
+
+@{
+    ViewData.SetActivePage(PodServerNavPages.Podcast, Model.Podcast.Title);
+}
+
+<div class="sticky-header-setup"></div>
+<div class="sticky-header d-sm-flex align-items-center justify-content-between mb-2">
+    <h2 class="mb-0">@ViewData["Title"]</h2>
+    <div class="d-flex gap-3 mt-3 mt-sm-0">
+        <a asp-page="/Episodes/Create" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary order-sm-1" role="button" id="CreatePodcast">
+            Create an episode
+        </a>
+        <a class="btn btn-secondary" asp-page="./Public" asp-route-podcastId="@Model.Podcast.PodcastId" id="ViewPodcast" target="podcast_@Model.Podcast.PodcastId">View</a>
+        <a class="btn btn-secondary" asp-page="./Edit" asp-route-podcastId="@Model.Podcast.PodcastId" id="EditPodcast">Edit</a>
+    </div>
+</div>
+
+<partial name="_StatusMessage" />
+
+<p>@Model.Podcast.Description</p>
+
+@if (Model.Episodes.Any())
+{
+    <div class="row">
+        <div class="col table-responsive-md">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="PodcastEpisodes">
+                @foreach (var episode in Model.Episodes)
+                {
+                    <tr id="Episode-@episode.EpisodeId">
+                        <td>
+                            <a asp-page="/Episodes/Episode" asp-route-podcastId="@Model.Podcast.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode">
+                                <time datetime="@episode.PublishedAt.ToString("o", CultureInfo.InvariantCulture)">
+                                    @episode.PublishedAt.ToTimeAgo()
+                                </time>
+                            </a>
+                        </td>
+                        <td class="episode-title">@episode.Title</td>
+                        <td class="text-end">
+                            <a asp-page="/Episodes/Public" asp-route-episodeId="@episode.EpisodeId" class="podcast-view" target="episode_@episode.EpisodeId">View</a>
+                            <span> - </span>
+                            <a asp-page="/Episodes/Edit" asp-route-podcastId="@episode.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode-edit">Edit</a>
+                            <span> - </span>
+                            <a asp-page="/Episodes/Delete" asp-route-podcastId="@episode.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode-delete">Delete</a>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <p id="PodcastEpisodes" class="text-secondary">There are no episodes yet.</p>
+}

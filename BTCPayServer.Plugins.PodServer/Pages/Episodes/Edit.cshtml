@@ -1,0 +1,50 @@
+@page "/plugins/podserver/podcasts/{podcastId}/episodes/{episodeId}/edit"
+@model BTCPayServer.Plugins.PodServer.Pages.Episodes.EditModel
+
+@{
+    ViewData.SetActivePage(PodServerNavPages.EditPodcast, Model.Episode.Title);
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+<form method="post">
+    <div class="sticky-header-setup"></div>
+    <div class="sticky-header d-sm-flex align-items-center justify-content-between">
+        <h2 class="mb-0">@ViewData["Title"]</h2>
+        <div class="d-flex gap-3 mt-3 mt-sm-0">
+            <button type="submit" class="btn btn-primary" id="Save">Save</button>   
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-8 col-xxl-constrain">
+            <partial name="_StatusMessage" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            
+            <div class="form-group">
+                <label asp-for="Episode.Title" class="form-label"></label>
+                <input asp-for="Episode.Title" class="form-control" required />
+                <span asp-validation-for="Episode.Title" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Episode.Description" class="form-label"></label>
+                <textarea asp-for="Episode.Description" class="form-control" rows="3" required></textarea>
+                <span asp-validation-for="Episode.Description" class="text-danger"></span>
+            </div>
+            
+            <h3 class="mt-5 mb-4">Additional information</h3>
+            <div class="form-group">
+                <label asp-for="Episode.Number" class="form-label"></label>
+                <input asp-for="Episode.Number" class="form-control">
+                <span asp-validation-for="Episode.Number" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Episode.ImageUrl" class="form-label"></label>
+                <input type="file" asp-for="Episode.ImageUrl" class="form-control">
+                <span asp-validation-for="Episode.ImageUrl" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+</form>
