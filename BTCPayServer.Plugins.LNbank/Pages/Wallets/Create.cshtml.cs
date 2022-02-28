@@ -44,6 +44,7 @@ public class CreateModel : BasePageModel
             return Redirect(ReturnUrl + $"?LNbankWallet={Wallet.WalletId}");
         }
         
+        TempData[WellKnownTempData.SuccessMessage] = "Wallet successfully created.";
         return RedirectToPage("./Index", new { walletId = Wallet.WalletId });
     }
 }

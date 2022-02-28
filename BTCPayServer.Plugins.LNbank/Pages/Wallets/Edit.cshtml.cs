@@ -50,6 +50,7 @@ public class EditModel : BasePageModel
         if (await TryUpdateModelAsync(Wallet, "wallet", w => w.Name))
         {
             await WalletService.AddOrUpdateWallet(Wallet);
+            TempData[WellKnownTempData.SuccessMessage] = "Wallet successfully updated.";
             return RedirectToPage("./Wallet", new { walletId });
         }
 

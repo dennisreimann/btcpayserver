@@ -31,7 +31,7 @@ public class IndexModel : BasePageModel
         var list = Wallets.ToList();
         if (!list.Any())
         {
-            return RedirectToRoute("./Create");
+            return RedirectToPage("./Create");
         }
         
         return Page();
