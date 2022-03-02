@@ -5,20 +5,24 @@ about: Report a bug or a technical issue
 ---
 
 <!--
-Thank you for reporting a technical issue.
+Thank you for reporting a technical issue with one of my BTCPay Server plugins, like LNbank or PodServer.
 
-This issue tracker is only for bug reports and problems. 
+For general issues with BTCPay Server please visit https://github.com/btcpayserver/btcpayserver/issues
 
-For general questions please read our documentation docs.btcpayserver.org. You can ask technical questions in discussions https://github.com/btcpayserver/btcpayserver/discussions and general support on our community chat chat.btcpayserver.org
+General support is available on our community chat chat.btcpayserver.org
 
-Please fill in as much of the template below as you're able. 
+Please fill in as much of the template below as you're able.
 -->
+
+**Plugin**
+Name and version of the plugin.
 
 **Describe the bug**
 A clear and concise description of what the bug is.
 
 **To Reproduce the bug**
 Steps to reproduce the reported bug:
+
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
@@ -32,13 +36,13 @@ A clear and concise description of what you expected to happen.
 
 **Screenshots**
 
-
 <!--
 If applicable, add screenshots to help explain your problem.
 -->
 
 **Your BTCPay Environment (please complete the following information):**
 - BTCPay Server Version:    <!--[available in the right bottom corner of footer] -->
+- Plugin Name and Version   <!--[available on the Server Settings > Plugins page] -->
 - Deployment Method:        <!--[e.g. Docker, Manual, Third-Party-host]-->
 - Browser:                  <!--[e.g. Chrome, Safari]-->
 
@@ -46,18 +50,10 @@ If applicable, add screenshots to help explain your problem.
 
 
 <!--
-Basic logs can be found in Server Settings > Logs. 
+If you are using the Docker setup, please post the output of the following command:
+
+docker logs generated_btcpayserver_1
+
+Otherwise, basic logs can be found in Server Settings > Logs.
 More logs https://docs.btcpayserver.org/Troubleshooting/#2-looking-through-the-logs
--->
-
-**Setup Parameters**
-
-<!--
-If you're reporting a deployment issue run `. btcpay-setup.sh -i` and paste the setup parameters here with your private information removed or obscured.
--->
-
-**Additional context**
-
-<!--
-Add any other context about the problem here.
 -->
