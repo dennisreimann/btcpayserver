@@ -1,6 +1,8 @@
 @page "/plugins/podserver/podcasts/{podcastId}"
 @using System.Globalization
+@using BTCPayServer.Abstractions.Contracts
 @model BTCPayServer.Plugins.PodServer.Pages.Podcasts.PodcastModel
+@inject IFileService _fileService
 
 @{
     ViewData.SetActivePage(PodServerNavPages.Podcast, Model.Podcast.Title);
@@ -19,6 +21,11 @@
 </div>
 
 <partial name="_StatusMessage" />
+
+@if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
+{
+    <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+}
 
 <p>@Model.Podcast.Description</p>
 
@@ -40,8 +47,8 @@
                     <tr id="Episode-@episode.EpisodeId">
                         <td>
                             <a asp-page="/Episodes/Episode" asp-route-podcastId="@Model.Podcast.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode">
-                                <time datetime="@episode.PublishedAt.ToString("o", CultureInfo.InvariantCulture)">
-                                    @episode.PublishedAt.ToTimeAgo()
+                                <time datetime="@episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
+                                    @episode.PublishedAt?.ToTimeAgo()
                                 </time>
                             </a>
                         </td>

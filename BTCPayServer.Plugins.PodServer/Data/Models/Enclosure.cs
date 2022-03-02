@@ -17,14 +17,15 @@ public class Enclosure
     
     // Properties
     [Required]
-    public string Url { get; set; }
+    public string FileId { get; set; }
     
     [Required]
     public string Type { get; set; }
     
-    public string Title { get; set; }
-    
+    [Required]
     public int Length { get; set; }
     
     public bool IsAlternate { get; set; }
+    
+    public string Title { get; set; }
 }

@@ -1,6 +1,8 @@
 @page "/plugins/podserver/podcasts/{podcastId}/public"
 @using System.Globalization
+@using BTCPayServer.Abstractions.Contracts
 @model BTCPayServer.Plugins.PodServer.Pages.Podcasts.PublicModel
+@inject IFileService _fileService
 
 @{
     Layout = "_LayoutSimple";
@@ -14,6 +16,11 @@
         <a asp-page="./Public" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0" role="button" id="Feed" target="feed_@Model.Podcast.PodcastId">Feed</a>
     </div>
 </div>
+
+@if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
+{
+    <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+}
 
 <p>@Model.Podcast.Description</p>
 
@@ -34,8 +41,8 @@
                     <tr id="Episode-@episode.EpisodeId">
                         <td>
                             <a asp-page="/Episode/Edit" asp-route-episode="@episode.EpisodeId" class="episode-edit">
-                                <time datetime="@episode.PublishedAt.ToString("o", CultureInfo.InvariantCulture)">
-                                    @episode.PublishedAt.ToTimeAgo()
+                                <time datetime="@episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
+                                    @episode.PublishedAt?.ToTimeAgo()
                                 </time>
                             </a>
                         </td>

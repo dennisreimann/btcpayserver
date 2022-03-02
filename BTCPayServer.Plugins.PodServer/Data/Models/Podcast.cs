@@ -31,7 +31,7 @@ public class Podcast
     public string Language { get; set; }
     public string Category { get; set; }
     
-    public string MainImage { get; set; }
+    public string ImageFileId { get; set; }
     
     public string Owner { get; set; }
     

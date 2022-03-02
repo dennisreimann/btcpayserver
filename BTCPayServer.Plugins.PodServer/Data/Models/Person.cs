@@ -25,7 +25,7 @@ public class Person
     
     public string Url { get; set; }
     
-    public string ImageUrl { get; set; }
+    public string ImageFileId { get; set; }
     
     public ValueRecipient ValueRecipient { get; set; }
 }

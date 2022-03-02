@@ -23,7 +23,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     Description = table.Column<string>(type: "text", nullable: false),
                     Language = table.Column<string>(type: "text", nullable: false),
                     Category = table.Column<string>(type: "text", nullable: true),
-                    MainImage = table.Column<string>(type: "text", nullable: true),
+                    ImageFileId = table.Column<string>(type: "text", nullable: true),
                     Owner = table.Column<string>(type: "text", nullable: true),
                     Email = table.Column<string>(type: "text", nullable: true),
                     Url = table.Column<string>(type: "text", nullable: true)
@@ -43,7 +43,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     Name = table.Column<string>(type: "text", nullable: false),
                     Email = table.Column<string>(type: "text", nullable: true),
                     Url = table.Column<string>(type: "text", nullable: true),
-                    ImageUrl = table.Column<string>(type: "text", nullable: true),
+                    ImageFileId = table.Column<string>(type: "text", nullable: true),
                     ValueRecipient_Type = table.Column<string>(type: "text", nullable: true),
                     ValueRecipient_Address = table.Column<string>(type: "text", nullable: true),
                     ValueRecipient_CustomKey = table.Column<string>(type: "text", nullable: true),
@@ -90,10 +90,10 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 {
                     EpisodeId = table.Column<string>(type: "text", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: true),
-                    PublishedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: false),
+                    PublishedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     LastUpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    ImageUrl = table.Column<string>(type: "text", nullable: true),
+                    ImageFileId = table.Column<string>(type: "text", nullable: true),
                     Number = table.Column<int>(type: "integer", nullable: false),
                     PodcastId = table.Column<string>(type: "text", nullable: false),
                     SeasonId = table.Column<string>(type: "text", nullable: true)
@@ -152,11 +152,11 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 {
                     EnclosureId = table.Column<string>(type: "text", nullable: false),
                     EpisodeId = table.Column<string>(type: "text", nullable: false),
-                    Url = table.Column<string>(type: "text", nullable: false),
+                    FileId = table.Column<string>(type: "text", nullable: false),
                     Type = table.Column<string>(type: "text", nullable: false),
-                    Title = table.Column<string>(type: "text", nullable: true),
                     Length = table.Column<int>(type: "integer", nullable: false),
-                    IsAlternate = table.Column<bool>(type: "boolean", nullable: false)
+                    IsAlternate = table.Column<bool>(type: "boolean", nullable: false),
+                    Title = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -205,12 +205,6 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 schema: "BTCPayServer.Plugins.PodServer",
                 table: "Person",
                 column: "PodcastId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Podcasts_UserId",
-                schema: "BTCPayServer.Plugins.PodServer",
-                table: "Podcasts",
-                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Season_PodcastId",

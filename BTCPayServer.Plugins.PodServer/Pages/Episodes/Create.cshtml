@@ -5,8 +5,13 @@
     ViewData.SetActivePage(PodServerNavPages.EditEpisode, "Create a new episode");
 }
 
+@section Styles {
+    <bundle name="wwwroot/bundles/summernote-bundle.min.css" asp-append-version="true"></bundle>
+}
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <bundle name="wwwroot/bundles/summernote-bundle.min.js" asp-append-version="true"></bundle>
 }
 
 <form method="post">
@@ -24,13 +29,13 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             
             <div class="form-group">
-                <label asp-for="Episode.Title" class="form-label"></label>
+                <label asp-for="Episode.Title" class="form-label" data-required></label>
                 <input asp-for="Episode.Title" class="form-control" required />
                 <span asp-validation-for="Episode.Title" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Episode.Description" class="form-label"></label>
-                <textarea asp-for="Episode.Description" class="form-control" rows="3" required></textarea>
+                <label asp-for="Episode.Description" class="form-label" data-required></label>
+                <textarea asp-for="Episode.Description" class="form-control richtext" rows="15" cols="40" required></textarea>
                 <span asp-validation-for="Episode.Description" class="text-danger"></span>
             </div>
         </div>

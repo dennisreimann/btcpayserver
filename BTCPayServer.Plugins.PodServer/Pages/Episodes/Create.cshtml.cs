@@ -42,10 +42,11 @@ public class CreateModel : BasePageModel
         {
             return Page();
         }
-            
+        
+        Episode.LastUpdatedAt = DateTimeOffset.UtcNow;
         await PodcastService.AddOrUpdateEpisode(Episode);
         
         TempData[WellKnownTempData.SuccessMessage] = "Episode successfully created.";
-        return RedirectToPage("./Episode", new { podcastId = Podcast.PodcastId, episodeId = Episode.EpisodeId });
+        return RedirectToPage("./Edit", new { podcastId = Podcast.PodcastId, episodeId = Episode.EpisodeId });
     }
 }

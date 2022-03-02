@@ -1,3 +1,4 @@
+using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Plugins.PodServer.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -7,13 +8,16 @@ namespace BTCPayServer.Plugins.PodServer.Services.Podcasts;
 public class PodcastService
 {
     private readonly ILogger _logger;
+    private readonly IFileService _fileService;
     private readonly PodServerPluginDbContextFactory _dbContextFactory;
 
     public PodcastService(
         ILogger<PodcastService> logger,
+        IFileService fileService,
         PodServerPluginDbContextFactory dbContextFactory)
     {
         _logger = logger;
+        _fileService = fileService;
         _dbContextFactory = dbContextFactory;
     }
 
@@ -76,6 +80,10 @@ public class PodcastService
 
     public async Task RemovePodcast(Podcast podcast)
     {
+        if (!string.IsNullOrEmpty(podcast.ImageFileId))
+        {
+            await _fileService.RemoveFile(podcast.ImageFileId, null);
+        }
         await using var dbContext = _dbContextFactory.CreateContext();
         dbContext.Podcasts.Remove(podcast);
         await dbContext.SaveChangesAsync();
@@ -145,6 +153,13 @@ public class PodcastService
 
     public async Task RemoveEpisode(Episode episode)
     {
+        if (!string.IsNullOrEmpty(episode.ImageFileId))
+        {
+            await _fileService.RemoveFile(episode.ImageFileId, null);
+        }
+        
+        // TODO: Delete associated enclosures
+        
         await using var dbContext = _dbContextFactory.CreateContext();
         dbContext.Episodes.Remove(episode);
         await dbContext.SaveChangesAsync();

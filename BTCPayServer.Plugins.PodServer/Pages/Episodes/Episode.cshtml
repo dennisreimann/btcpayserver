@@ -1,5 +1,7 @@
 @page "/plugins/podserver/podcasts/{podcastId}/episodes/{episodeId}"
+@using BTCPayServer.Abstractions.Contracts
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.EpisodeModel
+@inject IFileService _fileService
 
 @{
     ViewData.SetActivePage(PodServerNavPages.Episode, Model.Episode.Title);
@@ -9,7 +11,7 @@
 <div class="sticky-header d-sm-flex align-items-center justify-content-between mb-2">
     <h2 class="mb-0">@ViewData["Title"]</h2>
     <div class="d-flex gap-3 mt-3 mt-sm-0">
-        <a asp-page="/Episodes/Create" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary order-sm-1" role="button" id="EditEpisode">
+        <a asp-page="./Edit" asp-route-podcastId="@Model.Podcast.PodcastId" asp-route-episodeId="@Model.Episode.EpisodeId" class="btn btn-primary order-sm-1" role="button" id="EditEpisode">
             Edit
         </a>
         <a class="btn btn-secondary" asp-page="./Public" asp-route-episodeId="@Model.Episode.EpisodeId" id="ViewEpisode" target="episode_@Model.Episode.EpisodeId">View</a>
@@ -17,5 +19,10 @@
 </div>
 
 <partial name="_StatusMessage" />
+
+@if (!string.IsNullOrEmpty(Model.Episode.ImageFileId))
+{
+    <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Episode.ImageFileId))" alt="@Model.Episode.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+}
 
 <p>@Model.Episode.Description</p>

@@ -1,5 +1,7 @@
 @page "/plugins/podserver/episodes/{episodeId}/public"
+@using BTCPayServer.Abstractions.Contracts
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.PublicModel
+@inject IFileService _fileService
 
 @{
     Layout = "_LayoutSimple";
@@ -13,5 +15,10 @@
         <a asp-page="/Podcasts/Public" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0">@Model.Podcast.Title</a>
     </div>
 </div>
+
+@if (!string.IsNullOrEmpty(Model.Episode.ImageFileId))
+{
+    <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Episode.ImageFileId))" alt="@Model.Episode.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+}
 
 <p>@Model.Episode.Description</p>

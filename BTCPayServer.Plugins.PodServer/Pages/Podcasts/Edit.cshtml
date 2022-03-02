@@ -1,5 +1,7 @@
 @page "/plugins/podserver/podcasts/{podcastId}/edit"
+@using BTCPayServer.Abstractions.Contracts
 @model BTCPayServer.Plugins.PodServer.Pages.Podcasts.EditModel
+@inject IFileService _fileService
 
 @{
     ViewData.SetActivePage(PodServerNavPages.EditPodcast, Model.Podcast.Title);
@@ -9,7 +11,7 @@
     <partial name="_ValidationScriptsPartial" />
 }
 
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     <div class="sticky-header-setup"></div>
     <div class="sticky-header d-sm-flex align-items-center justify-content-between">
         <h2 class="mb-0">@ViewData["Title"]</h2>
@@ -24,12 +26,12 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             
             <div class="form-group">
-                <label asp-for="Podcast.Title" class="form-label"></label>
+                <label asp-for="Podcast.Title" class="form-label" data-required></label>
                 <input asp-for="Podcast.Title" class="form-control" required />
                 <span asp-validation-for="Podcast.Title" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Podcast.Language" class="form-label"></label>
+                <label asp-for="Podcast.Language" class="form-label" data-required></label>
                 <select asp-for="Podcast.Language" asp-items="Helpers.LanguageOptions" class="form-select" required></select>
                 <span asp-validation-for="Podcast.Language" class="text-danger"></span>
             </div>
@@ -39,7 +41,7 @@
                 <span asp-validation-for="Podcast.Category" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Podcast.Description" class="form-label"></label>
+                <label asp-for="Podcast.Description" class="form-label" data-required></label>
                 <textarea asp-for="Podcast.Description" class="form-control" rows="3" required></textarea>
                 <span asp-validation-for="Podcast.Description" class="text-danger"></span>
             </div>
@@ -58,12 +60,15 @@
             <div class="form-group">
                 <label asp-for="Podcast.Url" class="form-label"></label>
                 <input asp-for="Podcast.Url" class="form-control">
-                <span asp-validation-for="Podcast.MainImage" class="text-danger"></span>
+                <span asp-validation-for="Podcast.Url" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Podcast.MainImage" class="form-label"></label>
-                <input type="file" asp-for="Podcast.MainImage" class="form-control">
-                <span asp-validation-for="Podcast.MainImage" class="text-danger"></span>
+                <label for="ImageFile" class="form-label">Cover Image</label>
+                @if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
+                {
+                    <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+                }
+                <input id="ImageFile" name="ImageFile" type="file" class="form-control">
             </div>
         </div>
     </div>

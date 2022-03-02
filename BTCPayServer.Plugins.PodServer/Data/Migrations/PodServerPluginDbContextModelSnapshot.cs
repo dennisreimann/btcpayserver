@@ -60,6 +60,10 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("FileId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsAlternate")
                         .HasColumnType("boolean");
 
@@ -70,10 +74,6 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Url")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -91,9 +91,10 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<string>("ImageFileId")
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("LastUpdatedAt")
@@ -106,7 +107,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTimeOffset>("PublishedAt")
+                    b.Property<DateTimeOffset?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SeasonId")
@@ -134,7 +135,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.Property<string>("Email")
                         .HasColumnType("text");
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<string>("ImageFileId")
                         .HasColumnType("text");
 
                     b.Property<string>("Name")
@@ -171,11 +172,11 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.Property<string>("Email")
                         .HasColumnType("text");
 
-                    b.Property<string>("Language")
-                        .IsRequired()
+                    b.Property<string>("ImageFileId")
                         .HasColumnType("text");
 
-                    b.Property<string>("MainImage")
+                    b.Property<string>("Language")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Owner")
@@ -192,8 +193,6 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("PodcastId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Podcasts", "BTCPayServer.Plugins.PodServer");
                 });

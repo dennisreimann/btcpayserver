@@ -1,4 +1,5 @@
 using BTCPayServer.Abstractions.Constants;
+using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Client;
 using BTCPayServer.Data;
 using BTCPayServer.Plugins.PodServer.Data.Models;
@@ -12,10 +13,15 @@ namespace BTCPayServer.Plugins.PodServer.Pages.Podcasts;
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
 public class EditModel : BasePageModel
 {
+    private readonly IFileService _fileService;
     public Podcast Podcast { get; set; }
+    public IFormFile ImageFile { get; set; }
 
     public EditModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastService podcastService, IFileService fileService) : base(userManager, podcastService)
+    {
+        _fileService = fileService;
+    }
 
     public async Task<IActionResult> OnGet(string podcastId)
     {
@@ -37,6 +43,18 @@ public class EditModel : BasePageModel
         if (Podcast == null) return NotFound();
         
         if (!ModelState.IsValid) return Page();
+        
+        if (ImageFile != null)
+        {
+            // delete existing image
+            if (!string.IsNullOrEmpty(Podcast.ImageFileId))
+            {
+                await _fileService.RemoveFile(Podcast.ImageFileId, UserId);
+            }
+            // add new image
+            var storedFile = await _fileService.AddFile(ImageFile, UserId);
+            Podcast.ImageFileId = storedFile.Id;
+        }
 
         if (!await TryUpdateModelAsync(
                 Podcast, 
@@ -48,13 +66,13 @@ public class EditModel : BasePageModel
                 p => p.Owner,
                 p => p.Email,
                 p => p.Url,
-                p => p.MainImage))
+                p => p.ImageFileId))
         {
             return Page();
         }
         
-        TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully updated.";
         await PodcastService.AddOrUpdatePodcast(Podcast);
+        TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully updated.";
         
         return RedirectToPage("./Podcast", new { podcastId = Podcast.PodcastId });
     }

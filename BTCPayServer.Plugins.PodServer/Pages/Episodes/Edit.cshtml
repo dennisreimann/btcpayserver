@@ -1,15 +1,27 @@
 @page "/plugins/podserver/podcasts/{podcastId}/episodes/{episodeId}/edit"
+@using BTCPayServer.Abstractions.Contracts
+@using System.Globalization
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.EditModel
+@inject IFileService _fileService
 
 @{
     ViewData.SetActivePage(PodServerNavPages.EditPodcast, Model.Episode.Title);
 }
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+@section Styles {
+    <bundle name="wwwroot/bundles/summernote-bundle.min.css" asp-append-version="true"></bundle>
+    <style>
+        .flatpickr-wrapper { flex-grow: 1; }
+    </style>
 }
 
-<form method="post">
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <bundle name="wwwroot/bundles/summernote-bundle.min.js" asp-append-version="true"></bundle>
+}
+
+
+<form method="post" enctype="multipart/form-data">
     <div class="sticky-header-setup"></div>
     <div class="sticky-header d-sm-flex align-items-center justify-content-between">
         <h2 class="mb-0">@ViewData["Title"]</h2>
@@ -24,26 +36,42 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             
             <div class="form-group">
-                <label asp-for="Episode.Title" class="form-label"></label>
+                <label asp-for="Episode.Title" class="form-label" data-required></label>
                 <input asp-for="Episode.Title" class="form-control" required />
                 <span asp-validation-for="Episode.Title" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Episode.Description" class="form-label"></label>
-                <textarea asp-for="Episode.Description" class="form-control" rows="3" required></textarea>
+                <label asp-for="Episode.Description" class="form-label" data-required></label>
+                <textarea asp-for="Episode.Description" class="form-control richtext" rows="15" cols="40" required></textarea>
                 <span asp-validation-for="Episode.Description" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Episode.PublishedAt" class="form-label"></label>
+                <div class="input-group flex-nowrap">
+                    <input type="datetime-local" asp-for="Episode.PublishedAt"
+                           value="@(Model.Episode.PublishedAt?.ToString("u", CultureInfo.InvariantCulture))"
+                           class="form-control flatdtpicker"
+                           placeholder="No publish date has been set" />
+                    <button class="btn btn-secondary input-group-clear" type="button" title="Clear">
+                        <span class="fa fa-times"></span>
+                    </button>
+                </div>
+                <span asp-validation-for="Episode.PublishedAt" class="text-danger"></span>
             </div>
             
             <h3 class="mt-5 mb-4">Additional information</h3>
             <div class="form-group">
                 <label asp-for="Episode.Number" class="form-label"></label>
-                <input asp-for="Episode.Number" class="form-control">
+                <input asp-for="Episode.Number" class="form-control" type="number">
                 <span asp-validation-for="Episode.Number" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Episode.ImageUrl" class="form-label"></label>
-                <input type="file" asp-for="Episode.ImageUrl" class="form-control">
-                <span asp-validation-for="Episode.ImageUrl" class="text-danger"></span>
+                <label for="ImageFile" class="form-label">Cover Image</label>
+                @if (!string.IsNullOrEmpty(Model.Episode.ImageFileId))
+                {
+                    <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Episode.ImageFileId))" alt="@Model.Episode.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+                }
+                <input id="ImageFile" name="ImageFile" type="file" class="form-control">
             </div>
         </div>
     </div>

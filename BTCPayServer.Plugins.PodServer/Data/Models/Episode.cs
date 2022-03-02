@@ -13,16 +13,16 @@ public class Episode
     [Required]
     public string Title { get; set; }
     
+    [Required]
     public string Description { get; set; }
     
     [DisplayName("Publish date")]
-    public DateTimeOffset PublishedAt { get; set; }
+    public DateTimeOffset? PublishedAt { get; set; }
     
     [DisplayName("Last update")]
     public DateTimeOffset LastUpdatedAt { get; set; }
     
-    public string ImageUrl { get; set; }
-    
+    public string ImageFileId { get; set; }
     public int Number { get; set; }
     
     // Relations

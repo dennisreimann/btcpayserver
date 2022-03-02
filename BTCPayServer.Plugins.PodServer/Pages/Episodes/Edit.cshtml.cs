@@ -1,4 +1,5 @@
 using BTCPayServer.Abstractions.Constants;
+using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Client;
 using BTCPayServer.Data;
 using BTCPayServer.Plugins.PodServer.Data.Models;
@@ -12,11 +13,16 @@ namespace BTCPayServer.Plugins.PodServer.Pages.Episodes;
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
 public class EditModel : BasePageModel
 {
+    private readonly IFileService _fileService;
     public Podcast Podcast { get; set; }
     public Episode Episode { get; set; }
+    public IFormFile ImageFile { get; set; }
 
     public EditModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastService podcastService, IFileService fileService) : base(userManager, podcastService)
+    {
+        _fileService = fileService;
+    }
 
     public async Task<IActionResult> OnGet(string podcastId, string episodeId)
     {
@@ -50,18 +56,34 @@ public class EditModel : BasePageModel
         if (Episode == null) return NotFound();
         
         if (!ModelState.IsValid) return Page();
+        
+        if (ImageFile != null)
+        {
+            // delete existing image
+            if (!string.IsNullOrEmpty(Episode.ImageFileId))
+            {
+                await _fileService.RemoveFile(Episode.ImageFileId, UserId);
+            }
+            // add new image
+            var storedFile = await _fileService.AddFile(ImageFile, UserId);
+            Episode.ImageFileId = storedFile.Id;
+        }
 
         if (!await TryUpdateModelAsync(
             Episode, 
             "episode",
-            p => p.Title,
-            p => p.Description))
+            e => e.Title,
+            e => e.Description,
+            e => e.Number,
+            e => e.ImageFileId,
+            e => e.PublishedAt))
         {
             return Page();
         }
         
-        TempData[WellKnownTempData.SuccessMessage] = "Episode successfully updated.";
+        Episode.LastUpdatedAt = DateTimeOffset.UtcNow; 
         await PodcastService.AddOrUpdateEpisode(Episode);
+        TempData[WellKnownTempData.SuccessMessage] = "Episode successfully updated.";
         
         return RedirectToPage("./Episode", new { podcastId = Podcast.PodcastId, episodeId = Episode.EpisodeId });
     }

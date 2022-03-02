@@ -13,7 +13,6 @@ public class Season
     // Relations
     [Required]
     public string PodcastId { get; set; }
-
     public Podcast Podcast { get; set; }
     
     // Properties
