@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -12,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Constants;
+using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Abstractions.Models;
 using BTCPayServer.BIP78.Sender;
 using BTCPayServer.Configuration;
@@ -28,12 +28,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Payment;
-using NBitpayClient;
-using NBXplorer.DerivationStrategy;
 using NBXplorer.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -43,20 +40,10 @@ namespace BTCPayServer
 {
     public static class Extensions
     {
-
         public static bool TryGetPayjoinEndpoint(this BitcoinUrlBuilder bip21, out Uri endpoint)
         {
             endpoint = bip21.UnknownParameters.TryGetValue($"{PayjoinClient.BIP21EndpointKey}", out var uri) ? new Uri(uri, UriKind.Absolute) : null;
             return endpoint != null;
-        }
-
-        public static bool IsValidFileName(this string fileName)
-        {
-            return !fileName.ToCharArray().Any(c => Path.GetInvalidFileNameChars().Contains(c)
-            || c == Path.AltDirectorySeparatorChar
-            || c == Path.DirectorySeparatorChar
-            || c == Path.PathSeparator
-            || c == '\\');
         }
 
         public static bool IsSafe(this LightningConnectionString connectionString)
@@ -79,13 +66,6 @@ namespace BTCPayServer
             return System.Linq.Queryable.Where(obj, predicate);
         }
 
-        public static string Truncate(this string value, int maxLength)
-        {
-            if (string.IsNullOrEmpty(value))
-                return value;
-            return value.Length <= maxLength ? value : value.Substring(0, maxLength);
-        }
-
         public static string PrettyPrint(this TimeSpan expiration)
         {
             StringBuilder builder = new StringBuilder();
@@ -96,6 +76,7 @@ namespace BTCPayServer
             builder.Append(CultureInfo.InvariantCulture, $"{expiration.Minutes.ToString("00", CultureInfo.InvariantCulture)}:{expiration.Seconds.ToString("00", CultureInfo.InvariantCulture)}");
             return builder.ToString();
         }
+        
         public static decimal RoundUp(decimal value, int precision)
         {
             for (int i = 0; i < precision; i++)
@@ -110,22 +91,11 @@ namespace BTCPayServer
             return value;
         }
 
-        public static bool HasStatusMessage(this ITempDataDictionary tempData)
-        {
-            return (tempData.Peek(WellKnownTempData.SuccessMessage) ??
-                   tempData.Peek(WellKnownTempData.ErrorMessage) ??
-                   tempData.Peek("StatusMessageModel")) != null;
-        }
-
-        public static bool HasErrorMessage(this ITempDataDictionary tempData)
-        {
-            return GetStatusMessageModel(tempData)?.Severity == StatusMessageModel.StatusSeverity.Error;
-        }
-
         public static PaymentMethodId GetpaymentMethodId(this InvoiceCryptoInfo info)
         {
             return new PaymentMethodId(info.CryptoCode, PaymentTypes.Parse(info.PaymentType));
         }
+        
         public static async Task CloseSocket(this WebSocket webSocket)
         {
             try
@@ -180,25 +150,6 @@ namespace BTCPayServer
             return result.PSBT;
         }
 
-        public static string WithTrailingSlash(this string str)
-        {
-            if (str.EndsWith("/", StringComparison.InvariantCulture))
-                return str;
-            return str + "/";
-        }
-        public static string WithStartingSlash(this string str)
-        {
-            if (str.StartsWith("/", StringComparison.InvariantCulture))
-                return str;
-            return $"/{str}";
-        }
-        public static string WithoutEndingSlash(this string str)
-        {
-            if (str.EndsWith("/", StringComparison.InvariantCulture))
-                return str.Substring(0, str.Length - 1);
-            return str;
-        }
-
         public static void SetHeaderOnStarting(this HttpResponse resp, string name, string value)
         {
             if (resp.HasStarted)
@@ -236,152 +187,11 @@ namespace BTCPayServer
             return false;
         }
 
-
-
-        public static StatusMessageModel GetStatusMessageModel(this ITempDataDictionary tempData)
-        {
-            tempData.TryGetValue(WellKnownTempData.SuccessMessage, out var successMessage);
-            tempData.TryGetValue(WellKnownTempData.ErrorMessage, out var errorMessage);
-            tempData.TryGetValue("StatusMessageModel", out var model);
-            if (successMessage != null || errorMessage != null)
-            {
-                var parsedModel = new StatusMessageModel();
-                parsedModel.Message = (string)successMessage ?? (string)errorMessage;
-                if (successMessage != null)
-                {
-                    parsedModel.Severity = StatusMessageModel.StatusSeverity.Success;
-                }
-                else
-                {
-                    parsedModel.Severity = StatusMessageModel.StatusSeverity.Error;
-                }
-                return parsedModel;
-            }
-            else if (model != null && model is string str)
-            {
-                return JObject.Parse(str).ToObject<StatusMessageModel>();
-            }
-            return null;
-        }
-
-        public static bool IsOnion(this HttpRequest request)
-        {
-            if (request?.Host.Host == null)
-                return false;
-            return request.Host.Host.EndsWith(".onion", StringComparison.OrdinalIgnoreCase);
-        }
-
         public static bool IsOnion(this Uri uri)
         {
             if (uri == null || !uri.IsAbsoluteUri)
                 return false;
             return uri.DnsSafeHost.EndsWith(".onion", StringComparison.OrdinalIgnoreCase);
-        }
-
-
-        public static string GetAbsoluteRoot(this HttpRequest request)
-        {
-            return string.Concat(
-                        request.Scheme,
-                        "://",
-                        request.Host.ToUriComponent(),
-                        request.PathBase.ToUriComponent());
-        }
-
-        public static Uri GetAbsoluteRootUri(this HttpRequest request)
-        {
-            return new Uri(request.GetAbsoluteRoot());
-        }
-
-        public static string GetCurrentUrl(this HttpRequest request)
-        {
-            return string.Concat(
-                        request.Scheme,
-                        "://",
-                        request.Host.ToUriComponent(),
-                        request.PathBase.ToUriComponent(),
-                        request.Path.ToUriComponent());
-        }
-
-        public static string GetCurrentPath(this HttpRequest request)
-        {
-            return string.Concat(
-                        request.PathBase.ToUriComponent(),
-                        request.Path.ToUriComponent());
-        }
-        public static string GetCurrentPathWithQueryString(this HttpRequest request)
-        {
-            return request.PathBase + request.Path + request.QueryString;
-        }
-
-        /// <summary>
-        /// If 'toto' and RootPath is 'rootpath' returns '/rootpath/toto'
-        /// If 'toto' and RootPath is empty returns '/toto'
-        /// </summary>
-        /// <param name="request"></param>
-        /// <param name="path"></param>
-        /// <returns></returns>
-        public static string GetRelativePath(this HttpRequest request, string path)
-        {
-            if (path.Length > 0 && path[0] != '/')
-                path = $"/{path}";
-            return string.Concat(
-                        request.PathBase.ToUriComponent(),
-                        path);
-        }
-
-        /// <summary>
-        /// If 'https://example.com/toto' returns 'https://example.com/toto'
-        /// If 'toto' and RootPath is 'rootpath' returns '/rootpath/toto'
-        /// If 'toto' and RootPath is empty returns '/toto'
-        /// </summary>
-        /// <param name="request"></param>
-        /// <param name="path"></param>
-        /// <returns></returns>
-        public static string GetRelativePathOrAbsolute(this HttpRequest request, string path)
-        {
-            if (!Uri.TryCreate(path, UriKind.RelativeOrAbsolute, out var uri) ||
-                uri.IsAbsoluteUri)
-                return path;
-
-            if (path.Length > 0 && path[0] != '/')
-                path = $"/{path}";
-            return string.Concat(
-                        request.PathBase.ToUriComponent(),
-                        path);
-        }
-
-        public static string GetAbsoluteUri(this HttpRequest request, string redirectUrl)
-        {
-            bool isRelative =
-                (redirectUrl.Length > 0 && redirectUrl[0] == '/')
-                || !new Uri(redirectUrl, UriKind.RelativeOrAbsolute).IsAbsoluteUri;
-            return isRelative ? request.GetAbsoluteRoot() + redirectUrl : redirectUrl;
-        }
-
-        /// <summary>
-        /// Will return an absolute URL. 
-        /// If `relativeOrAsbolute` is absolute, returns it.
-        /// If `relativeOrAsbolute` is relative, send absolute url based on the HOST of this request (without PathBase)
-        /// </summary>
-        /// <param name="request"></param>
-        /// <param name="relativeOrAbsolte"></param>
-        /// <returns></returns>
-        public static Uri GetAbsoluteUriNoPathBase(this HttpRequest request, Uri relativeOrAbsolute = null)
-        {
-            if (relativeOrAbsolute == null)
-            {
-                return new Uri(string.Concat(
-                    request.Scheme,
-                    "://",
-                    request.Host.ToUriComponent()), UriKind.Absolute);
-            }
-            if (relativeOrAbsolute.IsAbsoluteUri)
-                return relativeOrAbsolute;
-            return new Uri(string.Concat(
-                    request.Scheme,
-                    "://",
-                    request.Host.ToUriComponent()) + relativeOrAbsolute.ToString().WithStartingSlash(), UriKind.Absolute);
         }
 
         public static string GetSIN(this ClaimsPrincipal principal)
