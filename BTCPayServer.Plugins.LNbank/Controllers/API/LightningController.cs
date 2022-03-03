@@ -36,11 +36,11 @@ public class LightningController : BaseApiController
         Transaction transaction;
         if (req.Description is null)
         {
-            transaction = await _walletService.Receive(Wallet, req.Amount, req.DescriptionHash, req.PrivateRouteHints);
+            transaction = await _walletService.Receive(Wallet, req.Amount, req.DescriptionHash, req.PrivateRouteHints, req.Expiry);
         }
         else
         {
-            transaction = await _walletService.Receive(Wallet, req.Amount, req.Description, true, req.PrivateRouteHints);
+            transaction = await _walletService.Receive(Wallet, req.Amount, req.Description, true, req.PrivateRouteHints, req.Expiry);
         }
           
         var data = ToLightningInvoiceData(transaction);

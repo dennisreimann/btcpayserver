@@ -78,7 +78,7 @@ public class WalletService
     public async Task<Wallet> GetWallet(WalletQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        var walletsQuery = new WalletsQuery()
+        var walletsQuery = new WalletsQuery
         {
             IncludeTransactions = query.IncludeTransactions,
             IncludeAccessKeys = query.IncludeAccessKeys,
@@ -89,13 +89,13 @@ public class WalletService
         return await FilterWallets(dbContext.Wallets.AsQueryable(), walletsQuery).FirstOrDefaultAsync();
     }
 
-    public async Task<Transaction> Receive(Wallet wallet, long amount, string description, bool attachDescription, bool privateRouteHints) =>
-        await Receive(wallet, amount, description, null, attachDescription, privateRouteHints);
+    public async Task<Transaction> Receive(Wallet wallet, long amount, string description, bool attachDescription, bool privateRouteHints, TimeSpan? expiry) =>
+        await Receive(wallet, amount, description, null, attachDescription, privateRouteHints, expiry);
         
-    public async Task<Transaction> Receive(Wallet wallet, long amount, uint256 descriptionHash, bool privateRouteHints) =>
-        await Receive(wallet, amount, null, descriptionHash, false, privateRouteHints);
+    public async Task<Transaction> Receive(Wallet wallet, long amount, uint256 descriptionHash, bool privateRouteHints, TimeSpan? expiry) =>
+        await Receive(wallet, amount, null, descriptionHash, false, privateRouteHints, expiry);
 
-    private async Task<Transaction> Receive(Wallet wallet, long amount, string description, uint256 descriptionHash, bool attachDescription, bool privateRouteHints)
+    private async Task<Transaction> Receive(Wallet wallet, long amount, string description, uint256 descriptionHash, bool attachDescription, bool privateRouteHints, TimeSpan? expiry)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
         if (amount <= 0) throw new ArgumentException(nameof(amount));
@@ -105,7 +105,8 @@ public class WalletService
             Amount = amount,
             Description = attachDescription ? description : null,
             DescriptionHash = descriptionHash,
-            PrivateRouteHints = privateRouteHints
+            PrivateRouteHints = privateRouteHints,
+            Expiry = expiry ?? LightningInvoiceCreateRequest.ExpiryDefault
         });
 
         var entry = await dbContext.Transactions.AddAsync(new Transaction
@@ -117,7 +118,7 @@ public class WalletService
             PaymentRequest = data.BOLT11,
             Description = description ?? descriptionHash?.ToString() ?? string.Empty
         });
-            
+
         await dbContext.SaveChangesAsync();
 
         return entry.Entity;
