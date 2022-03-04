@@ -7,9 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.1] - ongoing development
 
+### Added
+
+- API for creating LNbank wallets.
+
 ### Changed
 
-- Use store invoice expiry time
+- Use store invoice expiry time.
+- Soft delete wallets (only mark as deleted).
+
+### Fixed
+
+- Websocket connection to update transaction states.
 
 ## [1.1.0] - 2022-02-21
 
@@ -22,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Proper redirects on homepage (create wallet if none exists, go to wallet if there is only one).
+- Proper redirects on homepage (create wallet if none exists).
 - Separate wallet list and wallet details views.
 - Common wallet header for all views.
 
