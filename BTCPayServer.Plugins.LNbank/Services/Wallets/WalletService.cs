@@ -9,6 +9,7 @@ using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.DataEncoders;
@@ -218,10 +219,11 @@ public class WalletService
         };
     }
 
-    public async Task AddOrUpdateWallet(Wallet wallet)
+    public async Task<Wallet> AddOrUpdateWallet(Wallet wallet)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
 
+        EntityEntry entry;
         if (string.IsNullOrEmpty(wallet.WalletId))
         {
             wallet.AccessKeys ??= new List<AccessKey>();
@@ -229,14 +231,16 @@ public class WalletService
             {
                 Key = Encoders.Hex.EncodeData(RandomUtils.GetBytes(20))
             });
-            await dbContext.Wallets.AddAsync(wallet);
+            entry = await dbContext.Wallets.AddAsync(wallet);
         }
         else
         {
-            var entry = dbContext.Entry(wallet);
+            entry = dbContext.Entry(wallet);
             entry.State = EntityState.Modified;
         }
         await dbContext.SaveChangesAsync();
+
+        return (Wallet)entry.Entity;
     }
 
     public async Task RemoveWallet(Wallet wallet)

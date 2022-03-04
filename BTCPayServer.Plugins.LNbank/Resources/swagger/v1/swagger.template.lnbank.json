@@ -1,0 +1,113 @@
+{
+    "paths": {
+        "/api/v1/lnbank/wallets": {
+            "post": {
+                "tags": [
+                    "LNbank"
+                ],
+                "summary": "Create a new wallet",
+                "description": "Create a new wallet",
+                "requestBody": {
+                    "x-name": "request",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LNbankWalletData"
+                            }
+                        }
+                    },
+                    "required": true,
+                    "x-position": 1
+                },
+                "responses": {
+                    "200": {
+                        "description": "Information about the new wallet",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LNbankWalletData"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "A list of errors that occurred when creating the wallet",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "If you are authenticated but forbidden to add new wallets"
+                    }
+                },
+                "security": [
+                    {
+                        "API_Key": [
+                            "btcpay.user.canmodifyprofile"
+                        ],
+                        "Basic": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "LNbankWalletDataList": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/components/schemas/LNbankWalletData"
+                }
+            },
+            "LNbankWalletData": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/LNbankWalletBaseData"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "description": "The id of the wallet",
+                                "nullable": false
+                            }
+                        }
+                    }
+                ]
+            },
+            "LNbankWalletBaseData": {
+                "type": "object",
+                "x-abstract": true,
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The name of the wallet"
+                    },
+                    "accessKey": {
+                        "type": "string",
+                        "description": "The access key of the wallet"
+                    },
+                    "createdAt": {
+                        "description": "The creation time of the wallet",
+                        "allOf": [ {"$ref": "#/components/schemas/UnixTimestamp"}]
+                    },
+                    "balance": {
+                        "type": "string",
+                        "description": "Amount wrapped in a string, represented in a millistatoshi string. (1000 millisatoshi = 1 satoshi)"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "LNbank"
+        }
+    ]
+}

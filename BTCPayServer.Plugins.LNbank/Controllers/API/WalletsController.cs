@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Abstractions.Extensions;
@@ -9,13 +10,14 @@ using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using WalletData = BTCPayServer.Plugins.LNbank.Data.API.WalletData;
 
 namespace BTCPayServer.Plugins.LNbank.Controllers.API;
 
 [ApiController]
 [Route("~/api/v1/lnbank/[controller]")]
-[Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield, Policy = Policies.CanViewProfile)]
+[Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield, Policy = Policies.CanModifyProfile)]
 public class WalletsController : ControllerBase
 {
     private readonly WalletService _walletService;
@@ -44,9 +46,9 @@ public class WalletsController : ControllerBase
             Name = request.Name
         };
 
-        await _walletService.AddOrUpdateWallet(wallet);
+        var entry = await _walletService.AddOrUpdateWallet(wallet);
         
-        return Ok(FromModel(wallet));
+        return Ok(FromModel(entry));
     }
 
     private IActionResult Validate(WalletData request)
@@ -64,14 +66,15 @@ public class WalletsController : ControllerBase
         return !ModelState.IsValid ? this.CreateValidationError(ModelState) : null;
     }
 
-    private WalletData FromModel(Wallet model)
-    {
-        return new WalletData
+    private WalletData FromModel(Wallet model) =>
+        new()
         {
             Id = model.WalletId,
-            Name = model.Name
+            Name = model.Name,
+            CreatedAt = model.CreatedAt,
+            Balance = model.Balance,
+            AccessKey = model.AccessKeys.First().Key
         };
-    }
 
     private string GetUserId() => _userManager.GetUserId(User);
 }

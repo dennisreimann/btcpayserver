@@ -85,6 +85,8 @@ public class LightningController : BaseApiController
             WalletId = WalletId,
             InvoiceId = invoiceId
         });
+        if (transaction == null) return NotFound();
+        
         var invoice = ToLightningInvoiceData(transaction);
         return Ok(invoice);
     }
@@ -124,8 +126,8 @@ public class LightningController : BaseApiController
         return Ok(address);
     }
 
-    private LightningInvoiceData ToLightningInvoiceData(Transaction transaction) =>
-        new LightningInvoiceData
+    private LightningInvoiceData ToLightningInvoiceData(Transaction transaction) => 
+        new()
         {
             Amount = transaction.Amount,
             Id = transaction.InvoiceId,
