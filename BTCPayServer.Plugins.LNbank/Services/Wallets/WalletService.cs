@@ -245,11 +245,6 @@ public class WalletService
 
     public async Task RemoveWallet(Wallet wallet)
     {
-        /*
-        await using var dbContext = _dbContextFactory.CreateContext();
-        dbContext.Wallets.Remove(wallet);
-        await dbContext.SaveChangesAsync();
-        */
         wallet.IsSoftDeleted = true;
         await AddOrUpdateWallet(wallet);
     }
