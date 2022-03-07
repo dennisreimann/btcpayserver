@@ -266,10 +266,17 @@ public class WalletService
 
     public async Task CheckPendingTransaction(Transaction transaction, CancellationToken cancellationToken = default)
     {
-        var invoice = await _btcpayService.GetLightningInvoice(transaction.InvoiceId, cancellationToken);
-        if (invoice.Status == LightningInvoiceStatus.Paid)
+        try
         {
-            await MarkTransactionPaid(transaction, invoice.AmountReceived, invoice.PaidAt);
+            var invoice = await _btcpayService.GetLightningInvoice(transaction.InvoiceId, cancellationToken);
+            if (invoice.Status == LightningInvoiceStatus.Paid)
+            {
+                await MarkTransactionPaid(transaction, invoice.AmountReceived, invoice.PaidAt);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError("Checking pending transaction " + transaction.TransactionId + " failed: " + exception.Message);
         }
     }
 
