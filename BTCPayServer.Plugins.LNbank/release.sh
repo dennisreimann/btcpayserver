@@ -32,15 +32,18 @@ sed -i "s%<PackageVersion>.*</PackageVersion>%<PackageVersion>$version</PackageV
 ./pack.sh
 cd bin/packed
 sha256sum BTCPayServer.Plugins.LNbank.btcpay* > SHA256SUMS
-gpg  --armor --sign SHA256SUMS
+gpg --armor --sign SHA256SUMS
 shasums=$(cat SHA256SUMS)
-notes="${changes}
+notes=$(cat << EOF
+${changes}
 
 ### SHA256SUMS
 
 ```
 ${shasums}
-```"
+```
+EOF
+)
 cd -
 
 printf "\n\n=====> Prepare plugins repo\n\n"

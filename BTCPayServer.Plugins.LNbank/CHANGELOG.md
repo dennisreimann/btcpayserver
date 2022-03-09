@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Websocket connection to update transaction states.
+- Handle crashes in background service.
+- Fix redirects.
 
 ## [1.1.0] - 2022-02-21
 
