@@ -10,6 +10,7 @@ using BTCPayServer.Plugins.LNbank.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.DataEncoders;
@@ -133,75 +134,128 @@ public class WalletService
         }
 
         // check balance
-        LightMoney routingFee = null;
         var amount = bolt11.MinimumAmount;
         if (wallet.Balance < amount)
         {
-            throw new Exception($"Insufficient balance: {Sats(wallet.Balance)}, tried to send {Sats(amount)}.");
+            throw new Exception($"Insufficient balance: {Sats(wallet.Balance)} — tried to send {Sats(amount)}.");
         }
 
         // check if the invoice exists already
-        var transaction = await ValidatePaymentRequest(paymentRequest);
-        var isInternal = !string.IsNullOrEmpty(transaction?.InvoiceId);
-        if (!isInternal)
+        var receivingTransaction = await ValidatePaymentRequest(paymentRequest);
+        var isInternal = !string.IsNullOrEmpty(receivingTransaction?.InvoiceId);
+
+        var sendingTransaction = new Transaction
         {
-            // Account for fees
-            var maxFeeAmount = LightMoney.Satoshis(amount.ToUnit(LightMoneyUnit.Satoshi) * (decimal)maxFeePercent / 100);
-            var amountWithFee = amount + maxFeeAmount;
-            if (wallet.Balance < amountWithFee)
-            {
-                throw new Exception($"Insufficient balance: {Sats(wallet.Balance)}, tried to send {Sats(amount)} and need to keep a fee reserve of {Sats(maxFeeAmount)}.");
-            }
-            var result = await _btcpayService.PayLightningInvoice(new LightningInvoicePayRequest
-            {
-                PaymentRequest = paymentRequest,
-                MaxFeePercent = maxFeePercent
-            });
-                
-            // Set amount to actual total amount paid, including fees
-            amount = result.TotalAmount;
-            routingFee = result.FeeAmount;
+            WalletId = wallet.WalletId,
+            PaymentRequest = paymentRequest,
+            ExpiresAt = bolt11.ExpiryDate,
+            Description = description,
+            Amount = amount,
+            AmountSettled = new LightMoney(amount.MilliSatoshi * -1),
+        };  
+        
+        var finalizedTransaction = await (isInternal
+            ? SendInternal(sendingTransaction, receivingTransaction, amount)
+            : SendExternal(sendingTransaction, amount, wallet.Balance, maxFeePercent));
+
+        if (finalizedTransaction != null)
+        {
+            await BroadcastTransactionUpdate(finalizedTransaction, "paid");
         }
-            
+        
+        return finalizedTransaction;
+    }
+
+    private async Task<Transaction> SendInternal(Transaction sendingTransaction, Transaction receivingTransaction, LightMoney amount)
+    {
+        Transaction transaction = null;
         await using var dbContext = _dbContextFactory.CreateContext();
         var executionStrategy = dbContext.Database.CreateExecutionStrategy();
+        
         await executionStrategy.ExecuteAsync(async () =>
         {
-            // https://docs.microsoft.com/en-us/ef/core/saving/transactions#controlling-transactions
             await using var dbTransaction = await dbContext.Database.BeginTransactionAsync();
             try
             {
                 var now = DateTimeOffset.UtcNow;
-                var entry = await dbContext.Transactions.AddAsync(new Transaction
-                {
-                    WalletId = wallet.WalletId,
-                    PaymentRequest = paymentRequest,
-                    Amount = amount,
-                    AmountSettled = new LightMoney(amount.MilliSatoshi * -1),
-                    RoutingFee = routingFee,
-                    ExpiresAt = bolt11.ExpiryDate,
-                    Description = description,
-                    PaidAt = now
-                });
-                await dbContext.SaveChangesAsync();
 
-                if (transaction != null)
-                {
-                    await MarkTransactionPaid(transaction, amount, now);
-                }
+                var receiveEntry = dbContext.Entry(receivingTransaction);
+                var sendingEntry = await dbContext.Transactions.AddAsync(sendingTransaction);
+                
+                sendingEntry.Entity.SetSettled(sendingTransaction.Amount, sendingTransaction.AmountSettled, null, now);
+                receiveEntry.Entity.SetSettled(sendingTransaction.Amount, sendingTransaction.Amount, null, now);
+                receiveEntry.State = EntityState.Modified;
+                
+                await dbContext.SaveChangesAsync();
                 await dbTransaction.CommitAsync();
 
-                return entry.Entity;
+                transaction = sendingEntry.Entity;
             }
             catch (Exception)
             {
                 await dbTransaction.RollbackAsync();
+                throw;
             }
-
-            return null;
         });
 
-        return null;
+        return transaction;
+    }
+
+    private async Task<Transaction> SendExternal(Transaction sendingTransaction, LightMoney amount, LightMoney walletBalance, float maxFeePercent)
+    {
+        // Account for fees
+        var maxFeeAmount = LightMoney.Satoshis(amount.ToUnit(LightMoneyUnit.Satoshi) * (decimal)maxFeePercent / 100);
+        var amountWithFee = amount + maxFeeAmount;
+        if (walletBalance < amountWithFee)
+        {
+            throw new Exception(
+                $"Insufficient balance: {Sats(walletBalance)} — tried to send {Sats(amount)} and need to keep a fee reserve of {Millisats(maxFeeAmount)}.");
+        }
+
+        Transaction transaction;
+        await using var dbContext = _dbContextFactory.CreateContext();
+        
+        // Create preliminary transaction entry
+        sendingTransaction.Amount = amountWithFee;
+        sendingTransaction.AmountSettled = new LightMoney(amountWithFee.MilliSatoshi * -1);
+        sendingTransaction.RoutingFee = maxFeeAmount;
+        var sendingEntry = await dbContext.Transactions.AddAsync(sendingTransaction);
+        await dbContext.SaveChangesAsync();
+        
+        try
+        {
+            // Pay the invoice
+            var result = await _btcpayService.PayLightningInvoice(new LightningInvoicePayRequest
+            {
+                PaymentRequest = sendingTransaction.PaymentRequest, 
+                MaxFeePercent = maxFeePercent
+            });
+            
+            // Check result
+            if (result.TotalAmount == null)
+            {
+                throw new Exception("Payment request has already been paid.");
+            }
+
+            // Set amount to actual total amount paid, including fees
+            var amountSettled = new LightMoney(result.TotalAmount * -1);
+            sendingEntry.Entity.SetSettled(result.TotalAmount, amountSettled, result.FeeAmount, DateTimeOffset.UtcNow);
+
+            // Update entry with payment data
+            sendingEntry.State = EntityState.Modified;
+            await dbContext.SaveChangesAsync();
+
+            transaction = sendingEntry.Entity;
+        }
+        catch (Exception)
+        {
+            // Remove preliminary transaction
+            dbContext.Transactions.Remove(sendingEntry.Entity);
+            await dbContext.SaveChangesAsync();
+            throw;
+        }
+
+        return transaction;
     }
 
     public async Task<Transaction> ValidatePaymentRequest(string paymentRequest)
@@ -214,6 +268,7 @@ public class WalletService
         return transaction switch
         {
             { IsExpired: true } => throw new Exception($"Payment request already expired at {transaction.ExpiresAt}."),
+            { IsSettled: true } => throw new Exception("Payment request has already been settled."),
             { IsPaid: true } => throw new Exception("Payment request has already been paid."),
             _ => transaction
         };
@@ -258,23 +313,7 @@ public class WalletService
             IncludingPaid = false
         });
     }
-
-    public async Task CheckPendingTransaction(Transaction transaction, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var invoice = await _btcpayService.GetLightningInvoice(transaction.InvoiceId, cancellationToken);
-            if (invoice.Status == LightningInvoiceStatus.Paid)
-            {
-                await MarkTransactionPaid(transaction, invoice.AmountReceived, invoice.PaidAt);
-            }
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError("Checking pending transaction " + transaction.TransactionId + " failed: " + exception.Message);
-        }
-    }
-
+    
     public async Task<Transaction> GetTransaction(TransactionQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
@@ -319,18 +358,20 @@ public class WalletService
         return queryable.FirstOrDefault();
     }
 
-    public async Task UpdateTransaction(Transaction transaction)
+    public async Task<Transaction> UpdateTransaction(Transaction transaction)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
         var entry = dbContext.Entry(transaction);
         entry.State = EntityState.Modified;
 
         await dbContext.SaveChangesAsync();
+
+        return entry.Entity;
     }
 
     public BOLT11PaymentRequest ParsePaymentRequest(string payReq)
     {
-        return BOLT11PaymentRequest.Parse(payReq, _network);
+        return BOLT11PaymentRequest.Parse(payReq.Trim(), _network);
     }
 
     private async Task<IEnumerable<Transaction>> GetTransactions(TransactionsQuery query)
@@ -372,14 +413,27 @@ public class WalletService
         return await queryable.ToListAsync();
     }
 
-    private async Task MarkTransactionPaid(Transaction transaction, LightMoney amountSettled, DateTimeOffset? date)
+    public async Task<bool> Cancel(string invoiceId)
     {
-        _logger.LogInformation($"Marking transaction {transaction.TransactionId} as paid");
-
-        transaction.AmountSettled = amountSettled;
-        transaction.PaidAt = date;
-
+        var transaction = await GetTransaction(new TransactionQuery { InvoiceId = invoiceId });
+        if (!transaction.SetCancelled()) return false;
+        
         await UpdateTransaction(transaction);
+        await BroadcastTransactionUpdate(transaction, "cancelled");
+        return true;
+    }
+
+    public async Task<bool> Settle(Transaction transaction, LightMoney amount, LightMoney amountSettled, LightMoney routingFee, DateTimeOffset date)
+    {
+        if (!transaction.SetSettled(amount, amountSettled, routingFee, date)) return false;
+        
+        await UpdateTransaction(transaction);
+        await BroadcastTransactionUpdate(transaction, "settled");
+        return true;
+    }
+    
+    private async Task BroadcastTransactionUpdate(Transaction transaction, string eventName)
+    {
         await _transactionHub.Clients.All.SendAsync("transaction-update", new
         {
             transaction.TransactionId,
@@ -388,28 +442,10 @@ public class WalletService
             transaction.Status,
             transaction.IsPaid,
             transaction.IsExpired,
-            Event = "paid"
+            Event = eventName
         });
-    }
-
-    public async Task Cancel(string invoiceId)
-    {
-        var transaction = await GetTransaction(new TransactionQuery { InvoiceId = invoiceId });
-        if (transaction.SetCancelled())
-        {
-            await UpdateTransaction(transaction);
-            await _transactionHub.Clients.All.SendAsync("transaction-update", new
-            {
-                transaction.TransactionId,
-                transaction.InvoiceId,
-                transaction.WalletId,
-                transaction.Status,
-                transaction.IsPaid,
-                transaction.IsExpired,
-                Event = "cancelled"
-            });
-        }
     }
         
     private static string Sats(LightMoney amount) => $"{Math.Round(amount.ToUnit(LightMoneyUnit.Satoshi))} sats";
+    public static string Millisats(LightMoney amount) => $"{amount.ToUnit(LightMoneyUnit.MilliSatoshi)} millisats";
 }

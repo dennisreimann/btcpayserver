@@ -9,18 +9,28 @@
 <partial name="_WalletHeader" model="Model.Wallet"/>
 
 <div class="mb-4">
-    @if (Model.Transaction.IsPaid)
+    @if (Model.Transaction.IsPaid || Model.Transaction.IsSettled)
     {
         <h3 id="LNbank-TransactionSettled" class="text-@(Model.Transaction.AmountSettled > 0 ? "success" : "danger")">
             @Helpers.Sats(Model.Transaction.AmountSettled)
             @Model.Transaction.Status
         </h3>
         <h4 class="h4 text-muted">
-            Paid
-            <time datetime="@Model.Transaction.PaidAt?.ToString("o", CultureInfo.InvariantCulture)">
-                @Model.Transaction.PaidAt?.ToTimeAgo()
-            </time>
+            @if (Model.Transaction.IsSettled)
+            {
+                <span>
+                    Paid
+                    <time datetime="@Model.Transaction.PaidAt?.ToString("o", CultureInfo.InvariantCulture)">
+                        @Model.Transaction.PaidAt?.ToTimeAgo()
+                    </time>
+                </span>
+            }
+            else
+            {
+                <span>Awaiting confirmation</span>
+            }
         </h4>
+        <!-- Debug Info: @Model.Transaction.PaymentRequest -->
     }
     else
     {

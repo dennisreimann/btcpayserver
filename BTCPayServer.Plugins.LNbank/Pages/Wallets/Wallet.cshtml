@@ -1,9 +1,20 @@
 @page "/plugins/lnbank/wallets/{walletId}"
 @using System.Globalization
+@using BTCPayServer.Plugins.LNbank.Data.Models
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.WalletModel
 
 @{
     ViewData.SetActivePage(LNbankNavPages.Wallets, Model.Wallet.Name);
+}
+
+@functions
+{
+    private string Tooltip(Transaction transaction)
+    {
+        var tt = transaction.IsSettled ? "" : "Awaiting confirmation. ";
+        if (transaction.HasRoutingFee) tt += $"Includes {Helpers.Millisats(transaction.RoutingFee)} routing fee.";
+        return string.IsNullOrEmpty(tt) ? null : tt;
+    }
 }
 
 <partial name="_WalletHeader" model="Model.Wallet"/>
@@ -42,20 +53,11 @@
                             @Helpers.Sats(transaction.Amount)
                         </td>
                         <td class="text-nowrap text-end">
-                            @if (transaction.IsPaid)
+                            @if (transaction.IsPaid || transaction.IsSettled)
                             {
-                                @if (transaction.RoutingFee != null)
-                                {
-                                    <span class="text-@(transaction.AmountSettled > 0 ? "success" : "danger") transaction-settled" data-bs-toggle="tooltip" data-bs-placement="left" title="Includes @Helpers.Millisats(transaction.RoutingFee) routing fee">
-                                        @Helpers.Sats(transaction.AmountSettled)
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="text-@(transaction.AmountSettled > 0 ? "success" : "danger") transaction-settled">
-                                        @Helpers.Sats(transaction.AmountSettled)
-                                    </span>
-                                }
+                                <span class="text-@(transaction.AmountSettled > 0 ? "success" : "danger") transaction-@(transaction.Status.ToLower())" data-bs-toggle="tooltip" data-bs-placement="left" title="@Tooltip(transaction)">
+                                    @Helpers.Sats(transaction.AmountSettled)
+                                </span>
                             }
                             else
                             {

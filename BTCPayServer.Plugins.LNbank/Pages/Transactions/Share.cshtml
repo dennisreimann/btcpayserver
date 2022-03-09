@@ -27,17 +27,26 @@
     <div class="row justify-content-center mb-5">
         <div class="col text-center">
             <h2 id="LNbank-TransactionDescription">@ViewData["Title"]</h2>
-            @if (Model.Transaction.IsPaid)
+            @if (Model.Transaction.IsPaid || Model.Transaction.IsSettled)
             {
                 <h3 id="LNbank-TransactionSettled" class="text-success">
                     @Helpers.Sats(Model.Transaction.AmountSettled)
                     @Model.Transaction.Status
                 </h3>
                 <h4 class="h4 text-muted">
-                    Paid
-                    <time datetime="@Model.Transaction.PaidAt?.ToString("o", CultureInfo.InvariantCulture)">
-                        @Model.Transaction.PaidAt?.ToTimeAgo()
-                    </time>
+                    @if (Model.Transaction.IsSettled)
+                    {
+                        <span>
+                            Paid
+                            <time datetime="@Model.Transaction.PaidAt?.ToString("o", CultureInfo.InvariantCulture)">
+                                @Model.Transaction.PaidAt?.ToTimeAgo()
+                            </time>
+                        </span>
+                    }
+                    else
+                    {
+                        <span>Awaiting confirmation</span>
+                    }
                 </h4>
             }
             else

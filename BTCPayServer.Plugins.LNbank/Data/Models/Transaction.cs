@@ -31,6 +31,7 @@ public class Transaction
     public Wallet Wallet { get; set; }
     public string ExplicitStatus { get; set; }
 
+    private const string StatusSettled = "settled";
     private const string StatusPaid = "paid";
     private const string StatusUnpaid = "unpaid";
     private const string StatusExpired = "expired";
@@ -46,14 +47,12 @@ public class Transaction
             }
             if (AmountSettled != null)
             {
-                return StatusPaid;
+                return PaidAt == null ? StatusPaid : StatusSettled;
             }
-
             if (ExpiresAt <= DateTimeOffset.UtcNow)
             {
                 return StatusExpired;
             }
-
             return StatusUnpaid;
         }
     }
@@ -62,6 +61,7 @@ public class Transaction
     {
         get => Status switch
         {
+            StatusSettled => LightningInvoiceStatus.Paid,
             StatusPaid => LightningInvoiceStatus.Paid,
             StatusUnpaid => LightningInvoiceStatus.Unpaid,
             StatusExpired => LightningInvoiceStatus.Expired,
@@ -69,12 +69,13 @@ public class Transaction
         };
     }
 
+    public bool IsSettled => Status == StatusSettled;
     public bool IsPaid => Status == StatusPaid;
     public bool IsUnpaid => Status != StatusPaid;
     public bool IsExpired => Status == StatusExpired;
     public bool IsCancelled  => Status == StatusCancelled;
-    public bool IsOverpaid => Status == StatusPaid && AmountSettled > Amount;
-    public bool IsPaidPartially => Status == StatusPaid && AmountSettled < Amount;
+    public bool IsOverpaid => (IsPaid || IsSettled) && AmountSettled > Amount;
+    public bool IsPaidPartially => (IsPaid || IsSettled) && AmountSettled < Amount;
 
     public DateTimeOffset Date => PaidAt ?? CreatedAt;
 
@@ -84,4 +85,16 @@ public class Transaction
         ExplicitStatus = StatusCancelled;
         return true;
     }
+    
+    public bool SetSettled(LightMoney amount, LightMoney amountSettled, LightMoney routingFee, DateTimeOffset date)
+    {
+        if (IsSettled) return false;
+        Amount = amount;
+        AmountSettled = amountSettled;
+        RoutingFee = routingFee;
+        PaidAt = date;
+        return true;
+    }
+
+    public bool HasRoutingFee => RoutingFee != null && RoutingFee > 0;
 }

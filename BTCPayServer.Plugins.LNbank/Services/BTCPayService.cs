@@ -75,6 +75,14 @@ public class BTCPayService
         await client.ConnectToLightningNode(CryptoCode, req, cancellationToken);
     }
 
+    /*
+    public async Task TrackPayment(uint256 paymentHash, CancellationToken cancellationToken)
+    {
+        var client = await Client();
+        await client.GetPayment(CryptoCode, paymentHash, cancellationToken);
+    }
+    */
+
     private async Task<BTCPayServerClient> Client()
     {
         return await _clientFactory.Create(null, new string[0]);
