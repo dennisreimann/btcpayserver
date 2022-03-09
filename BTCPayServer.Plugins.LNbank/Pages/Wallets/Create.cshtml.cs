@@ -45,6 +45,6 @@ public class CreateModel : BasePageModel
         }
         
         TempData[WellKnownTempData.SuccessMessage] = "Wallet successfully created.";
-        return RedirectToPage("./Index", new { walletId = Wallet.WalletId });
+        return RedirectToPage("./Wallet", new { walletId = Wallet.WalletId });
     }
 }

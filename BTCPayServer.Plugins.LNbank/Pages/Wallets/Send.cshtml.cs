@@ -84,8 +84,8 @@ public class SendModel : BasePageModel
         try
         {
             await WalletService.Send(Wallet, Bolt11, PaymentRequest, Description);
-            TempData[WellKnownTempData.SuccessMessage] = "Payment sent.";
-            return RedirectToPage("./Index", new { walletId });
+            TempData[WellKnownTempData.SuccessMessage] = "Payment successfully sent.";
+            return RedirectToPage("./Wallet", new { walletId });
         }
         catch (Exception exception)
         {
