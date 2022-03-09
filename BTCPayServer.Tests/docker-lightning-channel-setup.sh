@@ -97,8 +97,17 @@ connect $C_LN $m_ln_uri "Customer (LND) to Merchant (LND)"
 # Channels
 printf "\n\rEstablishing channels\n\r----------------------\n\r"
 
+
+create_channel $M_LN $c_ln_id "Merchant (LND) to Customer (LND)"
+create_channel $C_LN $c_cl_id "Customer (LND) to Customer (c-lightning)"
+create_channel $C_CL $m_cl_id "Customer (c-lightning) to Merchant (c-lightning)"
 create_channel $C_CL $m_cl_id "Customer (c-lightning) to Merchant (c-lightning)"
 create_channel $C_CL $m_ln_id "Customer (c-lightning) to Merchant (LND)"
 create_channel $C_LN $c_cl_id "Customer (LND) to Customer (c-lightning)"
+create_channel $C_LN $m_cl_id "Customer (LND) to Merchant (c-lightning)"
 create_channel $M_CL $m_ln_id "Merchant (c-lightning) to Merchant (LND)" "announce=false"
+create_channel $M_CL $c_ln_id "Merchant (c-lightning) to Customer (LND)" "announce=false"
+create_channel $M_CL $c_cl_id "Merchant (c-lightning) to Customer (c-lightning)" "announce=false"
+create_channel $M_LN $c_ln_id "Merchant (LND) to Customer (LND)"
+create_channel $M_LN $c_cl_id "Merchant (LND) to Customer (c-lightning)"
 create_channel $C_LN $m_ln_id "Customer (LND) to Merchant (LND)" --private
