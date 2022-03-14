@@ -15,7 +15,7 @@ public class Person
     public string PodcastId { get; set; }
     public Podcast Podcast { get; set; }
 
-    public ICollection<Contribution> Contributions { get; set; }
+    public ICollection<Contribution> Contributions { get; set; } = new List<Contribution>();
     
     // Properties
     [Required]

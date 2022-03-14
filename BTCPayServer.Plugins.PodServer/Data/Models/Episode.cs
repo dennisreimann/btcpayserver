@@ -33,7 +33,7 @@ public class Episode
     public string SeasonId { get; set; }
     public Season Season { get; set; }
     
-    public ICollection<Contribution> Contributors { get; set; }
-    public ICollection<Enclosure> Enclosures { get; set; }
+    public ICollection<Contribution> Contributors { get; set; } = new List<Contribution>();
+    public ICollection<Enclosure> Enclosures { get; set; } = new List<Enclosure>();
 
 }

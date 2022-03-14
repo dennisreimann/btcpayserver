@@ -23,7 +23,7 @@ public class Enclosure
     public string Type { get; set; }
     
     [Required]
-    public int Length { get; set; }
+    public long Length { get; set; }
     
     public bool IsAlternate { get; set; }
     

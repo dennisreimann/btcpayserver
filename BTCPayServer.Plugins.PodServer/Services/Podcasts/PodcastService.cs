@@ -112,7 +112,19 @@ public class PodcastService
         {
             queryable = queryable.Include(e => e.Podcast).AsNoTracking();
         }
-
+        
+        if (query.ForEditing)
+        {
+            queryable = queryable
+                .Include(e => e.Enclosures)
+                .Include(e => e.Contributors);
+        }
+        else
+        {
+            queryable = queryable
+                .Include(e => e.Enclosures).AsNoTracking()
+                .Include(e => e.Contributors).AsNoTracking();
+        }
 
         return queryable.FirstOrDefault();
     }

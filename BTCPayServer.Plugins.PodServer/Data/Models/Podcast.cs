@@ -16,9 +16,9 @@ public class Podcast
     
     public ICollection<Season> Seasons { get; set; }
 
-    public ICollection<Episode> Episodes { get; set; }
+    public ICollection<Episode> Episodes { get; set; } = new List<Episode>();
     
-    public ICollection<Person> People { get; set; }
+    public ICollection<Person> People { get; set; } = new List<Person>();
     
     // Properties
     [Required]

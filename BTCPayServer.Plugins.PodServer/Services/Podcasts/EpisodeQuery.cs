@@ -7,4 +7,5 @@ public class EpisodeQuery
 
     public string SeasonId { get; set; }
     public bool IncludePodcast { get; set; }
+    public bool ForEditing { get; set; }
 }

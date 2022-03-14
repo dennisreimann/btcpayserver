@@ -52,8 +52,15 @@ public class EditModel : BasePageModel
                 await _fileService.RemoveFile(Podcast.ImageFileId, UserId);
             }
             // add new image
-            var storedFile = await _fileService.AddFile(ImageFile, UserId);
-            Podcast.ImageFileId = storedFile.Id;
+            try
+            {
+                var storedFile = await _fileService.AddFile(ImageFile, UserId);
+                Podcast.ImageFileId = storedFile.Id;
+            }
+            catch (Exception e)
+            {
+                TempData[WellKnownTempData.ErrorMessage] = $"Could not save image: {e.Message}";
+            }
         }
 
         if (!await TryUpdateModelAsync(
@@ -72,7 +79,10 @@ public class EditModel : BasePageModel
         }
         
         await PodcastService.AddOrUpdatePodcast(Podcast);
-        TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully updated.";
+        if (TempData[WellKnownTempData.ErrorMessage] is null)
+        {
+            TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully updated.";
+        }
         
         return RedirectToPage("./Podcast", new { podcastId = Podcast.PodcastId });
     }

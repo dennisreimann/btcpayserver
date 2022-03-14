@@ -25,4 +25,4 @@
     <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Episode.ImageFileId))" alt="@Model.Episode.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
 }
 
-<p>@Model.Episode.Description</p>
+@Html.Raw(Model.Episode.Description)
