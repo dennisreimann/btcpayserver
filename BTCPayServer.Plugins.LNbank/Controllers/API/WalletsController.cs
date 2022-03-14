@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Constants;
@@ -10,7 +11,6 @@ using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using WalletData = BTCPayServer.Plugins.LNbank.Data.API.WalletData;
 
 namespace BTCPayServer.Plugins.LNbank.Controllers.API;
@@ -28,11 +28,21 @@ public class WalletsController : ControllerBase
         _userManager = userManager;
         _walletService = walletService;
     }
+    
+    [HttpGet("")]
+    public async Task<IActionResult> GetWallets()
+    {
+        var wallets = await _walletService.GetWallets(new WalletsQuery {
+            UserId = new[] { GetUserId() },
+            IncludeTransactions = true,
+            IncludeAccessKeys = true
+        });
 
-    // --- Custom methods ---
+        return Ok(wallets.Select(FromModel));
+    }
 
     [HttpPost("")]
-    public async Task<IActionResult> CreateWallet(CreateWalletRequest request)
+    public async Task<IActionResult> CreateWallet(EditWalletRequest request)
     {
         var validationResult = Validate(request);
         if (validationResult != null)
@@ -50,8 +60,75 @@ public class WalletsController : ControllerBase
         
         return Ok(FromModel(entry));
     }
+    
+    [HttpGet("{walletId}")]
+    public async Task<IActionResult> GetWallet(string walletId)
+    {
+        var wallet = await _walletService.GetWallet(new WalletQuery {
+            UserId = GetUserId(),
+            WalletId = walletId,
+            IncludeTransactions = true,
+            IncludeAccessKeys = true
+        });
 
-    private IActionResult Validate(WalletData request)
+        if (wallet == null) 
+            return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
+
+        return Ok(FromModel(wallet));
+    }
+    
+    [HttpPut("{walletId}")]
+    public async Task<IActionResult> UpdateWallet(string walletId, EditWalletRequest request)
+    {
+        var validationResult = Validate(request);
+        if (validationResult != null)
+        {
+            return validationResult;
+        }
+
+        var wallet = await _walletService.GetWallet(new WalletQuery {
+            UserId = GetUserId(),
+            WalletId = walletId,
+            IncludeTransactions = true,
+            IncludeAccessKeys = true
+        });
+
+        if (wallet == null) 
+            return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
+
+        wallet.Name = request.Name;
+
+        var entry = await _walletService.AddOrUpdateWallet(wallet);
+
+        return Ok(FromModel(entry));
+    }
+    
+    [HttpDelete("{walletId}")]
+    public async Task<IActionResult> DeleteWallet(string walletId)
+    {
+        var wallet = await _walletService.GetWallet(new WalletQuery {
+            UserId = GetUserId(),
+            WalletId = walletId,
+            IncludeTransactions = true,
+            IncludeAccessKeys = true
+        });
+
+        if (wallet == null) 
+            return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
+
+        try
+        {
+            await _walletService.RemoveWallet(wallet);
+
+            return Ok();
+        }
+        catch (Exception e)
+        {
+            return this.CreateAPIError("wallet-not-empty", e.Message);
+        }
+    }
+
+    private IActionResult Validate(EditWalletRequest request)
     {
         if (request is null)
         {

@@ -7,6 +7,7 @@ using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Hubs;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -290,8 +291,7 @@ public class WalletService
         }
         else
         {
-            entry = dbContext.Entry(wallet);
-            entry.State = EntityState.Modified;
+            entry = dbContext.Update(wallet);
         }
         await dbContext.SaveChangesAsync();
 
@@ -300,6 +300,11 @@ public class WalletService
 
     public async Task RemoveWallet(Wallet wallet)
     {
+        if (wallet.Balance > 0)
+        {
+            throw new Exception("This wallet still has a balance.");
+        }
+        
         wallet.IsSoftDeleted = true;
         await AddOrUpdateWallet(wallet);
     }

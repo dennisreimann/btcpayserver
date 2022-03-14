@@ -42,16 +42,18 @@ public class DeleteModel : BasePageModel
         });
 
         if (Wallet == null) return NotFound();
-        
-        if (Wallet.Balance > 0)
+
+        try
         {
-            TempData[WellKnownTempData.ErrorMessage] = "This wallet still has a balance.";
+            await WalletService.RemoveWallet(Wallet);
+            
+            TempData[WellKnownTempData.SuccessMessage] = "Wallet removed.";
+            return RedirectToPage("./Index");
+        }
+        catch (Exception e)
+        {
+            TempData[WellKnownTempData.ErrorMessage] = e.Message;
             return Page();
         }
-
-        await WalletService.RemoveWallet(Wallet);
-        TempData[WellKnownTempData.SuccessMessage] = "Wallet removed.";
-
-        return RedirectToPage("./Index");
     }
 }

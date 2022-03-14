@@ -1,18 +1,47 @@
 {
     "paths": {
         "/api/v1/lnbank/wallets": {
+            "get": {
+                "tags": [
+                    "LNbank"
+                ],
+                "summary": "Get wallets",
+                "description": "View information about the available wallets",
+                "operationId": "LNbankWallets_GetWallets",
+                "responses": {
+                    "200": {
+                        "description": "List of wallets",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LNbankWalletDataList"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "API_Key": [
+                            "btcpay.user.canmodifyprofile"
+                        ],
+                        "Basic": []
+                    }
+                ]
+            },
             "post": {
                 "tags": [
                     "LNbank"
                 ],
                 "summary": "Create a new wallet",
                 "description": "Create a new wallet",
+                "operationId": "LNbankWallets_CreateWallet",
                 "requestBody": {
                     "x-name": "request",
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/LNbankWalletData"
+                                "$ref": "#/components/schemas/LNbankEditWalletData"
                             }
                         }
                     },
@@ -53,6 +82,167 @@
                     }
                 ]
             }
+        },
+        "/api/v1/lnbank/wallets/{walletId}": {
+            "get": {
+                "tags": [
+                    "LNbank"
+                ],
+                "summary": "Get wallet",
+                "parameters": [
+                    {
+                        "name": "walletId",
+                        "in": "path",
+                        "required": true,
+                        "description": "The wallet to fetch",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "description": "View information about the specified wallet",
+                "operationId": "LNbankWallets_GetWallet",
+                "responses": {
+                    "200": {
+                        "description": "Specified wallet",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LNbankWalletData"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "If you are authenticated but forbidden to view the specified wallet"
+                    },
+                    "404": {
+                        "description": "The key is not found for this wallet"
+                    }
+                },
+                "security": [
+                    {
+                        "API_Key": [
+                            "btcpay.user.canmodifyprofile"
+                        ],
+                        "Basic": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "LNbank"
+                ],
+                "summary": "Update wallet",
+                "parameters": [
+                    {
+                        "name": "walletId",
+                        "in": "path",
+                        "required": true,
+                        "description": "The wallet to update",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "description": "Update the specified wallet",
+                "requestBody": {
+                    "x-name": "request",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LNbankEditWalletData"
+                            }
+                        }
+                    },
+                    "required": true,
+                    "x-position": 1
+                },
+                "operationId": "LNbankWallets_UpdateWallet",
+                "responses": {
+                    "200": {
+                        "description": "Updated specified wallet",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LNbankWalletData"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "A list of errors that occurred when updating the wallet",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "If you are authenticated but forbidden to update the specified wallet"
+                    },
+                    "404": {
+                        "description": "The key is not found for this wallet"
+                    }
+                },
+                "security": [
+                    {
+                        "API_Key": [
+                            "btcpay.user.canmodifyprofile"
+                        ],
+                        "Basic": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "LNbank"
+                ],
+                "summary": "Remove wallet",
+                "description": "Removes the specified wallet.",
+                "parameters": [
+                    {
+                        "name": "walletId",
+                        "in": "path",
+                        "required": true,
+                        "description": "The wallet to remove",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The wallet has been removed"
+                    },
+                    "400": {
+                        "description": "A list of errors that occurred when removing the wallet",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "If you are authenticated but forbidden to remove the specified wallet"
+                    },
+                    "404": {
+                        "description": "The key is not found for this wallet"
+                    }
+                },
+                "security": [
+                    {
+                        "API_Key": [
+                            "btcpay.user.canmodifyprofile"
+                        ],
+                        "Basic": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -61,6 +251,15 @@
                 "type": "array",
                 "items": {
                     "$ref": "#/components/schemas/LNbankWalletData"
+                }
+            },
+            "LNbankEditWalletData": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The name of the wallet"
+                    }
                 }
             },
             "LNbankWalletData": {
