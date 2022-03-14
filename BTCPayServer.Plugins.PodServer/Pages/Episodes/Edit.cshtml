@@ -9,7 +9,7 @@
 }
 
 @section Styles {
-    <bundle name="wwwroot/bundles/summernote-bundle.min.css" asp-append-version="true"></bundle>
+    <link href="~/vendor/summernote/summernote-bs5.css" rel="stylesheet" asp-append-version="true" />
     <style>
         .flatpickr-wrapper { flex-grow: 1; }
     </style>
@@ -17,9 +17,8 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <bundle name="wwwroot/bundles/summernote-bundle.min.js" asp-append-version="true"></bundle>
+    <script src="~/vendor/summernote/summernote-bs5.js" asp-append-version="true"></script>
 }
-
 
 <form method="post" enctype="multipart/form-data">
     <div class="sticky-header-setup"></div>
