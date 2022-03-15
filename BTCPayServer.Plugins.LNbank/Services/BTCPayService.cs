@@ -23,7 +23,8 @@ public class BTCPayService
         return await client.CreateLightningInvoice(CryptoCode, new CreateLightningInvoiceRequest
         {
             Amount = req.Amount,
-            Description = req.Description ?? req.DescriptionHash?.ToString() ?? string.Empty,
+            Description = req.Description,
+            DescriptionHash = req.DescriptionHash,
             Expiry = req.Expiry,
             PrivateRouteHints = req.PrivateRouteHints
         });

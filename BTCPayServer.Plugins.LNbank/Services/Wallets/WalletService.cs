@@ -1,17 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using BTCPayServer.Lightning;
-using BTCPayServer.Plugins.LNbank.Data;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Hubs;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.DataEncoders;
@@ -94,6 +90,9 @@ public class WalletService
 
     public async Task<Transaction> Receive(Wallet wallet, long amount, string description, bool attachDescription, bool privateRouteHints, TimeSpan? expiry) =>
         await Receive(wallet, amount, description, null, attachDescription, privateRouteHints, expiry);
+    
+    public async Task<Transaction> Receive(Wallet wallet, long amount, string description, uint256 descriptionHash) =>
+        await Receive(wallet, amount, description, descriptionHash, false, false, null);
         
     public async Task<Transaction> Receive(Wallet wallet, long amount, uint256 descriptionHash, bool privateRouteHints, TimeSpan? expiry) =>
         await Receive(wallet, amount, null, descriptionHash, false, privateRouteHints, expiry);
@@ -119,7 +118,7 @@ public class WalletService
             Amount = data.Amount,
             ExpiresAt = data.ExpiresAt,
             PaymentRequest = data.BOLT11,
-            Description = description ?? descriptionHash?.ToString() ?? string.Empty
+            Description = description
         });
 
         await dbContext.SaveChangesAsync();
@@ -257,6 +256,11 @@ public class WalletService
         }
 
         return transaction;
+    }
+
+    public bool ValidateDescriptionHash(string paymentRequest, string metadata)
+    {
+        return ParsePaymentRequest(paymentRequest).VerifyDescriptionHash(metadata);
     }
 
     public async Task<Transaction> ValidatePaymentRequest(string paymentRequest)
@@ -453,4 +457,5 @@ public class WalletService
         
     private static string Sats(LightMoney amount) => $"{Math.Round(amount.ToUnit(LightMoneyUnit.Satoshi))} sats";
     public static string Millisats(LightMoney amount) => $"{amount.ToUnit(LightMoneyUnit.MilliSatoshi)} millisats";
+
 }
