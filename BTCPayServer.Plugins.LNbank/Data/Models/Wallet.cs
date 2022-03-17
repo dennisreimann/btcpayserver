@@ -14,11 +14,15 @@ public class Wallet
     [DisplayName("Wallet ID")]
     public string WalletId { get; set; }
 
-    [DisplayName("User ID")] public string UserId { get; set; }
+    [DisplayName("User ID")]
+    public string UserId { get; set; }
+    
     [Required]
     public string Name { get; set; }
+    
     [DisplayName("Creation date")]
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 
     public LightMoney Balance
