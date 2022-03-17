@@ -2,6 +2,7 @@ using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Plugins.PodServer.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace BTCPayServer.Plugins.PodServer.Services.Podcasts;
 
@@ -44,6 +45,16 @@ public class PodcastService
             queryable = queryable.Include(p => p.Episodes).AsNoTracking();
         }
 
+        if (query.IncludeSeasons)
+        {
+            queryable = queryable.Include(p => p.Seasons).AsNoTracking();
+        }
+
+        if (query.IncludePeople)
+        {
+            queryable = queryable.Include(p => p.People).AsNoTracking();
+        }
+
         return queryable;
     }
 
@@ -52,9 +63,11 @@ public class PodcastService
         await using var dbContext = _dbContextFactory.CreateContext();
         var podcastQuery = new PodcastsQuery
         {
-            IncludeEpisodes = query.IncludeEpisodes,
             UserId = query.UserId is null ? null : new[] { query.UserId },
-            PodcastId = query.PodcastId is null ? null : new[] { query.PodcastId }
+            PodcastId = query.PodcastId is null ? null : new[] { query.PodcastId },
+            IncludeSeasons = query.IncludeSeasons,
+            IncludeEpisodes = query.IncludeEpisodes,
+            IncludePeople = query.IncludePeople,
         };
         return await FilterPodcasts(dbContext.Podcasts.AsQueryable(), podcastQuery).FirstOrDefaultAsync();
     }
@@ -70,8 +83,7 @@ public class PodcastService
         }
         else
         {
-            entry = dbContext.Entry(podcast);
-            entry.State = EntityState.Modified;
+            entry = dbContext.Update(podcast);
         }
         await dbContext.SaveChangesAsync();
 
@@ -87,6 +99,26 @@ public class PodcastService
         await using var dbContext = _dbContextFactory.CreateContext();
         dbContext.Podcasts.Remove(podcast);
         await dbContext.SaveChangesAsync();
+    }
+
+    public async Task<IEnumerable<Episode>> GetEpisodes(EpisodesQuery query)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        var queryable = dbContext.Episodes.AsQueryable();
+
+        if (query.PodcastId != null) query.IncludePodcast = true;
+
+        if (query.PodcastId != null)
+        {
+            queryable = queryable.Where(e => e.PodcastId == query.PodcastId);
+        }
+
+        if (query.OnlyPublished)
+        {
+            queryable = queryable.Where(e => e.PublishedAt >= DateTime.UtcNow);
+        }
+        
+        return await queryable.OrderByDescending(t => t.PublishedAt).ToListAsync();
     }
 
     public async Task<Episode> GetEpisode(EpisodeQuery query)
@@ -140,27 +172,11 @@ public class PodcastService
         }
         else
         {
-            entry = dbContext.Entry(episode);
-            entry.State = EntityState.Modified;
+            entry = dbContext.Update(episode);
         }
         await dbContext.SaveChangesAsync();
 
         return (Episode)entry.Entity;
-    }
-
-    private async Task<IEnumerable<Episode>> GetEpisodes(EpisodesQuery query)
-    {
-        await using var dbContext = _dbContextFactory.CreateContext();
-        var queryable = dbContext.Episodes.AsQueryable();
-
-        if (query.PodcastId != null) query.IncludePodcast = true;
-
-        if (query.PodcastId != null)
-        {
-            queryable = queryable.Where(e => e.PodcastId == query.PodcastId);
-        }
-
-        return await queryable.ToListAsync();
     }
 
     public async Task RemoveEpisode(Episode episode)
@@ -174,6 +190,146 @@ public class PodcastService
         
         await using var dbContext = _dbContextFactory.CreateContext();
         dbContext.Episodes.Remove(episode);
+        await dbContext.SaveChangesAsync();
+    }
+
+    private async Task<IEnumerable<Person>> GetPeople(PeopleQuery query)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        var queryable = dbContext.People.AsQueryable();
+
+        if (query.PodcastId != null) query.IncludePodcast = true;
+
+        if (query.PodcastId != null)
+        {
+            queryable = queryable.Where(e => e.PodcastId == query.PodcastId);
+        }
+
+        return await queryable.ToListAsync();
+    }
+
+    public async Task<Person> GetPerson(PersonQuery query)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        IQueryable<Person> queryable = dbContext.People.AsQueryable();
+        
+        if (query.PodcastId != null)
+        {
+            var podcastQuery = new PodcastQuery
+            { 
+                PodcastId = query.PodcastId,
+                IncludePeople = true
+            };
+
+            var podcast = await GetPodcast(podcastQuery);
+            if (podcast == null) return null;
+
+            queryable = podcast.People.AsQueryable();
+        }
+        
+        if (query.IncludePodcast)
+        {
+            queryable = queryable.Include(e => e.Podcast).AsNoTracking();
+        }
+
+        return queryable.FirstOrDefault();
+    }
+    
+    public async Task<Person> AddOrUpdatePerson(Person person)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+
+        EntityEntry entry;
+        if (string.IsNullOrEmpty(person.PersonId))
+        {
+            entry = await dbContext.People.AddAsync(person);
+        }
+        else
+        {
+            entry = dbContext.Update(person);
+        }
+        await dbContext.SaveChangesAsync();
+
+        return (Person)entry.Entity;
+    }
+
+    public async Task RemovePerson(Person person)
+    {
+        if (!string.IsNullOrEmpty(person.ImageFileId))
+        {
+            await _fileService.RemoveFile(person.ImageFileId, null);
+        }
+        
+        await using var dbContext = _dbContextFactory.CreateContext();
+        dbContext.People.Remove(person);
+        await dbContext.SaveChangesAsync();
+    }
+
+    public async Task<IEnumerable<Season>> GetSeasons(SeasonsQuery query)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        var queryable = dbContext.Seasons.AsQueryable();
+
+        if (query.PodcastId != null) query.IncludePodcast = true;
+
+        if (query.PodcastId != null)
+        {
+            queryable = queryable.Where(e => e.PodcastId == query.PodcastId);
+        }
+
+        return await queryable.ToListAsync();
+    }
+
+    public async Task<Season> GetSeason(SeasonQuery query)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        IQueryable<Season> queryable = dbContext.Seasons.AsQueryable();
+        
+        if (query.PodcastId != null)
+        {
+            var podcastQuery = new PodcastQuery
+            { 
+                PodcastId = query.PodcastId,
+                IncludeSeasons = true
+            };
+
+            var podcast = await GetPodcast(podcastQuery);
+            if (podcast == null) return null;
+
+            queryable = podcast.Seasons.AsQueryable();
+        }
+        
+        if (query.IncludePodcast)
+        {
+            queryable = queryable.Include(e => e.Podcast).AsNoTracking();
+        }
+
+        return queryable.FirstOrDefault();
+    }
+
+    
+    public async Task<Season> AddOrUpdateSeason(Season season)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+
+        EntityEntry entry;
+        if (string.IsNullOrEmpty(season.SeasonId))
+        {
+            entry = await dbContext.Seasons.AddAsync(season);
+        }
+        else
+        {
+            entry = dbContext.Update(season);
+        }
+        await dbContext.SaveChangesAsync();
+
+        return (Season)entry.Entity;
+    }
+
+    public async Task RemoveSeason(Season season)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        dbContext.Seasons.Remove(season);
         await dbContext.SaveChangesAsync();
     }
 }

@@ -6,4 +6,5 @@ public class EpisodesQuery
     public string EpisodeId { get; set; }
     public string SeasonId { get; set; }
     public bool IncludePodcast { get; set; }
+    public bool OnlyPublished { get; set; }
 }

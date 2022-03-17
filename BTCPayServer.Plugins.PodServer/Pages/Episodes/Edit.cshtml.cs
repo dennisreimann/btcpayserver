@@ -1,6 +1,5 @@
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Abstractions.Contracts;
-using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Client;
 using BTCPayServer.Data;
 using BTCPayServer.Plugins.PodServer.Data.Models;
@@ -8,7 +7,7 @@ using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace BTCPayServer.Plugins.PodServer.Pages.Episodes;
 
@@ -16,6 +15,7 @@ namespace BTCPayServer.Plugins.PodServer.Pages.Episodes;
 public class EditModel : BasePageModel
 {
     private readonly IFileService _fileService;
+    public IEnumerable<SelectListItem> SeasonItems { get; set; }
     public Episode Episode { get; set; }
     public IFormFile ImageFile { get; set; }
     public IFormFile EnclosureFile { get; set; }
@@ -28,23 +28,28 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId, string episodeId)
     {
-        Episode = await PodcastService.GetEpisode(new EpisodeQuery {
+        Episode = await PodcastService.GetEpisode(new EpisodeQuery
+        {
             PodcastId = podcastId,
             EpisodeId = episodeId,
         });
         if (Episode == null) return NotFound();
-        
+
+        SeasonItems = await GetSeasonItems(Episode.PodcastId);
         return Page();
     }
 
     public async Task<IActionResult> OnPostAsync(string podcastId, string episodeId)
     {
-        Episode = await PodcastService.GetEpisode(new EpisodeQuery {
+        Episode = await PodcastService.GetEpisode(new EpisodeQuery
+        {
             PodcastId = podcastId,
             EpisodeId = episodeId,
             ForEditing = true
         });
         if (Episode == null) return NotFound();
+        
+        SeasonItems = await GetSeasonItems(Episode.PodcastId);
         
         if (!ModelState.IsValid) return Page();
         
@@ -103,6 +108,7 @@ public class EditModel : BasePageModel
             e => e.Title,
             e => e.Description,
             e => e.Number,
+            e => e.SeasonId,
             e => e.ImageFileId,
             e => e.PublishedAt,
             e => e.Enclosures))
@@ -118,5 +124,11 @@ public class EditModel : BasePageModel
         }
         
         return RedirectToPage("./Episode", new { podcastId = Episode.PodcastId, episodeId = Episode.EpisodeId });
+    }
+
+    private async Task<IEnumerable<SelectListItem>> GetSeasonItems(string podcastId)
+    {
+        var seasons = await PodcastService.GetSeasons(new SeasonsQuery { PodcastId = podcastId });
+        return seasons.Select(s => new SelectListItem { Value = s.SeasonId, Text = s.Number + (string.IsNullOrEmpty(s.Name) ? "" : $" - {s.Name}") });
     }
 }

@@ -15,6 +15,8 @@ public class PodServerPluginDbContext : DbContext
         
     public DbSet<Podcast> Podcasts { get; set; }
     public DbSet<Episode> Episodes { get; set; }
+    public DbSet<Person> People { get; set; }    
+    public DbSet<Season> Seasons { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,6 +47,18 @@ public class PodServerPluginDbContext : DbContext
         }
         
         modelBuilder
+            .Entity<Season>()
+            .HasIndex("PodcastId", "Number")
+            .IsUnique();
+
+        modelBuilder
+            .Entity<Episode>()
+            .HasOne(e => e.Season)
+            .WithMany(s => s.Episodes)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        /*
+        modelBuilder
             .Entity<Contribution>()
             .HasOne(c => c.Person)
             .WithMany(p => p.Contributions)
@@ -73,6 +87,6 @@ public class PodServerPluginDbContext : DbContext
             .HasOne(o => o.Podcast)
             .WithMany(w => w.Seasons)
             .OnDelete(DeleteBehavior.Cascade);
-            
+        */
     }
 }

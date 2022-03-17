@@ -10,7 +10,7 @@
 }
 
 <div class="sticky-header-setup"></div>
-<div class="sticky-header d-sm-flex align-items-center justify-content-between mb-2">
+<div class="sticky-header d-sm-flex align-items-center justify-content-between">
     <h1 class="mb-0">@ViewData["Title"]</h1>
     <div class="d-flex gap-3 mt-3 mt-sm-0">
         <a asp-page="./Public" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0" role="button" id="Feed" target="feed_@Model.Podcast.PodcastId">Feed</a>
@@ -22,7 +22,7 @@
     <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
 }
 
-<p>@Model.Podcast.Description</p>
+@Html.Raw(Model.Podcast.Description)
 
 @if (Model.Episodes.Any())
 {

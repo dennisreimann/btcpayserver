@@ -5,4 +5,6 @@ public class PodcastsQuery
     public string[] UserId { get; set; }
     public string[] PodcastId { get; set; }
     public bool IncludeEpisodes { get; set; }
+    public bool IncludeSeasons { get; set; }
+    public bool IncludePeople { get; set; }
 }

@@ -15,8 +15,11 @@ public class Season
     public string PodcastId { get; set; }
     public Podcast Podcast { get; set; }
     
+    public ICollection<Episode> Episodes { get; set; }
+    
     // Properties
     [Required]
+    [Range(1, int.MaxValue)]
     public int Number { get; set; }
 
     [MaxLength(128)]

@@ -22,7 +22,7 @@ public class PublicModel : BasePageModel
             EpisodeId = episodeId,
             IncludePodcast = true
         });
-        if (Episode == null) return NotFound();
+        if (!Episode.IsPublished) return NotFound();
         
         Podcast = Episode.Podcast;
 

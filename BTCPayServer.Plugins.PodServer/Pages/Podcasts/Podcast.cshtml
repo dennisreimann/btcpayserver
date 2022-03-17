@@ -9,14 +9,15 @@
 }
 
 <div class="sticky-header-setup"></div>
-<div class="sticky-header d-sm-flex align-items-center justify-content-between mb-2">
+<div class="sticky-header d-sm-flex align-items-center justify-content-between">
     <h2 class="mb-0">@ViewData["Title"]</h2>
     <div class="d-flex gap-3 mt-3 mt-sm-0">
-        <a asp-page="/Episodes/Create" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary order-sm-1" role="button" id="CreatePodcast">
+        <a asp-page="/Episodes/Create" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary" role="button" id="CreateEpisode">
             Create an episode
         </a>
-        <a class="btn btn-secondary" asp-page="./Public" asp-route-podcastId="@Model.Podcast.PodcastId" id="ViewPodcast" target="podcast_@Model.Podcast.PodcastId">View</a>
-        <a class="btn btn-secondary" asp-page="./Edit" asp-route-podcastId="@Model.Podcast.PodcastId" id="EditPodcast">Edit</a>
+        <a class="btn btn-secondary" asp-page="./Edit" asp-route-podcastId="@Model.Podcast.PodcastId" id="EditPodcast">
+            @await Component.InvokeAsync("Icon", new { symbol = "settings" })
+        </a>
     </div>
 </div>
 
@@ -27,7 +28,7 @@
     <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
 }
 
-<p>@Model.Podcast.Description</p>
+@Html.Raw(Model.Podcast.Description)
 
 @if (Model.Episodes.Any())
 {
@@ -47,18 +48,23 @@
                     <tr id="Episode-@episode.EpisodeId">
                         <td>
                             <a asp-page="/Episodes/Episode" asp-route-podcastId="@Model.Podcast.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode">
-                                <time datetime="@episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
-                                    @episode.PublishedAt?.ToTimeAgo()
-                                </time>
+                                @if (episode.PublishedAt != null)
+                                {
+                                    <time datetime="@episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
+                                        @episode.PublishedAt?.ToTimeAgo()
+                                    </time>
+                                }
+                                else
+                                {
+                                    <span class="text-danger">No publish date</span>
+                                }
                             </a>
                         </td>
                         <td class="episode-title">@episode.Title</td>
                         <td class="text-end">
-                            <a asp-page="/Episodes/Public" asp-route-episodeId="@episode.EpisodeId" class="podcast-view" target="episode_@episode.EpisodeId">View</a>
+                            <a asp-page="/Episodes/Public" asp-route-episodeId="@episode.EpisodeId" class="podcast-view" target="episode_@episode.EpisodeId">Public Page</a>
                             <span> - </span>
                             <a asp-page="/Episodes/Edit" asp-route-podcastId="@episode.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode-edit">Edit</a>
-                            <span> - </span>
-                            <a asp-page="/Episodes/Delete" asp-route-podcastId="@episode.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode-delete">Delete</a>
                         </td>
                     </tr>
                 }

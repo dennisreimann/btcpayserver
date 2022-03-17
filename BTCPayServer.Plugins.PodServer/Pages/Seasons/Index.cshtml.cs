@@ -1,33 +1,32 @@
-using BTCPayServer.Data;
-using BTCPayServer.Abstractions.Constants;
+﻿using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client;
+using BTCPayServer.Data;
 using BTCPayServer.Plugins.PodServer.Data.Models;
 using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BTCPayServer.Plugins.PodServer.Pages.Podcasts;
+namespace BTCPayServer.Plugins.PodServer.Pages.Seasons;
 
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
-public class PodcastModel : BasePageModel
+public class IndexModel : BasePageModel
 {
     public Podcast Podcast { get; set; }
-    public IEnumerable<Episode> Episodes { get; set; }
+    public IEnumerable<Season> Seasons { get; set; }
 
-    public PodcastModel(UserManager<ApplicationUser> userManager,
+    public IndexModel(UserManager<ApplicationUser> userManager,
         PodcastService podcastService) : base(userManager, podcastService) {}
 
-    public async Task<IActionResult> OnGetAsync(string podcastId)
+    public async Task<IActionResult> OnGet(string podcastId)
     {
         Podcast = await PodcastService.GetPodcast(new PodcastQuery {
             UserId = UserId,
             PodcastId = podcastId,
-            IncludeEpisodes = true
+            IncludeSeasons = true
         });
-        if (Podcast == null) return NotFound();
         
-        Episodes = Podcast.Episodes.OrderByDescending(t => t.PublishedAt);
+        Seasons = Podcast.Seasons.OrderByDescending(p => p.Number);
         
         return Page();
     }
