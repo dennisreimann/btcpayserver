@@ -1,4 +1,4 @@
-@page "/plugins/podserver/podcasts/create"
+@page "/plugins/podserver/podcasts/create/{handler?}"
 @model BTCPayServer.Plugins.PodServer.Pages.Podcasts.CreateModel
 
 @{
@@ -40,9 +40,24 @@
                 <span asp-validation-for="Podcast.Category" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Podcast.Description" class="form-label" data-required></label>
+                <label asp-for="Podcast.Description" class="form-label" data-required>RSS Feed</label>
                 <textarea asp-for="Podcast.Description" class="form-control" rows="3" required></textarea>
                 <span asp-validation-for="Podcast.Description" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+</form>
+
+<h3 class="mt-5 mb-4">Import existing RSS feed</h3>
+<form method="post" asp-page-handler="import" enctype="multipart/form-data">
+    <div class="row">
+        <div class="col-xl-10 col-xxl-constrain">
+            <div class="form-group">
+                <label for="RssFile" class="form-label" data-required>RSS File</label>
+                <div class="d-flex gap-3">
+                    <input id="RssFile" name="RssFile" type="file" class="form-control" required>
+                    <button type="submit" class="btn btn-secondary" id="Import">Import</button>
+                </div>
             </div>
         </div>
     </div>

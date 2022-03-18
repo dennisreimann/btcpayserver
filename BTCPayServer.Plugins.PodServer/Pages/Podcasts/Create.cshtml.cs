@@ -2,6 +2,7 @@ using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client;
 using BTCPayServer.Data;
 using BTCPayServer.Plugins.PodServer.Data.Models;
+using BTCPayServer.Plugins.PodServer.Services.Feeds;
 using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -46,5 +47,24 @@ public class CreateModel : BasePageModel
         
         TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully created.";
         return RedirectToPage("./Index", new { podcastId = Podcast.PodcastId });
+    }
+    
+    public async Task<IActionResult> OnPostImportAsync([FromForm] IFormFile rssFile, [FromServices] FeedImporter importer)
+    {
+        try
+        {
+            Podcast = await importer.Import(rssFile);
+            Podcast.UserId = UserId;
+
+            await PodcastService.AddOrUpdatePodcast(Podcast);
+
+            TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully imported.";
+            return RedirectToPage("./Index", new { podcastId = Podcast.PodcastId });
+        }
+        catch (Exception exception)
+        {
+            TempData[WellKnownTempData.ErrorMessage] = $"Import failed: {exception.Message}";
+            return Page();
+        }
     }
 }
