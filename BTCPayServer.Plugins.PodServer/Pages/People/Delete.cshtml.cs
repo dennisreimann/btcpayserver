@@ -1,0 +1,44 @@
+using BTCPayServer.Abstractions.Constants;
+using BTCPayServer.Client;
+using BTCPayServer.Data;
+using BTCPayServer.Plugins.PodServer.Data.Models;
+using BTCPayServer.Plugins.PodServer.Services.Podcasts;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+
+namespace BTCPayServer.Plugins.PodServer.Pages.People;
+
+[Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
+public class DeleteModel : BasePageModel
+{
+    public Person Person { get; set; }
+
+    public DeleteModel(UserManager<ApplicationUser> userManager,
+        PodcastService podcastService) : base(userManager, podcastService) {}
+
+    public async Task<IActionResult> OnGet(string podcastId, string personId)
+    {
+        Person = await PodcastService.GetPerson(new PersonQuery {
+            PodcastId = podcastId,
+            PersonId = personId
+        });
+        if (Person == null) return NotFound();
+
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostAsync(string podcastId, string personId)
+    {
+        Person = await PodcastService.GetPerson(new PersonQuery {
+            PodcastId = podcastId,
+            PersonId = personId
+        });
+        if (Person == null) return NotFound();
+
+        await PodcastService.RemovePerson(Person);
+        TempData[WellKnownTempData.SuccessMessage] = "Person removed.";
+
+        return RedirectToPage("./Index", new { podcastId = Person.PodcastId });
+    }
+}

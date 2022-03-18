@@ -1,0 +1,50 @@
+﻿@page "/plugins/podserver/podcasts/{podcastId}/people"
+@model BTCPayServer.Plugins.PodServer.Pages.People.IndexModel
+
+@{
+    ViewData.SetActivePage(PodServerNavPages.People, Model.Podcast.Title);
+}
+
+<div class="sticky-header-setup"></div>
+<div class="sticky-header mb-l">
+    <div class="d-sm-flex align-items-center justify-content-between mb-2 mb-lg-4">
+        <h2 class="mb-0">@ViewData["Title"]</h2>
+        <a asp-page="./Create" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0" role="button" id="AddPerson">Add a person</a>
+    </div>
+    <partial name="_PodcastSettingsNav" model="Model.Podcast.PodcastId" />
+</div>
+
+<partial name="_StatusMessage" />
+
+@if (Model.People.Any())
+{
+    <div class="row">
+        <div class="col">
+            <table id="PodcastPeople" class="table table-hover">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var person in Model.People)
+                {
+                    <tr>
+                        <td>
+                            @person.Name
+                        </td>
+                        <td class="text-end">
+                            <a asp-page="./Edit" asp-route-podcastId="@person.PodcastId" asp-route-personId="@person.PersonId" class="podcast-edit">Edit</a>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <p id="PodcastPeople" class="text-secondary">There are no people yet.</p>
+}

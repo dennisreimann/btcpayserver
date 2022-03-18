@@ -13,6 +13,8 @@ public class Contribution
     // Properties
     public string Role { get; set; }
     
+    [Required]
+    [Range(1, int.MaxValue)]
     public int Split { get; set; }
     
     // Relations

@@ -19,12 +19,16 @@ public class PublicModel : BasePageModel
     public async Task<IActionResult> OnGetAsync(string podcastId)
     {
         Podcast = await PodcastService.GetPodcast(new PodcastQuery {
-            PodcastId = podcastId,
-            IncludeEpisodes = true
+            PodcastId = podcastId
         });
-        
-        Episodes = Podcast.Episodes.OrderByDescending(t => t.PublishedAt);
-        
+        if (Podcast == null) return NotFound();
+
+        Episodes = await PodcastService.GetEpisodes(new EpisodesQuery
+        {
+            PodcastId = podcastId, 
+            OnlyPublished = true
+        });
+
         return Page();
     }
 }

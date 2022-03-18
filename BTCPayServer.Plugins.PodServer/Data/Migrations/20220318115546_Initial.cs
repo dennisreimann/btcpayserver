@@ -34,7 +34,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Person",
+                name: "People",
                 schema: "BTCPayServer.Plugins.PodServer",
                 columns: table => new
                 {
@@ -51,9 +51,9 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Person", x => x.PersonId);
+                    table.PrimaryKey("PK_People", x => x.PersonId);
                     table.ForeignKey(
-                        name: "FK_Person_Podcasts_PodcastId",
+                        name: "FK_People_Podcasts_PodcastId",
                         column: x => x.PodcastId,
                         principalSchema: "BTCPayServer.Plugins.PodServer",
                         principalTable: "Podcasts",
@@ -62,7 +62,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Season",
+                name: "Seasons",
                 schema: "BTCPayServer.Plugins.PodServer",
                 columns: table => new
                 {
@@ -73,9 +73,9 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Season", x => x.SeasonId);
+                    table.PrimaryKey("PK_Seasons", x => x.SeasonId);
                     table.ForeignKey(
-                        name: "FK_Season_Podcasts_PodcastId",
+                        name: "FK_Seasons_Podcasts_PodcastId",
                         column: x => x.PodcastId,
                         principalSchema: "BTCPayServer.Plugins.PodServer",
                         principalTable: "Podcasts",
@@ -94,7 +94,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     PublishedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     LastUpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     ImageFileId = table.Column<string>(type: "text", nullable: true),
-                    Number = table.Column<int>(type: "integer", nullable: false),
+                    Number = table.Column<int>(type: "integer", nullable: true),
                     PodcastId = table.Column<string>(type: "text", nullable: false),
                     SeasonId = table.Column<string>(type: "text", nullable: true)
                 },
@@ -109,11 +109,12 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         principalColumn: "PodcastId",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Episodes_Season_SeasonId",
+                        name: "FK_Episodes_Seasons_SeasonId",
                         column: x => x.SeasonId,
                         principalSchema: "BTCPayServer.Plugins.PodServer",
-                        principalTable: "Season",
-                        principalColumn: "SeasonId");
+                        principalTable: "Seasons",
+                        principalColumn: "SeasonId",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -137,12 +138,11 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         principalTable: "Episodes",
                         principalColumn: "EpisodeId");
                     table.ForeignKey(
-                        name: "FK_Contribution_Person_PersonId",
+                        name: "FK_Contribution_People_PersonId",
                         column: x => x.PersonId,
                         principalSchema: "BTCPayServer.Plugins.PodServer",
-                        principalTable: "Person",
-                        principalColumn: "PersonId",
-                        onDelete: ReferentialAction.Cascade);
+                        principalTable: "People",
+                        principalColumn: "PersonId");
                 });
 
             migrationBuilder.CreateTable(
@@ -154,7 +154,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     EpisodeId = table.Column<string>(type: "text", nullable: false),
                     FileId = table.Column<string>(type: "text", nullable: false),
                     Type = table.Column<string>(type: "text", nullable: false),
-                    Length = table.Column<int>(type: "integer", nullable: false),
+                    Length = table.Column<long>(type: "bigint", nullable: false),
                     IsAlternate = table.Column<bool>(type: "boolean", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: true)
                 },
@@ -201,16 +201,17 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 column: "SeasonId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Person_PodcastId",
+                name: "IX_People_PodcastId",
                 schema: "BTCPayServer.Plugins.PodServer",
-                table: "Person",
+                table: "People",
                 column: "PodcastId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Season_PodcastId",
+                name: "IX_Seasons_PodcastId_Number",
                 schema: "BTCPayServer.Plugins.PodServer",
-                table: "Season",
-                column: "PodcastId");
+                table: "Seasons",
+                columns: new[] { "PodcastId", "Number" },
+                unique: true);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
@@ -224,7 +225,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 schema: "BTCPayServer.Plugins.PodServer");
 
             migrationBuilder.DropTable(
-                name: "Person",
+                name: "People",
                 schema: "BTCPayServer.Plugins.PodServer");
 
             migrationBuilder.DropTable(
@@ -232,7 +233,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 schema: "BTCPayServer.Plugins.PodServer");
 
             migrationBuilder.DropTable(
-                name: "Season",
+                name: "Seasons",
                 schema: "BTCPayServer.Plugins.PodServer");
 
             migrationBuilder.DropTable(

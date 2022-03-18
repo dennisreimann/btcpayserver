@@ -1,15 +1,15 @@
-@page "/plugins/podserver/podcasts/{podcastId}/episodes/{episodeId}delete"
+@page "/plugins/podserver/podcasts/{podcastId}/episodes/{episodeId}/delete"
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.DeleteModel
 
 @{
     ViewData.SetActivePage(PodServerNavPages.EditEpisode, Model.Episode.Title);
 }
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
-
-<h2 class="mt-1 mb-4">@ViewData["Title"]</h2>
+<h2 class="mt-1 mb-4">
+    <a asp-page="./Episode" asp-route-podcastId="@Model.Episode.EpisodeId" class="unobtrusive-link">
+        @ViewData["Title"]
+    </a>
+</h2>
 
 <p>Are you sure you want to delete this episode?</p>
 

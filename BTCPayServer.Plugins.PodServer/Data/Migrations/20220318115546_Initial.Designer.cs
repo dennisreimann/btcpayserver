@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 {
     [DbContext(typeof(PodServerPluginDbContext))]
-    [Migration("20220302211525_Initial")]
+    [Migration("20220318115546_Initial")]
     partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -69,8 +69,8 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.Property<bool>("IsAlternate")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("Length")
-                        .HasColumnType("integer");
+                    b.Property<long>("Length")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Title")
                         .HasColumnType("text");
@@ -102,7 +102,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.Property<DateTimeOffset>("LastUpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Number")
+                    b.Property<int?>("Number")
                         .HasColumnType("integer");
 
                     b.Property<string>("PodcastId")
@@ -155,7 +155,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 
                     b.HasIndex("PodcastId");
 
-                    b.ToTable("Person", "BTCPayServer.Plugins.PodServer");
+                    b.ToTable("People", "BTCPayServer.Plugins.PodServer");
                 });
 
             modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Podcast", b =>
@@ -218,9 +218,10 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 
                     b.HasKey("SeasonId");
 
-                    b.HasIndex("PodcastId");
+                    b.HasIndex("PodcastId", "Number")
+                        .IsUnique();
 
-                    b.ToTable("Season", "BTCPayServer.Plugins.PodServer");
+                    b.ToTable("Seasons", "BTCPayServer.Plugins.PodServer");
                 });
 
             modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Contribution", b =>
@@ -231,8 +232,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 
                     b.HasOne("BTCPayServer.Plugins.PodServer.Data.Models.Person", "Person")
                         .WithMany("Contributions")
-                        .HasForeignKey("PersonId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("PersonId");
 
                     b.Navigation("Person");
                 });
@@ -257,8 +257,9 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         .IsRequired();
 
                     b.HasOne("BTCPayServer.Plugins.PodServer.Data.Models.Season", "Season")
-                        .WithMany()
-                        .HasForeignKey("SeasonId");
+                        .WithMany("Episodes")
+                        .HasForeignKey("SeasonId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Podcast");
 
@@ -294,7 +295,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 
                             b1.HasKey("PersonId");
 
-                            b1.ToTable("Person", "BTCPayServer.Plugins.PodServer");
+                            b1.ToTable("People", "BTCPayServer.Plugins.PodServer");
 
                             b1.WithOwner()
                                 .HasForeignKey("PersonId");
@@ -335,6 +336,11 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.Navigation("People");
 
                     b.Navigation("Seasons");
+                });
+
+            modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Season", b =>
+                {
+                    b.Navigation("Episodes");
                 });
 #pragma warning restore 612, 618
         }

@@ -23,7 +23,9 @@ public class Episode
     public DateTimeOffset LastUpdatedAt { get; set; }
     
     public string ImageFileId { get; set; }
-    public int Number { get; set; }
+    
+    [Range(1, int.MaxValue)]
+    public int? Number { get; set; }
     
     // Relations
     [Required]
@@ -35,5 +37,9 @@ public class Episode
     
     public ICollection<Contribution> Contributors { get; set; } = new List<Contribution>();
     public ICollection<Enclosure> Enclosures { get; set; } = new List<Enclosure>();
-
+    
+    public bool IsPublished
+    {
+        get => PublishedAt >= DateTime.UtcNow;
+    }
 }

@@ -1,6 +1,7 @@
 @page "/plugins/podserver/podcasts/{podcastId}/episodes/{episodeId}/edit"
 @using BTCPayServer.Abstractions.Contracts
 @using System.Globalization
+@using BTCPayServer.Plugins.PodServer.Data.Models
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.EditModel
 @inject IFileService _fileService
 
@@ -28,10 +29,11 @@
             <button type="submit" class="btn btn-primary" id="Save">Save</button>   
         </div>
     </div>
+    
+    <partial name="_StatusMessage" />
 
     <div class="row">
-        <div class="col-xl-8 col-xxl-constrain">
-            <partial name="_StatusMessage" />
+        <div class="col-xl-10 col-xxl-constrain">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             
             <div class="form-group">
@@ -46,7 +48,7 @@
             </div>
             <div class="form-group">
                 <label asp-for="Episode.PublishedAt" class="form-label"></label>
-                <div class="input-group flex-nowrap">
+                <div class="input-group flex-nowrap" style="max-width:18rem">
                     <input type="datetime-local" asp-for="Episode.PublishedAt"
                            value="@(Model.Episode.PublishedAt?.ToString("u", CultureInfo.InvariantCulture))"
                            class="form-control flatdtpicker"
@@ -68,11 +70,27 @@
                 </div>
             }
             
-            <h3 class="mt-5 mb-4">Additional information</h3>
-            <div class="form-group">
-                <label asp-for="Episode.Number" class="form-label"></label>
-                <input asp-for="Episode.Number" class="form-control" type="number">
-                <span asp-validation-for="Episode.Number" class="text-danger"></span>
+            <h3 class="mt-5 mb-3">Additional information</h3>
+            <div class="row g-3">
+                <div class="col col-auto">
+                    <div class="form-group">
+                        <label asp-for="Episode.Number" class="form-label"></label>
+                        <input asp-for="Episode.Number" class="form-control" type="number" min="1" step="1" style="width:8rem">
+                        <span asp-validation-for="Episode.Number" class="text-danger"></span>
+                    </div>
+                </div>
+                @if (Model.SeasonItems.Any())
+                {
+                    <div class="col col-auto">
+                        <div class="form-group">
+                            <label asp-for="Episode.SeasonId" class="form-label">Season</label>
+                            <select asp-for="Episode.SeasonId" asp-items="Model.SeasonItems" class="form-select w-auto">
+                                <option></option>
+                            </select>
+                            <span asp-validation-for="Episode.SeasonId" class="text-danger"></span>
+                        </div>
+                    </div>
+                }
             </div>
             <div class="form-group">
                 <label for="ImageFile" class="form-label">Cover Image</label>
@@ -85,3 +103,9 @@
         </div>
     </div>
 </form>
+
+<h3 class="mt-5 mb-4">Additional Actions</h3>
+<div class="d-flex gap-3">
+    <a id="DeleteEpisode" class="btn btn-outline-danger" asp-page="./Delete" asp-route-podcastId="@Model.Episode.PodcastId" asp-route-episodeId="@Model.Episode.EpisodeId">Delete this episode</a>
+</div>
+

@@ -7,51 +7,55 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BTCPayServer.Plugins.PodServer.Pages.Episodes;
+namespace BTCPayServer.Plugins.PodServer.Pages.People;
 
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
 public class CreateModel : BasePageModel
 {
     public Podcast Podcast { get; set; }
-    public Episode Episode { get; set; }
+    public Person Person { get; set; }
 
     public CreateModel(UserManager<ApplicationUser> userManager,
         PodcastService podcastService) : base(userManager, podcastService) {}
 
     public async Task<IActionResult> OnGet(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastQuery { UserId = UserId, PodcastId = podcastId });
+        Podcast = await PodcastService.GetPodcast(new PodcastQuery {
+            UserId = UserId,
+            PodcastId = podcastId
+        });
         if (Podcast == null) return NotFound();
+        
+        Person = new Person
+        {
+            PodcastId = Podcast.PodcastId
+        };
         
         return Page();
     }
 
     public async Task<IActionResult> OnPostAsync(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastQuery { UserId = UserId, PodcastId = podcastId });
-        if (Podcast == null) return NotFound();
-        
         if (!ModelState.IsValid) return Page();
 
-        Episode = new Episode
+        Podcast = await PodcastService.GetPodcast(new PodcastQuery { UserId = UserId, PodcastId = podcastId });
+        
+        Person = new Person
         {
             PodcastId = Podcast.PodcastId
         };
 
         if (!await TryUpdateModelAsync(
-            Episode, 
-            "episode",
-            e => e.PodcastId,
-            e => e.Title,
-            e => e.Description))
+            Person, 
+            "person",
+            p => p.Name))
         {
             return Page();
         }
         
-        Episode.LastUpdatedAt = DateTimeOffset.UtcNow;
-        await PodcastService.AddOrUpdateEpisode(Episode);
+        await PodcastService.AddOrUpdatePerson(Person);
         
-        TempData[WellKnownTempData.SuccessMessage] = "Episode successfully created.";
-        return RedirectToPage("./Edit", new { podcastId = Podcast.PodcastId, episodeId = Episode.EpisodeId });
+        TempData[WellKnownTempData.SuccessMessage] = "Person successfully created.";
+        return RedirectToPage("./Edit", new { podcastId = Podcast.PodcastId, personId = Person.PersonId });
     }
 }
