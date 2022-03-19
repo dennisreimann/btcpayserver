@@ -4,7 +4,7 @@
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.WalletModel
 
 @{
-    ViewData.SetActivePage(LNbankNavPages.Wallets, Model.Wallet.Name);
+    ViewData.SetActivePage(LNbankNavPages.Wallet, Model.Wallet.Name, Model.Wallet.WalletId);
 }
 
 @functions

@@ -1,6 +1,26 @@
+@using BTCPayServer.Plugins.LNbank.Services.Wallets
+@using Microsoft.AspNetCore.Identity
+@using BTCPayServer.Data
+@inject WalletService _walletService;
+@inject UserManager<ApplicationUser> _userManager;
+@{
+    var userId = _userManager.GetUserId(User);
+    var wallets = await _walletService.GetWallets(new WalletsQuery
+    {
+        UserId = new[] { userId }
+    });
+}
 <li class="nav-item">
-    <a href="/plugins/lnbank/wallets" class="nav-link js-scroll-trigger @ViewData.IsActiveCategory(typeof(LNbankNavPages))" id="Nav-LNbank">
+    <a href="/plugins/lnbank/wallets" class="nav-link js-scroll-trigger @ViewData.IsActivePage(LNbankNavPages.Wallets)" id="Nav-LNbank">
         <svg role="img" class="icon icon-lnbank"><use href="/Resources/img/icon-sprite.svg#lnbank"></use></svg>
         <span>LNbank</span>
     </a>
 </li>
+@foreach (var wallet in wallets)
+{
+    <li class="nav-item" style="padding-left:calc(1.5rem + var(--btcpay-space-xs))">
+        <a href="/plugins/lnbank/wallets/@wallet.WalletId" class="nav-link js-scroll-trigger @ViewData.IsActivePage(LNbankNavPages.Wallet, wallet.WalletId)" id="Nav-LNbank-Wallet-@wallet.WalletId">
+            <span>@wallet.Name</span>
+        </a>
+    </li>
+}

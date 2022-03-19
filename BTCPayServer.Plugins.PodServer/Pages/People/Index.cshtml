@@ -2,7 +2,7 @@
 @model BTCPayServer.Plugins.PodServer.Pages.People.IndexModel
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.People, Model.Podcast.Title);
+    ViewData.SetActivePage(PodServerNavPages.People, Model.Podcast.Title, Model.Podcast.PodcastId);
 }
 
 <div class="sticky-header-setup"></div>

@@ -2,7 +2,7 @@
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.ReceiveModel
 
 @{
-    ViewData.SetActivePage(LNbankNavPages.Receive, "Receive");
+    ViewData.SetActivePage(LNbankNavPages.Wallet, "Receive", Model.Wallet.WalletId);
 }
 
 @section Scripts {

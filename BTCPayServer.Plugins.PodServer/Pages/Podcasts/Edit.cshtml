@@ -4,7 +4,7 @@
 @inject IFileService _fileService
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.EditPodcast, Model.Podcast.Title);
+    ViewData.SetActivePage(PodServerNavPages.Podcast, Model.Podcast.Title, Model.Podcast.PodcastId);
 }
 
 @section Scripts {

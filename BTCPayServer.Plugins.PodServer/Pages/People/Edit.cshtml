@@ -4,7 +4,7 @@
 @inject IFileService _fileService
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.EditPerson, $"Edit {Model.Person.Name}");
+    ViewData.SetActivePage(PodServerNavPages.People, $"Edit {Model.Person.Name}", Model.Person.PodcastId);
 }
 
 <form method="post" enctype="multipart/form-data">

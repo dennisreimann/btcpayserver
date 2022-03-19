@@ -2,7 +2,7 @@
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.SendModel
 
 @{
-    ViewData.SetActivePage(LNbankNavPages.Send, "Send");
+    ViewData.SetActivePage(LNbankNavPages.Wallet, "Send", Model.Wallet.WalletId);
 }
 
 @section Scripts {

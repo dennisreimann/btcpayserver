@@ -2,7 +2,7 @@
 @model BTCPayServer.Plugins.PodServer.Pages.People.CreateModel
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.EditPerson, "Add a new person");
+    ViewData.SetActivePage(PodServerNavPages.People, "Add a new person", Model.Podcast.PodcastId);
 }
 
 <form method="post">

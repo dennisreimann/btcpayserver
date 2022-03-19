@@ -3,7 +3,7 @@
 @model BTCPayServer.Plugins.LNbank.Pages.Transactions.DetailsModel
 
 @{
-    ViewData.SetActivePage(LNbankNavPages.Transactions, Model.Transaction.Description);
+    ViewData.SetActivePage(LNbankNavPages.Wallet, Model.Transaction.Description, Model.Wallet.WalletId);
 }
 
 <partial name="_WalletHeader" model="Model.Wallet"/>

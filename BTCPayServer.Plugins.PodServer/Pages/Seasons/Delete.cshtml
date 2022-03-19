@@ -2,7 +2,7 @@
 @model BTCPayServer.Plugins.PodServer.Pages.Seasons.DeleteModel
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.EditSeason, Model.Season.Name);
+    ViewData.SetActivePage(PodServerNavPages.Seasons, Model.Season.Name, Model.Season.PodcastId);
 }
 
 <div class="sticky-header-setup"></div>

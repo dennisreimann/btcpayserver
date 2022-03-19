@@ -1,12 +1,11 @@
 @page "/plugins/podserver/podcasts/{podcastId}/episodes/{episodeId}/edit"
 @using BTCPayServer.Abstractions.Contracts
 @using System.Globalization
-@using BTCPayServer.Plugins.PodServer.Data.Models
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.EditModel
 @inject IFileService _fileService
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.EditPodcast, Model.Episode.Title);
+    ViewData.SetActivePage(PodServerNavPages.Podcast, Model.Episode.Title, Model.Episode.PodcastId);
 }
 
 @section Styles {

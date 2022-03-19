@@ -3,7 +3,7 @@
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.DetailsModel
 
 @{
-    ViewData.SetActivePage(LNbankNavPages.Wallets, Model.Wallet.Name);
+    ViewData.SetActivePage(LNbankNavPages.Wallet, Model.Wallet.Name, Model.Wallet.WalletId);
     var endpoint = new Uri($"{Request.Scheme}://{Request.Host}{Request.PathBase.ToUriComponent()}/api/v1/lnbank/lnurl/{Model.Wallet.WalletId}");
     var lnurl = LNURL.EncodeUri(endpoint, "payRequest", true);
 }

@@ -2,7 +2,7 @@
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.CreateModel
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.EditEpisode, "Create a new episode");
+    ViewData.SetActivePage(PodServerNavPages.Episodes, "Create a new episode", Model.Podcast.PodcastId);
 }
 
 @section Styles {

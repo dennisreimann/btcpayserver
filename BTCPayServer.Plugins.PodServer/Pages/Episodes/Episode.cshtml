@@ -4,7 +4,7 @@
 @inject IFileService _fileService
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.Episode, Model.Episode.Title);
+    ViewData.SetActivePage(PodServerNavPages.Episodes, Model.Episode.Title, Model.Podcast.PodcastId);
 }
 
 <div class="sticky-header-setup"></div>

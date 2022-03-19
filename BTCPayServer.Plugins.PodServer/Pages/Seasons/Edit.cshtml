@@ -5,7 +5,7 @@
 
 @{
     var isCreate = Model.Season.SeasonId == null;
-    ViewData.SetActivePage(PodServerNavPages.EditSeason, isCreate ? "Add a new season" : $"Edit {Model.Season.Name}");
+    ViewData.SetActivePage(PodServerNavPages.Seasons, isCreate ? "Add a new season" : $"Edit {Model.Season.Name}", Model.Season.PodcastId);
 }
 
 <form method="post" enctype="multipart/form-data">
