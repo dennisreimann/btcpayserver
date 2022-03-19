@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BTCPayServer.Data;
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client;
+using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +17,7 @@ namespace BTCPayServer.Plugins.LNbank.Pages.Wallets;
 public class IndexModel : BasePageModel
 {
     public IEnumerable<Wallet> Wallets { get; set; }
+    public LightMoney TotalBalance { get; set; }
 
     public IndexModel(
         UserManager<ApplicationUser> userManager, 
@@ -25,7 +27,8 @@ public class IndexModel : BasePageModel
     {
         Wallets = await WalletService.GetWallets(new WalletsQuery
         {
-            UserId = new[] { UserId }, IncludeTransactions = true
+            UserId = new[] { UserId },
+            IncludeTransactions = true
         });
 
         var list = Wallets.ToList();
@@ -33,6 +36,10 @@ public class IndexModel : BasePageModel
         {
             return RedirectToPage("./Create");
         }
+
+        TotalBalance = Wallets
+            .Select(w => w.Balance)
+            .Aggregate((res, current) => res + current);
         
         return Page();
     }
