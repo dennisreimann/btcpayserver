@@ -126,6 +126,35 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.ToTable("Episodes", "BTCPayServer.Plugins.PodServer");
                 });
 
+            modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Import", b =>
+                {
+                    b.Property<string>("ImportId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Log")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PodcastId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Raw")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("ImportId");
+
+                    b.ToTable("Imports", "BTCPayServer.Plugins.PodServer");
+                });
+
             modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Person", b =>
                 {
                     b.Property<string>("PersonId")

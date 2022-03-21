@@ -15,8 +15,9 @@ public class PodServerPluginDbContext : DbContext
         
     public DbSet<Podcast> Podcasts { get; set; }
     public DbSet<Episode> Episodes { get; set; }
-    public DbSet<Person> People { get; set; }    
+    public DbSet<Person> People { get; set; }
     public DbSet<Season> Seasons { get; set; }
+    public DbSet<Import> Imports { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,6 +46,10 @@ public class PodServerPluginDbContext : DbContext
                 }
             }
         }
+        
+        modelBuilder.Entity<Import>()
+            .Property(i => i.Status)
+            .HasConversion<string>();
         
         modelBuilder
             .Entity<Season>()

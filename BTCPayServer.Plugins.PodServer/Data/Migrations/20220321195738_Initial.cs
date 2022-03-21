@@ -13,6 +13,23 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 name: "BTCPayServer.Plugins.PodServer");
 
             migrationBuilder.CreateTable(
+                name: "Imports",
+                schema: "BTCPayServer.Plugins.PodServer",
+                columns: table => new
+                {
+                    ImportId = table.Column<string>(type: "text", nullable: false),
+                    Raw = table.Column<string>(type: "text", nullable: false),
+                    Log = table.Column<string>(type: "text", nullable: true),
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    PodcastId = table.Column<string>(type: "text", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Imports", x => x.ImportId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Podcasts",
                 schema: "BTCPayServer.Plugins.PodServer",
                 columns: table => new
@@ -222,6 +239,10 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Enclosure",
+                schema: "BTCPayServer.Plugins.PodServer");
+
+            migrationBuilder.DropTable(
+                name: "Imports",
                 schema: "BTCPayServer.Plugins.PodServer");
 
             migrationBuilder.DropTable(

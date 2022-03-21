@@ -53,8 +53,7 @@ public class CreateModel : BasePageModel
     {
         try
         {
-            Podcast = await importer.Import(rssFile);
-            Podcast.UserId = UserId;
+            Podcast = await importer.Import(rssFile, UserId);
 
             await PodcastService.AddOrUpdatePodcast(Podcast);
 
