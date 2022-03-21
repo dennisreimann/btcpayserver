@@ -7,8 +7,13 @@
     ViewData.SetActivePage(PodServerNavPages.Podcast, Model.Podcast.Title, Model.Podcast.PodcastId);
 }
 
+@section Styles {
+    <link href="~/vendor/summernote/summernote-bs5.css" rel="stylesheet" asp-append-version="true" />
+}
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/vendor/summernote/summernote-bs5.js" asp-append-version="true"></script>
 }
 
 <form method="post" enctype="multipart/form-data">
@@ -27,8 +32,10 @@
     
     <div class="row">
         <div class="col-xl-10 col-xxl-constrain">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
+            @if (!ViewContext.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            }
             <div class="form-group">
                 <label asp-for="Podcast.Title" class="form-label" data-required></label>
                 <input asp-for="Podcast.Title" class="form-control" required/>
@@ -46,7 +53,7 @@
             </div>
             <div class="form-group">
                 <label asp-for="Podcast.Description" class="form-label" data-required></label>
-                <textarea asp-for="Podcast.Description" class="form-control" rows="3" required></textarea>
+                <textarea asp-for="Podcast.Description" class="form-control richtext" rows="3" required></textarea>
                 <span asp-validation-for="Podcast.Description" class="text-danger"></span>
             </div>
 
