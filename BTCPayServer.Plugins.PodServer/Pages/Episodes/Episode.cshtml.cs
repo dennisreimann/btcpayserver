@@ -26,7 +26,7 @@ public class EpisodeModel : BasePageModel
         });
         if (Podcast == null) return NotFound();
         
-        Episode = await PodcastService.GetEpisode(new EpisodeQuery {
+        Episode = await PodcastService.GetEpisode(new EpisodesQuery {
             PodcastId = podcastId,
             EpisodeId = episodeId
         });

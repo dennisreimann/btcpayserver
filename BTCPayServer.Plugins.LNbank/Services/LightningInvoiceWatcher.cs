@@ -90,7 +90,7 @@ public class LightningInvoiceWatcher : BackgroundService
         }
         catch (Exception exception)
         {
-            _logger.LogError("Checking pending transaction {TransactionId} failed: {Message}", transaction.TransactionId, exception.Message);
+            _logger.LogError(exception, "Checking pending transaction {TransactionId} failed: {Message}", transaction.TransactionId, exception.Message);
         }
     }
 }

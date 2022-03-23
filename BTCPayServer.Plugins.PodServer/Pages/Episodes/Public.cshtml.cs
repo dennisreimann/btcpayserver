@@ -18,7 +18,7 @@ public class PublicModel : BasePageModel
 
     public async Task<IActionResult> OnGetAsync(string episodeId)
     {
-        Episode = await PodcastService.GetEpisode(new EpisodeQuery {
+        Episode = await PodcastService.GetEpisode(new EpisodesQuery {
             EpisodeId = episodeId,
             IncludePodcast = true
         });

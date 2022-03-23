@@ -2,22 +2,18 @@ using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Plugins.PodServer.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Query;
 
 namespace BTCPayServer.Plugins.PodServer.Services.Podcasts;
 
 public class PodcastService
 {
-    private readonly ILogger _logger;
     private readonly IFileService _fileService;
     private readonly PodServerPluginDbContextFactory _dbContextFactory;
 
     public PodcastService(
-        ILogger<PodcastService> logger,
         IFileService fileService,
         PodServerPluginDbContextFactory dbContextFactory)
     {
-        _logger = logger;
         _fileService = fileService;
         _dbContextFactory = dbContextFactory;
     }
@@ -26,6 +22,19 @@ public class PodcastService
     {
         await using var dbContext = _dbContextFactory.CreateContext();
         return await FilterPodcasts(dbContext.Podcasts.AsQueryable(), query).ToListAsync();
+    }
+
+    public async Task<Podcast> GetPodcast(PodcastQuery query)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        return await FilterPodcasts(dbContext.Podcasts.AsQueryable(), new PodcastsQuery
+        {
+            UserId = query.UserId is null ? null : new[] { query.UserId },
+            PodcastId = query.PodcastId is null ? null : new[] { query.PodcastId },
+            IncludeSeasons = query.IncludeSeasons,
+            IncludeEpisodes = query.IncludeEpisodes,
+            IncludePeople = query.IncludePeople
+        }).FirstOrDefaultAsync();
     }
 
     private IQueryable<Podcast> FilterPodcasts(IQueryable<Podcast> queryable, PodcastsQuery query)
@@ -39,37 +48,29 @@ public class PodcastService
         {
             queryable = queryable.Where(podcast => query.PodcastId.Contains(podcast.PodcastId));
         }
-
+    
         if (query.IncludeEpisodes)
         {
-            queryable = queryable.Include(p => p.Episodes).AsNoTracking();
+            queryable = queryable.Include(p => p.Episodes);
         }
 
         if (query.IncludeSeasons)
         {
-            queryable = queryable.Include(p => p.Seasons).AsNoTracking();
+            queryable = queryable.Include(p => p.Seasons);
         }
 
         if (query.IncludePeople)
         {
-            queryable = queryable.Include(p => p.People).AsNoTracking();
+            queryable = queryable.Include(p => p.People);
+        }
+
+        if (query.IncludeContributions)
+        {
+            queryable = queryable
+                .Include(p => p.Contributions.Where(c => c.EpisodeId == null));
         }
 
         return queryable;
-    }
-
-    public async Task<Podcast> GetPodcast(PodcastQuery query)
-    {
-        await using var dbContext = _dbContextFactory.CreateContext();
-        var podcastQuery = new PodcastsQuery
-        {
-            UserId = query.UserId is null ? null : new[] { query.UserId },
-            PodcastId = query.PodcastId is null ? null : new[] { query.PodcastId },
-            IncludeSeasons = query.IncludeSeasons,
-            IncludeEpisodes = query.IncludeEpisodes,
-            IncludePeople = query.IncludePeople,
-        };
-        return await FilterPodcasts(dbContext.Podcasts.AsQueryable(), podcastQuery).FirstOrDefaultAsync();
     }
     
     public async Task<Podcast> AddOrUpdatePodcast(Podcast podcast)
@@ -104,13 +105,49 @@ public class PodcastService
     public async Task<IEnumerable<Episode>> GetEpisodes(EpisodesQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        var queryable = dbContext.Episodes.AsQueryable();
+        return await FilterEpisodes(dbContext.Episodes.AsQueryable(), query).ToListAsync();
+    }
 
-        if (query.PodcastId != null) query.IncludePodcast = true;
+    public async Task<Episode> GetEpisode(EpisodesQuery query)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        return await FilterEpisodes(dbContext.Episodes.AsQueryable(), query).FirstOrDefaultAsync();
+    }
 
+    private IQueryable<Episode> FilterEpisodes(IQueryable<Episode> queryable, EpisodesQuery query)
+    {
         if (query.PodcastId != null)
         {
+            query.IncludePodcast = true;
+
             queryable = queryable.Where(e => e.PodcastId == query.PodcastId);
+        }
+        
+        if (query.IncludePodcast)
+        {
+            queryable = queryable.Include(e => e.Podcast);
+        }
+        
+        if (string.IsNullOrEmpty(query.SeasonId))
+        {
+            query.IncludeSeason = true;
+            
+            queryable = queryable.Where(e => e.SeasonId == query.SeasonId);
+        }
+        
+        if (query.IncludeSeason)
+        {
+            queryable = queryable.Include(e => e.Season);
+        }
+        
+        if (query.IncludeEnclosures)
+        {
+            queryable = queryable.Include(e => e.Enclosures);
+        }
+        
+        if (query.IncludeContributions)
+        {
+            queryable = queryable.Include(e => e.Contributions);
         }
 
         if (query.OnlyPublished)
@@ -118,47 +155,9 @@ public class PodcastService
             queryable = queryable.Where(e => e.PublishedAt >= DateTime.UtcNow);
         }
         
-        return await queryable.OrderByDescending(t => t.PublishedAt).ToListAsync();
-    }
+        queryable = queryable.OrderByDescending(t => t.PublishedAt);
 
-    public async Task<Episode> GetEpisode(EpisodeQuery query)
-    {
-        await using var dbContext = _dbContextFactory.CreateContext();
-        IQueryable<Episode> queryable = dbContext.Episodes.AsQueryable();
-        
-        if (query.PodcastId != null)
-        {
-            var podcastQuery = new PodcastQuery
-            { 
-                PodcastId = query.PodcastId,
-                IncludeEpisodes = true
-            };
-
-            var podcast = await GetPodcast(podcastQuery);
-            if (podcast == null) return null;
-
-            queryable = podcast.Episodes.AsQueryable();
-        }
-        
-        if (query.IncludePodcast)
-        {
-            queryable = queryable.Include(e => e.Podcast).AsNoTracking();
-        }
-        
-        if (query.ForEditing)
-        {
-            queryable = queryable
-                .Include(e => e.Enclosures)
-                .Include(e => e.Contributors);
-        }
-        else
-        {
-            queryable = queryable
-                .Include(e => e.Enclosures).AsNoTracking()
-                .Include(e => e.Contributors).AsNoTracking();
-        }
-
-        return queryable.FirstOrDefault();
+        return queryable;
     }
     
     public async Task<Episode> AddOrUpdateEpisode(Episode episode)
@@ -196,43 +195,33 @@ public class PodcastService
     private async Task<IEnumerable<Person>> GetPeople(PeopleQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        var queryable = dbContext.People.AsQueryable();
-
-        if (query.PodcastId != null) query.IncludePodcast = true;
-
-        if (query.PodcastId != null)
-        {
-            queryable = queryable.Where(e => e.PodcastId == query.PodcastId);
-        }
-
-        return await queryable.ToListAsync();
+        return await FilterPeople(dbContext.People.AsQueryable(), query).ToListAsync();
     }
 
-    public async Task<Person> GetPerson(PersonQuery query)
+    public async Task<Person> GetPerson(PeopleQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        IQueryable<Person> queryable = dbContext.People.AsQueryable();
-        
+        return await FilterPeople(dbContext.People.AsQueryable(), query).FirstOrDefaultAsync();
+    }
+
+    private IQueryable<Person> FilterPeople(IQueryable<Person> queryable, PeopleQuery query)
+    {
         if (query.PodcastId != null)
         {
-            var podcastQuery = new PodcastQuery
-            { 
-                PodcastId = query.PodcastId,
-                IncludePeople = true
-            };
-
-            var podcast = await GetPodcast(podcastQuery);
-            if (podcast == null) return null;
-
-            queryable = podcast.People.AsQueryable();
+            queryable = queryable.Where(p => p.PodcastId == query.PodcastId);
         }
         
-        if (query.IncludePodcast)
+        if (query.PersonId != null)
         {
-            queryable = queryable.Include(e => e.Podcast).AsNoTracking();
+            queryable = queryable.Where(p => p.PersonId == query.PersonId);
+        }
+        
+        if (!string.IsNullOrEmpty(query.Name))
+        {
+            queryable = queryable.Where(p => p.Name == query.Name);
         }
 
-        return queryable.FirstOrDefault();
+        return queryable;
     }
     
     public async Task<Person> AddOrUpdatePerson(Person person)
@@ -268,45 +257,29 @@ public class PodcastService
     public async Task<IEnumerable<Season>> GetSeasons(SeasonsQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        var queryable = dbContext.Seasons.AsQueryable();
-
-        if (query.PodcastId != null) query.IncludePodcast = true;
-
-        if (query.PodcastId != null)
-        {
-            queryable = queryable.Where(e => e.PodcastId == query.PodcastId);
-        }
-
-        return await queryable.ToListAsync();
+        return await FilterSeasons(dbContext.Seasons.AsQueryable(), query).ToListAsync();
     }
 
-    public async Task<Season> GetSeason(SeasonQuery query)
+    public async Task<Season> GetSeason(SeasonsQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        IQueryable<Season> queryable = dbContext.Seasons.AsQueryable();
-        
-        if (query.PodcastId != null)
-        {
-            var podcastQuery = new PodcastQuery
-            { 
-                PodcastId = query.PodcastId,
-                IncludeSeasons = true
-            };
-
-            var podcast = await GetPodcast(podcastQuery);
-            if (podcast == null) return null;
-
-            queryable = podcast.Seasons.AsQueryable();
-        }
-        
-        if (query.IncludePodcast)
-        {
-            queryable = queryable.Include(e => e.Podcast).AsNoTracking();
-        }
-
-        return queryable.FirstOrDefault();
+        return await FilterSeasons(dbContext.Seasons.AsQueryable(), query).FirstOrDefaultAsync();
     }
 
+    private IQueryable<Season> FilterSeasons(IQueryable<Season> queryable, SeasonsQuery query)
+    {
+        if (query.PodcastId != null)
+        {
+            queryable = queryable.Where(s => s.PodcastId == query.PodcastId);
+        }
+        
+        if (query.SeasonId != null)
+        {
+            queryable = queryable.Where(s => s.SeasonId == query.SeasonId);
+        }
+
+        return queryable;
+    }
     
     public async Task<Season> AddOrUpdateSeason(Season season)
     {
@@ -330,6 +303,67 @@ public class PodcastService
     {
         await using var dbContext = _dbContextFactory.CreateContext();
         dbContext.Seasons.Remove(season);
+        await dbContext.SaveChangesAsync();
+    }
+
+    public async Task<IEnumerable<Contribution>> GetContributions(ContributionsQuery query)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        return await FilterContributions(dbContext.Contributions.AsQueryable(), query).ToListAsync();
+    }
+
+    public async Task<Contribution> GetContribution(ContributionsQuery query)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        return await FilterContributions(dbContext.Contributions.AsQueryable(), query).FirstOrDefaultAsync();
+    }
+
+    private IQueryable<Contribution> FilterContributions(IQueryable<Contribution> queryable, ContributionsQuery query)
+    {
+        if (query.PodcastId != null)
+        {
+            queryable = queryable.Where(c => c.PodcastId == query.PodcastId);
+        }
+        if (query.PodcastOnly)
+        {
+            queryable = queryable.Where(c => c.EpisodeId == null);
+        }
+        
+        if (query.EpisodeId != null)
+        {
+            queryable = queryable.Where(c => c.EpisodeId == query.EpisodeId);
+        }
+        
+        if (query.PersonId != null)
+        {
+            queryable = queryable.Where(c => c.PersonId == query.PersonId);
+        }
+
+        return queryable;
+    }
+    
+    public async Task<Contribution> AddOrUpdateContribution(Contribution season)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+
+        EntityEntry entry;
+        if (string.IsNullOrEmpty(season.ContributionId))
+        {
+            entry = await dbContext.Contributions.AddAsync(season);
+        }
+        else
+        {
+            entry = dbContext.Update(season);
+        }
+        await dbContext.SaveChangesAsync();
+
+        return (Contribution)entry.Entity;
+    }
+
+    public async Task RemoveContribution(Contribution season)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        dbContext.Contributions.Remove(season);
         await dbContext.SaveChangesAsync();
     }
 }

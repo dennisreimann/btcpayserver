@@ -43,7 +43,7 @@ public class EditModel : BasePageModel
         }
         else
         {
-            Season = await PodcastService.GetSeason(new SeasonQuery {
+            Season = await PodcastService.GetSeason(new SeasonsQuery {
                 PodcastId = podcastId,
                 SeasonId = seasonId,
             });
@@ -62,7 +62,7 @@ public class EditModel : BasePageModel
         }
         else
         {
-            Season = await PodcastService.GetSeason(new SeasonQuery
+            Season = await PodcastService.GetSeason(new SeasonsQuery
             {
                 PodcastId = podcastId, 
                 SeasonId = seasonId

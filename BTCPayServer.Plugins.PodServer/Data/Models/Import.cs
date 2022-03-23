@@ -31,6 +31,7 @@ public enum ImportStatus
 {
     Created,
     Running,
+    Cancelled,
     Succeeded,
     Failed
 }

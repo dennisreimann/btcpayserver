@@ -19,6 +19,7 @@ public class Podcast
     public ICollection<Episode> Episodes { get; set; } = new List<Episode>();
     
     public ICollection<Person> People { get; set; } = new List<Person>();
+    public ICollection<Contribution> Contributions { get; set; } = new List<Contribution>();
     
     // Properties
     [Required]

@@ -27,6 +27,8 @@ public class Episode
     [Range(1, int.MaxValue)]
     public int? Number { get; set; }
     
+    public string ImportGuid { get; set; }
+    
     // Relations
     [Required]
     public string PodcastId { get; set; }
@@ -35,7 +37,7 @@ public class Episode
     public string SeasonId { get; set; }
     public Season Season { get; set; }
     
-    public ICollection<Contribution> Contributors { get; set; } = new List<Contribution>();
+    public ICollection<Contribution> Contributions { get; set; } = new List<Contribution>();
     public ICollection<Enclosure> Enclosures { get; set; } = new List<Enclosure>();
     
     public bool IsPublished

@@ -27,7 +27,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId, string personId)
     {
-        Person = await PodcastService.GetPerson(new PersonQuery {
+        Person = await PodcastService.GetPerson(new PeopleQuery {
             PodcastId = podcastId,
             PersonId = personId,
         });
@@ -38,7 +38,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId, string personId)
     {
-        Person = await PodcastService.GetPerson(new PersonQuery
+        Person = await PodcastService.GetPerson(new PeopleQuery
         {
             PodcastId = podcastId, 
             PersonId = personId
@@ -69,7 +69,6 @@ public class EditModel : BasePageModel
         if (!await TryUpdateModelAsync(Person,
                 "person",
             p => p.Name,
-            p => p.Email,
             p => p.Url,
             e => e.ImageFileId))
         {

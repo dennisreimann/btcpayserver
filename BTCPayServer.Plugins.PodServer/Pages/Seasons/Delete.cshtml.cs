@@ -19,7 +19,7 @@ public class DeleteModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId, string seasonId)
     {
-        Season = await PodcastService.GetSeason(new SeasonQuery {
+        Season = await PodcastService.GetSeason(new SeasonsQuery {
             PodcastId = podcastId,
             SeasonId = seasonId
         });
@@ -30,7 +30,7 @@ public class DeleteModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId, string seasonId)
     {
-        Season = await PodcastService.GetSeason(new SeasonQuery {
+        Season = await PodcastService.GetSeason(new SeasonsQuery {
             PodcastId = podcastId,
             SeasonId = seasonId
         });

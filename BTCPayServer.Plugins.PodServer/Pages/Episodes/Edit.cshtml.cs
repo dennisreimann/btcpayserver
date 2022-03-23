@@ -28,7 +28,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId, string episodeId)
     {
-        Episode = await PodcastService.GetEpisode(new EpisodeQuery
+        Episode = await PodcastService.GetEpisode(new EpisodesQuery
         {
             PodcastId = podcastId,
             EpisodeId = episodeId,
@@ -41,11 +41,10 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId, string episodeId)
     {
-        Episode = await PodcastService.GetEpisode(new EpisodeQuery
+        Episode = await PodcastService.GetEpisode(new EpisodesQuery
         {
             PodcastId = podcastId,
-            EpisodeId = episodeId,
-            ForEditing = true
+            EpisodeId = episodeId
         });
         if (Episode == null) return NotFound();
         

@@ -18,6 +18,12 @@ public class Contribution
     public int Split { get; set; }
     
     // Relations
+    public string PodcastId { get; set; }
+    public Podcast Podcast { get; set; }
+    
     public string PersonId { get; set; }
     public Person Person { get; set; }
+    
+    public string EpisodeId { get; set; }
+    public Episode Episode { get; set; }
 }

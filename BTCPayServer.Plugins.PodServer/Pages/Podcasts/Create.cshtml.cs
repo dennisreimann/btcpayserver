@@ -2,7 +2,7 @@ using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client;
 using BTCPayServer.Data;
 using BTCPayServer.Plugins.PodServer.Data.Models;
-using BTCPayServer.Plugins.PodServer.Services.Feeds;
+using BTCPayServer.Plugins.PodServer.Services.Imports;
 using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -53,12 +53,18 @@ public class CreateModel : BasePageModel
     {
         try
         {
-            Podcast = await importer.Import(rssFile, UserId);
+            if (!rssFile.ContentType.EndsWith("xml"))
+            {
+                throw new Exception($"Invalid RSS file: Content type {rssFile.ContentType} does not match XML.");
+            }
 
-            await PodcastService.AddOrUpdatePodcast(Podcast);
+            using var reader = new StreamReader(rssFile.OpenReadStream());
+            var rss = await reader.ReadToEndAsync();
+            
+            Podcast = await importer.CreatePodcast(rss, UserId);
 
-            TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully imported.";
-            return RedirectToPage("./Index", new { podcastId = Podcast.PodcastId });
+            TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully created. The feed is now being imported and the progress will be shown here.";
+            return RedirectToPage("./Podcast", new { podcastId = Podcast.PodcastId });
         }
         catch (Exception exception)
         {

@@ -1,8 +1,9 @@
 namespace BTCPayServer.Plugins.PodServer.Services.Podcasts;
 
-public class PersonQuery
+public class ContributionsQuery
 {
     public string PodcastId { get; set; }
-    public bool IncludePodcast { get; set; }
+    public string EpisodeId { get; set; }
     public string PersonId { get; set; }
+    public bool PodcastOnly { get; set; }
 }
