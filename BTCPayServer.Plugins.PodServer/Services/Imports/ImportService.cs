@@ -50,6 +50,9 @@ public class ImportService
 
         var storedFile = await _fileService.AddFile(file, userId);
         
+        // cleanup
+        File.Delete(filePath);
+        
         return storedFile;
     }
     
@@ -69,9 +72,9 @@ public class ImportService
             .FirstOrDefaultAsync();
     }
     
-    public async Task<Import> CreateImport(string podcastId, string rss)
+    public async Task<Import> CreateImport(string rss, string podcastId, string userId)
     {
-        var import = new Import { PodcastId = podcastId, Raw = rss };
+        var import = new Import { PodcastId = podcastId, UserId = userId, Raw = rss };
         return await AddOrUpdateImport(import);
     }
     

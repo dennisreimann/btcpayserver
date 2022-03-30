@@ -33,7 +33,8 @@ public class PodcastService
             PodcastId = query.PodcastId is null ? null : new[] { query.PodcastId },
             IncludeSeasons = query.IncludeSeasons,
             IncludeEpisodes = query.IncludeEpisodes,
-            IncludePeople = query.IncludePeople
+            IncludePeople = query.IncludePeople,
+            IncludeContributions = query.IncludeContributions
         }).FirstOrDefaultAsync();
     }
 
@@ -64,10 +65,14 @@ public class PodcastService
             queryable = queryable.Include(p => p.People);
         }
 
+        if (query.IncludeImports)
+        {
+            queryable = queryable.Include(p => p.Imports);
+        }
+
         if (query.IncludeContributions)
         {
-            queryable = queryable
-                .Include(p => p.Contributions.Where(c => c.EpisodeId == null));
+            queryable = queryable.Include(p => p.Contributions);
         }
 
         return queryable;
@@ -97,6 +102,7 @@ public class PodcastService
         {
             await _fileService.RemoveFile(podcast.ImageFileId, null);
         }
+        
         await using var dbContext = _dbContextFactory.CreateContext();
         dbContext.Podcasts.Remove(podcast);
         await dbContext.SaveChangesAsync();
@@ -128,11 +134,21 @@ public class PodcastService
             queryable = queryable.Include(e => e.Podcast);
         }
         
-        if (string.IsNullOrEmpty(query.SeasonId))
+        if (!string.IsNullOrEmpty(query.EpisodeId))
+        {
+            queryable = queryable.Where(e => e.EpisodeId == query.EpisodeId);
+        }
+        
+        if (!string.IsNullOrEmpty(query.SeasonId))
         {
             query.IncludeSeason = true;
             
             queryable = queryable.Where(e => e.SeasonId == query.SeasonId);
+        }
+        
+        if (!string.IsNullOrEmpty(query.ImportGuid))
+        {
+            queryable = queryable.Where(e => e.ImportGuid == query.ImportGuid);
         }
         
         if (query.IncludeSeason)
@@ -185,7 +201,13 @@ public class PodcastService
             await _fileService.RemoveFile(episode.ImageFileId, null);
         }
         
-        // TODO: Delete associated enclosures
+        if (episode.Enclosures.Any())
+        {
+            foreach (var enclosure in episode.Enclosures)
+            {
+                await _fileService.RemoveFile(enclosure.FileId, null);
+            }
+        }
         
         await using var dbContext = _dbContextFactory.CreateContext();
         dbContext.Episodes.Remove(episode);
@@ -218,7 +240,12 @@ public class PodcastService
         
         if (!string.IsNullOrEmpty(query.Name))
         {
-            queryable = queryable.Where(p => p.Name == query.Name);
+            queryable = queryable.Where(p => p.Name.ToLower() == query.Name.ToLower());
+        }
+
+        if (query.IncludeContributions)
+        {
+            queryable = queryable.Include(p => p.Contributions);
         }
 
         return queryable;
@@ -276,6 +303,11 @@ public class PodcastService
         if (query.SeasonId != null)
         {
             queryable = queryable.Where(s => s.SeasonId == query.SeasonId);
+        }
+
+        if (query.Number != 0)
+        {
+            queryable = queryable.Where(s => s.Number == query.Number);
         }
 
         return queryable;
@@ -342,28 +374,28 @@ public class PodcastService
         return queryable;
     }
     
-    public async Task<Contribution> AddOrUpdateContribution(Contribution season)
+    public async Task<Contribution> AddOrUpdateContribution(Contribution contribution)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
 
         EntityEntry entry;
-        if (string.IsNullOrEmpty(season.ContributionId))
+        if (string.IsNullOrEmpty(contribution.ContributionId))
         {
-            entry = await dbContext.Contributions.AddAsync(season);
+            entry = await dbContext.Contributions.AddAsync(contribution);
         }
         else
         {
-            entry = dbContext.Update(season);
+            entry = dbContext.Update(contribution);
         }
         await dbContext.SaveChangesAsync();
 
         return (Contribution)entry.Entity;
     }
 
-    public async Task RemoveContribution(Contribution season)
+    public async Task RemoveContribution(Contribution contribution)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        dbContext.Contributions.Remove(season);
+        dbContext.Contributions.Remove(contribution);
         await dbContext.SaveChangesAsync();
     }
 }

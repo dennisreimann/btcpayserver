@@ -45,7 +45,9 @@ public class DeleteModel : BasePageModel
         
         Episode = await PodcastService.GetEpisode(new EpisodesQuery {
             PodcastId = podcastId,
-            EpisodeId = episodeId
+            EpisodeId = episodeId,
+            IncludeContributions = true,
+            IncludeEnclosures = true
         });
         if (Episode == null) return NotFound();
 

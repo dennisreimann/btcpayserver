@@ -24,7 +24,12 @@ public class Import
     
     // Relations
     [Required]
+    [DisplayName("Podcast ID")]
     public string PodcastId { get; set; }
+    
+    [Required]
+    [DisplayName("User ID")]
+    public string UserId { get; set; }
 }
 
 public enum ImportStatus

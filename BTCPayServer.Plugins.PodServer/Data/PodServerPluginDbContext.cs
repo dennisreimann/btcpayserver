@@ -67,37 +67,5 @@ public class PodServerPluginDbContext : DbContext
             .Entity<Contribution>()
             .HasIndex("PodcastId", "EpisodeId", "PersonId")
             .IsUnique();
-
-        /*
-        modelBuilder
-            .Entity<Contribution>()
-            .HasOne(c => c.Person)
-            .WithMany(p => p.Contributions)
-            .OnDelete(DeleteBehavior.Cascade);
-        
-        modelBuilder
-            .Entity<Enclosure>()
-            .HasOne(e => e.Episode)
-            .WithMany(p => p.Enclosures)
-            .OnDelete(DeleteBehavior.Cascade);
-            
-        modelBuilder
-            .Entity<Episode>()
-            .HasOne(o => o.Podcast)
-            .WithMany(w => w.Episodes)
-            .OnDelete(DeleteBehavior.Cascade);
-            
-        modelBuilder
-            .Entity<Person>()
-            .HasOne(o => o.Podcast)
-            .WithMany(w => w.People)
-            .OnDelete(DeleteBehavior.Cascade);
-            
-        modelBuilder
-            .Entity<Season>()
-            .HasOne(o => o.Podcast)
-            .WithMany(w => w.Seasons)
-            .OnDelete(DeleteBehavior.Cascade);
-        */
     }
 }

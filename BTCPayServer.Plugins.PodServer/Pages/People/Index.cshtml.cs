@@ -26,7 +26,7 @@ public class IndexModel : BasePageModel
             IncludePeople = true
         });
         
-        People = Podcast.People.OrderByDescending(p => p.Name);
+        People = Podcast.People.OrderBy(p => p.Name);
         
         return Page();
     }

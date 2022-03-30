@@ -20,6 +20,7 @@ public class Podcast
     
     public ICollection<Person> People { get; set; } = new List<Person>();
     public ICollection<Contribution> Contributions { get; set; } = new List<Contribution>();
+    public ICollection<Import> Imports { get; set; } = new List<Import>();
     
     // Properties
     [Required]

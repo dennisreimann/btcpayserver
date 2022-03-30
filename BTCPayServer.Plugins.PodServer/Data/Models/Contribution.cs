@@ -18,9 +18,11 @@ public class Contribution
     public int Split { get; set; }
     
     // Relations
+    [Required]
     public string PodcastId { get; set; }
     public Podcast Podcast { get; set; }
     
+    [Required]
     public string PersonId { get; set; }
     public Person Person { get; set; }
     

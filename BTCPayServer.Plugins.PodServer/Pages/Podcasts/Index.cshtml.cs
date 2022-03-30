@@ -15,6 +15,7 @@ public class IndexModel : BasePageModel
 {
     private readonly IFileService _fileService;
     public IEnumerable<Podcast> Podcasts { get; set; }
+    public bool IsReady { get; set; }
 
     public IndexModel(
         UserManager<ApplicationUser> userManager,
@@ -32,9 +33,9 @@ public class IndexModel : BasePageModel
             UserId = new[] { UserId }
         });
 
-        var isReady = await _fileService.IsAvailable();
+        IsReady = await _fileService.IsAvailable();
 
-        if (isReady)
+        if (IsReady)
         {
             var list = Podcasts.ToList();
             if (!list.Any())

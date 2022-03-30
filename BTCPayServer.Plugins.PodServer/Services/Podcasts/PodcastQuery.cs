@@ -7,4 +7,5 @@ public class PodcastQuery
     public bool IncludeSeasons { get; set; }
     public bool IncludeEpisodes { get; set; }
     public bool IncludePeople { get; set; }
+    public bool IncludeContributions { get; set; }
 }

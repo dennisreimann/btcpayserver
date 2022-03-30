@@ -32,7 +32,11 @@ public class DeleteModel : BasePageModel
     {
         Podcast = await PodcastService.GetPodcast(new PodcastQuery {
             UserId = UserId,
-            PodcastId = podcastId
+            PodcastId = podcastId,
+            IncludeEpisodes = true,
+            IncludePeople = true,
+            IncludeSeasons = true,
+            IncludeContributions = true
         });
         if (Podcast == null) return NotFound();
 

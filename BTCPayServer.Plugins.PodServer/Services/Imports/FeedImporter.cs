@@ -59,8 +59,9 @@ public class FeedImporter
 
         // Create podcast and import job
         await _podcastService.AddOrUpdatePodcast(podcast);
-        var import = await _importService.CreateImport(podcast.PodcastId, rss);
+        var import = await _importService.CreateImport(rss, podcast.PodcastId, userId);
         await _taskQueue.QueueAsync(cancellationToken => Import(import.ImportId, cancellationToken));
+        //await Import(import.ImportId, new CancellationToken());
 
         return podcast;
     }
@@ -101,7 +102,7 @@ public class FeedImporter
                 {
                     foreach (XmlElement elem in people)
                     {
-                        var person = await GetPersonByPersonTag(podcast.PodcastId, elem);
+                        var person = await GetPersonByPersonTag(elem, podcast.PodcastId, import.UserId);
                         var isNew = string.IsNullOrEmpty(person.PersonId);
                         if (isNew) await _podcastService.AddOrUpdatePerson(person);
                         log += $"channel/podcast:person -> {(isNew ? "Added" : "Existed")}: '{person.Name}'\n";
@@ -110,25 +111,39 @@ public class FeedImporter
 
                 // Value info
                 var podcastValue = channel["podcast:value"];
-                log += "channel/podcast:value -> Found tag\n";
                 if (podcastValue != null)
                 {
+                    log += "channel/podcast:value -> Found tag\n";
                     var recipients = podcastValue.GetElementsByTagName("podcast:valueRecipient");
                     log += $"channel/podcast:value/podcast:valueRecipient -> {recipients?.Count ?? 0} tags\n";
                 
                     foreach (XmlElement elem in recipients)
                     {
-                        var person = await GetPersonByValueRecipientTag(podcast.PodcastId, elem);
+                        var person = await GetPersonByValueRecipientTag(elem, podcast.PodcastId);
                         if (person == null) continue; // might be null in case of fee entry
                         
                         var isNew = string.IsNullOrEmpty(person.PersonId);
                         if (isNew) await _podcastService.AddOrUpdatePerson(person);
                         log += $"channel/podcast:value/podcast:valueRecipient -> {(isNew ? "Added" : "Existed")}: Person '{person.Name}'\n";
                         
-                        var contribution = await GetContributionByValueRecipientTag(podcast.PodcastId, null, person.PersonId, elem);
+                        var contribution = await GetContributionByValueRecipientTag(elem, podcast.PodcastId, null, person.PersonId);
                         var isNewC = string.IsNullOrEmpty(contribution.ContributionId);
                         if (isNewC) await _podcastService.AddOrUpdateContribution(contribution);
-                        log += $"channel/podcast:value/podcast:valueRecipient -> {(isNew ? "Added" : "Existed")}: Contribution by '{person.Name}' with split '{contribution.Split}'\n";
+                        log += $"channel/podcast:value/podcast:valueRecipient -> {(isNewC ? "Added" : "Existed")}: Contribution by '{person.Name}' with split '{contribution.Split}'\n";
+                    }
+                }
+                
+                // Seasons
+                var seasons = channel.SelectNodes("//itunes:season | //podcast:season", nsmgr);
+                log += $"channel/itunes|podcast:season -> {seasons?.Count ?? 0} tags\n";
+                if (seasons != null)
+                {
+                    foreach (XmlElement elem in seasons)
+                    {
+                        var season = await GetSeasonByTag(elem, podcast.PodcastId);
+                        var isNew = string.IsNullOrEmpty(season.SeasonId);
+                        if (isNew) await _podcastService.AddOrUpdateSeason(season);
+                        log += $"channel/itunes|podcast:season -> {(isNew ? "Added" : "Existed")}: Season '{season.Number}'\n";
                     }
                 }
             
@@ -139,17 +154,34 @@ public class FeedImporter
                 {
                     foreach (XmlElement elem in items)
                     {
-                        var episode = await GetEpisodeByItemTag(podcast.PodcastId, elem);
-                        if (episode == null) continue;
-                    
-                        var contribution = new Contribution
+                        var episode = await GetEpisodeByItemTag(elem, podcast.PodcastId, import.UserId);
+                        var isNew = string.IsNullOrEmpty(episode.EpisodeId);
+                        if (isNew) await _podcastService.AddOrUpdateEpisode(episode);
+                        log += $"channel/item({episode.ImportGuid}) -> {(isNew ? "Added" : "Existed")}: Episode '{episode.Title}'\n";
+                        
+                        // Value info
+                        var episodeValue = elem["podcast:value"];
+                        if (episodeValue != null)
                         {
-                            Split = int.Parse(elem.GetAttribute("split")),
-                            PodcastId = podcast.PodcastId,
-                            EpisodeId = episode.EpisodeId,
-                            PersonId = person.PersonId,
-                        };
-                        await _podcastService.AddOrUpdateContribution(contribution);
+                            log += $"channel/item({episode.ImportGuid})/podcast:value -> Found tag\n";
+                            var recipients = episodeValue.GetElementsByTagName("podcast:valueRecipient");
+                            log += $"channel/item({episode.ImportGuid})/podcast:value/podcast:valueRecipient -> {recipients?.Count ?? 0} tags\n";
+                
+                            foreach (XmlElement el in recipients)
+                            {
+                                var person = await GetPersonByValueRecipientTag(el, podcast.PodcastId);
+                                if (person == null) continue; // might be null in case of fee entry
+                        
+                                var isNewP = string.IsNullOrEmpty(person.PersonId);
+                                if (isNewP) await _podcastService.AddOrUpdatePerson(person);
+                                log += $"channel/item({episode.ImportGuid})/podcast:value/podcast:valueRecipient -> {(isNewP ? "Added" : "Existed")}: Person '{person.Name}'\n";
+                        
+                                var contribution = await GetContributionByValueRecipientTag(el, podcast.PodcastId, episode.EpisodeId, person.PersonId);
+                                var isNewC = string.IsNullOrEmpty(contribution.ContributionId);
+                                if (isNewC) await _podcastService.AddOrUpdateContribution(contribution);
+                                log += $"channel/item({episode.ImportGuid})/podcast:value/podcast:valueRecipient -> {(isNewC ? "Added" : "Existed")}: Contribution by '{person.Name}' with split '{contribution.Split}'\n";
+                            }
+                        }
                     }
                 }
             
@@ -158,6 +190,7 @@ public class FeedImporter
             }
             catch (Exception exception)
             {
+                log += $"Error: {exception.Message}";
                 _logger.LogError(exception, "Error importing podcast {Id} ({Title})", podcast.PodcastId, podcast.Title);
 
                 status = ImportStatus.Failed;
@@ -185,12 +218,26 @@ public class FeedImporter
         }
         
         var nsmgr = new XmlNamespaceManager(doc.NameTable);
+        nsmgr.AddNamespace("itunes", "http://www.itunes.com/dtds/podcast-1.0.dtd");
         nsmgr.AddNamespace("podcast", "https://podcastindex.org/namespace/1.0");
 
         return (channel, nsmgr);
     }
 
-    private async Task<Person> GetPersonByPersonTag(string podcastId, XmlElement elem)
+    private async Task<Season> GetSeasonByTag(XmlElement elem, string podcastId)
+    {
+        var name = elem.GetAttribute("name");
+        var number = int.Parse(elem.InnerText);
+        var query = new SeasonsQuery { Number = number, PodcastId = podcastId };
+        return await _podcastService.GetSeason(query) ?? new Season
+        {
+            Name = name,
+            Number = number,
+            PodcastId = podcastId
+        };
+    }
+
+    private async Task<Person> GetPersonByPersonTag(XmlElement elem, string podcastId, string userId)
     {
         var url = elem.GetAttribute("href");
         var imageUrl = elem.GetAttribute("img");
@@ -203,7 +250,7 @@ public class FeedImporter
         IStoredFile imageFile = null;
         if (!string.IsNullOrEmpty(imageUrl))
         {
-            imageFile = await _importService.DownloadFile(new Uri(imageUrl), null);
+            imageFile = await _importService.DownloadFile(new Uri(imageUrl), userId);
         }
             
         return new Person
@@ -215,7 +262,7 @@ public class FeedImporter
         };
     }
 
-    private async Task<Person> GetPersonByValueRecipientTag(string podcastId, XmlElement elem)
+    private async Task<Person> GetPersonByValueRecipientTag(XmlElement elem, string podcastId)
     {
         var fee = elem.GetAttribute("fee") == "true";
         if (fee) return null;
@@ -236,7 +283,7 @@ public class FeedImporter
         };
     }
     
-    private async Task<Contribution> GetContributionByValueRecipientTag(string podcastId, string episodeId, string personId, XmlElement elem)
+    private async Task<Contribution> GetContributionByValueRecipientTag(XmlElement elem, string podcastId, string episodeId, string personId)
     {
         var query = new ContributionsQuery { PodcastId = podcastId, EpisodeId = episodeId, PersonId = personId };
         return await _podcastService.GetContribution(query) ?? new Contribution
@@ -248,53 +295,64 @@ public class FeedImporter
         };
     }
     
-
-    private async Task<Episode> GetEpisodeByItemTag(string podcastId, XmlElement item)
+    private async Task<Episode> GetEpisodeByItemTag(XmlElement item, string podcastId, string userId)
     {
         var guid = item["guid"]?.InnerText;
-        
         var query = new EpisodesQuery { ImportGuid = guid, PodcastId = podcastId };
         var episode = await _podcastService.GetEpisode(query);
-        if (episode == null)
+        if (episode != null) return episode;
+        
+        // Enclosure
+        Enclosure enclosure = null;
+        if (item["enclosure"] != null && !string.IsNullOrEmpty(item["enclosure"].GetAttribute("url")))
         {
-            Enclosure enclosure = null;
-            if (item["enclosure"] != null && !string.IsNullOrEmpty(item["enclosure"].GetAttribute("url")))
+            IStoredFile enclosureFile = await _importService.DownloadFile(new Uri(item["enclosure"].GetAttribute("url")), userId);
+            enclosure = new Enclosure
             {
-                IStoredFile enclosureFile = await _importService.DownloadFile(new Uri(item["enclosure"].GetAttribute("url")), null);
-                enclosure = new Enclosure
-                {
-                    FileId = enclosureFile.Id,
-                    Type = item["enclosure"].GetAttribute("type"),
-                    Title = item["enclosure"].GetAttribute("title"),
-                    Length = int.Parse(item["enclosure"].GetAttribute("length"))
-                };
-            }
-            
-            var imageUrl = item["itunes:image"]?.InnerText;
-            IStoredFile imageFile = null;
-            if (!string.IsNullOrEmpty(imageUrl))
-            {
-                imageFile = await _importService.DownloadFile(new Uri(imageUrl), null);
-            }
-
-            episode = new Episode
-            {
-                PodcastId = podcastId,
-                Title = item.GetAttribute("title"), 
-                Description = item.GetAttribute("description"),
-                PublishedAt = item.GetAttribute("pubDate"),
-                ImportGuid = guid,
-                ImageFileId = imageFile?.Id,
-                Enclosures = enclosurenew List<Enclosure>() { enclosure }
+                FileId = enclosureFile.Id,
+                Type = item["enclosure"].GetAttribute("type"),
+                Title = item["enclosure"].HasAttribute("title") ? item["enclosure"].GetAttribute("title") : null,
+                Length = int.Parse(item["enclosure"].GetAttribute("length"))
             };
-            _logger.LogInformation("Value recipient: Adding person {Name}", person.Name);
-            await _podcastService.AddOrUpdateEpisode(episode);
         }
-        else
+            
+        // Image
+        var imageUrl = item["itunes:image"]?.GetAttribute("href");
+        IStoredFile imageFile = null;
+        if (!string.IsNullOrEmpty(imageUrl))
         {
-            _logger.LogInformation("Value recipient: Skipping existing person {Name}", person.Name);
+            imageFile = await _importService.DownloadFile(new Uri(imageUrl), userId);
         }
 
-        return person;
+        // Season
+        Season season = null;
+        if (item["podcast:season"] != null)
+        {
+            season = await GetSeasonByTag(item["podcast:season"], podcastId);
+        }
+        else if (item["itunes:season"] != null)
+        {
+            season = await GetSeasonByTag(item["itunes:season"], podcastId);
+        }
+        
+        // Dates
+        var pubDate = item["pubDate"]?.InnerText;
+        var publishedAt = string.IsNullOrEmpty(pubDate) ? DateTimeOffset.Now : DateTimeOffset.Parse(pubDate);
+
+        episode = new Episode
+        {
+            PodcastId = podcastId,
+            Title = item["title"]?.InnerText, 
+            Description = item["description"]?.InnerText,
+            LastUpdatedAt = DateTimeOffset.UtcNow,
+            Number = int.Parse(item["itunes:episode"]?.InnerText ?? "0"),
+            PublishedAt = publishedAt,
+            ImportGuid = guid,
+            ImageFileId = imageFile?.Id,
+            SeasonId = season?.SeasonId,
+            Enclosures = new List<Enclosure> { enclosure }
+        };
+        
+        return episode;
     }
 }
