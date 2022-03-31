@@ -31,29 +31,7 @@ public class ImportService
     
     public async Task<IStoredFile> DownloadFile(Uri url, string userId)
     {
-        var fileName = Path.GetFileName(url.AbsolutePath);
-        if (!fileName.IsValidFileName())
-            throw new InvalidOperationException("Invalid file name");
-            
-        // download
-        var filePath = Path.Join(_dataDirectories.Value.TempStorageDir, fileName);
-        var httClient = _httpClientFactory.CreateClient();
-        using var resp = await httClient.GetAsync(url);
-        await using var stream = new FileStream(filePath, FileMode.Create, FileAccess.ReadWrite);
-        await resp.Content.CopyToAsync(stream);
-        var file = new FormFile(stream, 0, stream.Length, fileName, fileName)
-        {
-            Headers = new HeaderDictionary(),
-            ContentType = GetContentType(filePath)
-        };
-        await stream.FlushAsync();
-
-        var storedFile = await _fileService.AddFile(file, userId);
-        
-        // cleanup
-        File.Delete(filePath);
-        
-        return storedFile;
+        return await _fileService.AddFile(url, userId);
     }
     
     public async Task<IEnumerable<Import>> GetUnfinishedImports()
