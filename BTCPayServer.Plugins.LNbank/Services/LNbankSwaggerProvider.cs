@@ -19,17 +19,10 @@ public class LNbankSwaggerProvider : ISwaggerProvider
     public async Task<JObject> Fetch()
     {
         JObject json = new();
-        var directoryContents = _fileProvider.GetDirectoryContents("");
-        foreach (IFileInfo fi in directoryContents)
-        {
-            if (fi.Name.Contains("swagger.template.lnbank.json"))
-            {
-                await using var stream = fi.CreateReadStream();
-                using var reader = new StreamReader(fi.CreateReadStream());
-                json.Merge(JObject.Parse(await reader.ReadToEndAsync()));
-            }
-        }
-
+        var fi = _fileProvider.GetFileInfo("Resources/swagger/v1/swagger.template.lnbank.json");
+        await using var stream = fi.CreateReadStream();
+        using var reader = new StreamReader(fi.CreateReadStream());
+        json.Merge(JObject.Parse(await reader.ReadToEndAsync()));
         return json;
     }
 }
