@@ -1,3 +1,4 @@
+using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Plugins.LNbank.Services;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,5 +12,6 @@ public static class AppExtensions
         services.AddHostedService<LightningInvoiceWatcher>();
         services.AddSingleton<BTCPayService>();
         services.AddSingleton<WalletService>();
+        services.AddSingleton<ISwaggerProvider, LNbankSwaggerProvider>();
     }
 }
