@@ -1,5 +1,6 @@
 ﻿.qrcode {
-    max-width: 445px;
+    display: inline-block;
+    max-width: 256px;
 }
 
 .qrcode svg {

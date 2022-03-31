@@ -64,7 +64,7 @@
         
                 @if (!Model.Transaction.IsExpired)
                 {                                                                                                               
-                    <div class="qrcode d-inline-block my-4">
+                    <div class="qrcode my-4">
                         @await Component.InvokeAsync("QRCode", new { data = Model.Transaction.PaymentRequest })
                     </div>
                     
