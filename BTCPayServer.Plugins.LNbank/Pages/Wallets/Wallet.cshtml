@@ -72,6 +72,14 @@
             </table>
         </div>
     </div>
+    
+    <a class="btn btn-secondary dropdown-toggle mt-4 ms-auto" href="#" role="button" id="ExportDropdownToggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Export
+    </a>
+    <div class="dropdown-menu" aria-labelledby="ExportDropdownToggle">
+        <a asp-controller="Export" asp-action="Export" asp-route-walletId="@Model.Wallet.WalletId" asp-route-format="csv" class="dropdown-item export-link" target="_blank">CSV</a>
+        <a asp-controller="Export" asp-action="Export" asp-route-walletId="@Model.Wallet.WalletId" asp-route-format="json" class="dropdown-item export-link" target="_blank">JSON</a>
+    </div>
 }
 else
 {
