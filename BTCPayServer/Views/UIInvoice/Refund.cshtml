@@ -13,6 +13,10 @@
                 <form method="post">
                     <input type="hidden" asp-for="RefundStep" value="@Model.RefundStep"/>
                     <input type="hidden" asp-for="Title" value="@Model.Title"/>
+                    <input type="hidden" asp-for="RateThenText" value="@Model.RateThenText"/>
+                    <input type="hidden" asp-for="CurrentRateText" value="@Model.CurrentRateText"/>
+                    <input type="hidden" asp-for="FiatText" value="@Model.FiatText"/>
+
                     @switch (Model.RefundStep)
                     {
                         case RefundSteps.SelectPaymentMethod:
@@ -32,22 +36,22 @@
                             <input type="hidden" asp-for="CryptoAmountNow"/>
                             <div class="form-group">
                                 <div class="form-check">
-                                    <input id="RateThenText" asp-for="SelectedRefundOption" type="radio" value="RateThen" class="form-check-input"/>
-                                    <label for="RateThenText" class="form-check-label">@Model.RateThenText</label>
+                                    <input id="RateThenTextRadio" asp-for="SelectedRefundOption" type="radio" value="RateThen" class="form-check-input"/>
+                                    <label for="RateThenTextRadio" class="form-check-label">@Model.RateThenText</label>
                                 </div>
                                 <small class="form-text text-muted">The crypto currency price, at the rate the invoice got paid.</small>
                             </div>
                             <div class="form-group">
                                 <div class="form-check">
-                                    <input id="CurrentRateText" asp-for="SelectedRefundOption" type="radio" value="CurrentRate" class="form-check-input"/>
-                                    <label for="CurrentRateText" class="form-check-label">@Model.CurrentRateText</label>
+                                    <input id="CurrentRateTextRadio" asp-for="SelectedRefundOption" type="radio" value="CurrentRate" class="form-check-input"/>
+                                    <label for="CurrentRateTextRadio" class="form-check-label">@Model.CurrentRateText</label>
                                 </div>
                                 <small class="form-text text-muted">The crypto currency price, at the current rate.</small>
                             </div>
                             <div class="form-group">
                                 <div class="form-check">
-                                    <input id="FiatText" asp-for="SelectedRefundOption" type="radio" value="Fiat" class="form-check-input"/>
-                                    <label for="FiatText" class="form-check-label">@Model.FiatText</label>
+                                    <input id="FiatTextRadio" asp-for="SelectedRefundOption" type="radio" value="Fiat" class="form-check-input"/>
+                                    <label for="FiatTextRadio" class="form-check-label">@Model.FiatText</label>
                                 </div>
                                 <small class="form-text text-muted">The invoice currency, at the rate when the refund will be sent.</small>
                             </div>
@@ -58,6 +62,9 @@
                                     <label for="CustomText" class="form-check-label">Custom</label>
                                 </div>
                                 <small class="form-text text-muted">The specified amount with the specified currency, at the rate when the refund will be sent. </small>
+                            </div>
+                            <div class="form-group">
+                                <span asp-validation-for="SelectedRefundOption" class="text-danger w-100"></span>
                             </div>
                             <div class="form-group">
                                 <button id="ok" type="submit" class="btn btn-primary btn-lg w-100">Create refund</button>
