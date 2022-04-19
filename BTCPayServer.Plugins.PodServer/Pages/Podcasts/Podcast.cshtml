@@ -23,54 +23,58 @@
 
 <partial name="_StatusMessage" />
 
-@if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
-{
-    <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
-}
 
-@Html.Raw(Model.Podcast.Description)
+<div class="d-lg-flex gap-3">
+    @if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
+    {
+        <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+    }
+    <div class="description">
+        @Html.Raw(Model.Podcast.Description)
+        
+        <a asp-page="./Public" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-sm btn-secondary mt-3" role="button">Public Page</a>
+    </div>
+</div>
 
 @if (Model.Episodes.Any())
 {
-    <div class="row">
-        <div class="col table-responsive-md">
-            <table class="table table-hover">
-                <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Title</th>
-                    <th class="text-end">Actions</th>
+    <div class="table-responsive-md">
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th>Date</th>
+                <th>Title</th>
+                <th class="text-end">Actions</th>
+            </tr>
+            </thead>
+            <tbody id="PodcastEpisodes">
+            @foreach (var episode in Model.Episodes)
+            {
+                <tr id="Episode-@episode.EpisodeId">
+                    <td>
+                        <a asp-page="/Episodes/Episode" asp-route-podcastId="@Model.Podcast.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode">
+                            @if (episode.PublishedAt != null)
+                            {
+                                <time datetime="@episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
+                                    @episode.PublishedAt?.ToTimeAgo()
+                                </time>
+                            }
+                            else
+                            {
+                                <span class="text-danger">No publish date</span>
+                            }
+                        </a>
+                    </td>
+                    <td class="episode-title">@episode.Title</td>
+                    <td class="text-end">
+                        <a asp-page="/Episodes/Public" asp-route-episodeId="@episode.EpisodeId" class="podcast-view" target="episode_@episode.EpisodeId">Public Page</a>
+                        <span> - </span>
+                        <a asp-page="/Episodes/Edit" asp-route-podcastId="@episode.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode-edit">Edit</a>
+                    </td>
                 </tr>
-                </thead>
-                <tbody id="PodcastEpisodes">
-                @foreach (var episode in Model.Episodes)
-                {
-                    <tr id="Episode-@episode.EpisodeId">
-                        <td>
-                            <a asp-page="/Episodes/Episode" asp-route-podcastId="@Model.Podcast.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode">
-                                @if (episode.PublishedAt != null)
-                                {
-                                    <time datetime="@episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
-                                        @episode.PublishedAt?.ToTimeAgo()
-                                    </time>
-                                }
-                                else
-                                {
-                                    <span class="text-danger">No publish date</span>
-                                }
-                            </a>
-                        </td>
-                        <td class="episode-title">@episode.Title</td>
-                        <td class="text-end">
-                            <a asp-page="/Episodes/Public" asp-route-episodeId="@episode.EpisodeId" class="podcast-view" target="episode_@episode.EpisodeId">Public Page</a>
-                            <span> - </span>
-                            <a asp-page="/Episodes/Edit" asp-route-podcastId="@episode.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode-edit">Edit</a>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
+            }
+            </tbody>
+        </table>
     </div>
 }
 else
