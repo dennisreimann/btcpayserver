@@ -39,7 +39,6 @@ public class WalletService
 
     public async Task<IEnumerable<Wallet>> GetWallets(WalletsQuery query)
     {
-            
         await using var dbContext = _dbContextFactory.CreateContext();
         return await FilterWallets(dbContext.Wallets.AsQueryable(), query).ToListAsync();
     }
@@ -102,10 +101,11 @@ public class WalletService
         await using var dbContext = _dbContextFactory.CreateContext();
         if (amount <= 0) throw new ArgumentException(nameof(amount));
 
+        var desc = attachDescription && !string.IsNullOrEmpty(description) ? description : string.Empty;
         var data = await _btcpayService.CreateLightningInvoice(new LightningInvoiceCreateRequest
         {
             Amount = amount,
-            Description = attachDescription ? description : null,
+            Description = desc,
             DescriptionHash = descriptionHash,
             PrivateRouteHints = privateRouteHints,
             Expiry = expiry ?? LightningInvoiceCreateRequest.ExpiryDefault
