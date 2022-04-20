@@ -11,24 +11,34 @@ using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace BTCPayServer.Plugins.LNbank.Pages.Wallets;
 
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
 public class SendModel : BasePageModel
 {
+    private readonly ILogger _logger;
+    
     public Wallet Wallet { get; set; }
+    
     public BOLT11PaymentRequest Bolt11 { get; set; }
+    
     [BindProperty]
     [DisplayName("Payment Request")]
     [Required]
     public string PaymentRequest { get; set; }
+    
     [BindProperty]
     public string Description { get; set; }
 
     public SendModel(
-        UserManager<ApplicationUser> userManager, 
-        WalletService walletService) : base(userManager, walletService) {}
+        ILogger<SendModel> logger,
+        UserManager<ApplicationUser> userManager,
+        WalletService walletService) : base(userManager, walletService)
+    {
+        _logger = logger;
+    }
 
     public async Task<IActionResult> OnGet(string walletId)
     {
@@ -89,7 +99,12 @@ public class SendModel : BasePageModel
         }
         catch (Exception exception)
         {
-            TempData[WellKnownTempData.ErrorMessage] = exception.Message;
+            const string message = "Payment failed";
+            _logger.LogError(exception, message);
+
+            TempData[WellKnownTempData.ErrorMessage] = string.IsNullOrEmpty(exception.Message)
+                ? message
+                : exception.Message;
         }
 
         return Page();

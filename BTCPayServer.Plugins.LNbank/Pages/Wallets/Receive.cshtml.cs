@@ -11,30 +11,41 @@ using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace BTCPayServer.Plugins.LNbank.Pages.Wallets;
 
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
 public class ReceiveModel : BasePageModel
 {
+    private readonly ILogger _logger;
+    
     public Wallet Wallet { get; set; }
+    
     [BindProperty]
     public string Description { get; set; }
+    
     [BindProperty] 
     [DisplayName("Attach description to payment request")]
     public bool AttachDescription { get; set; }
+    
     [BindProperty]
     [DisplayName("Amount in sats")]
     [Required]
     [Range(1, 2100000000000)]
     public long Amount { get; set; }
+    
     [BindProperty]
     [DisplayName("Add routing hints for private channels")]
     public bool PrivateRouteHints { get; set; }
 
     public ReceiveModel(
-        UserManager<ApplicationUser> userManager, 
-        WalletService walletService) : base(userManager, walletService) {}
+        ILogger<ReceiveModel> logger,
+        UserManager<ApplicationUser> userManager,
+        WalletService walletService) : base(userManager, walletService)
+    {
+        _logger = logger;
+    }
         
     public async Task<IActionResult> OnGet(string walletId)
     {
@@ -68,8 +79,11 @@ public class ReceiveModel : BasePageModel
         }
         catch (Exception exception)
         {
+            const string message = "Invoice creation failed";
+            _logger.LogError(exception, message);
+
             TempData[WellKnownTempData.ErrorMessage] = string.IsNullOrEmpty(exception.Message)
-                ? "Invoice creation failed."
+                ? message
                 : exception.Message;
         }
 
