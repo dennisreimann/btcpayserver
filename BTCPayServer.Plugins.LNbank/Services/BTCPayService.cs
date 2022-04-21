@@ -40,6 +40,12 @@ public class BTCPayService
         });
     }
 
+    public async Task<LightningPaymentData> GetLightningPayment(string paymentHash, CancellationToken cancellationToken = default)
+    {
+        var client = await Client();
+        return await client.GetLightningPayment(CryptoCode, paymentHash, cancellationToken);
+    }
+
     public async Task<LightningInvoiceData> GetLightningInvoice(string invoiceId, CancellationToken cancellationToken = default)
     {
         var client = await Client();
@@ -75,14 +81,6 @@ public class BTCPayService
         var client = await Client();
         await client.ConnectToLightningNode(CryptoCode, req, cancellationToken);
     }
-
-    /*
-    public async Task TrackPayment(uint256 paymentHash, CancellationToken cancellationToken)
-    {
-        var client = await Client();
-        await client.GetPayment(CryptoCode, paymentHash, cancellationToken);
-    }
-    */
 
     private async Task<BTCPayServerClient> Client()
     {

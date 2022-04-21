@@ -90,7 +90,16 @@ public class LightningController : BaseApiController
         var invoice = ToLightningInvoiceData(transaction);
         return Ok(invoice);
     }
-
+    
+    [HttpGet("payment/{paymentHash}")]
+    public async Task<ActionResult<LightningPaymentData>> GetLightningPayment(string paymentHash)
+    {
+        var payment = await _btcpayService.GetLightningPayment(paymentHash);
+        if (payment == null) return NotFound();
+        
+        return Ok(payment);
+    }
+    
     [HttpDelete("invoice/{invoiceId}")]
     public async Task<ActionResult<LightningInvoiceData>> CancelLightningInvoice(string invoiceId)
     {
