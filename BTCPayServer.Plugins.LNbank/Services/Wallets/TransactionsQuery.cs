@@ -8,4 +8,5 @@ public class TransactionsQuery
     public bool IncludingPending { get; set; } = true;
     public bool IncludingPaid { get; set; } = true;
     public bool IncludeWallet { get; set; }
+    public bool IncludingCancelled { get; set; }
 }

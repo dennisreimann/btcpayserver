@@ -64,9 +64,18 @@ public class LightningInvoiceWatcher : BackgroundService
         {
             if (!string.IsNullOrEmpty(transaction.InvoiceId))
             {
-                // Receiving transaction
+                // Receiving transaction - cancelled invoices return null, hence we need to null-check it
                 var invoice = await _btcpayService.GetLightningInvoice(transaction.InvoiceId, cancellationToken);
-                if (invoice.Status == LightningInvoiceStatus.Paid)
+                if (invoice == null)
+                {
+                    var result = await walletService.Cancel(transaction);
+
+                    _logger.LogInformation(
+                        // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                        result ? "Cancelled transaction {TransactionId}" : "Cancelling transaction {TransactionId} failed",
+                        transaction.TransactionId);
+                }
+                else if (invoice.Status == LightningInvoiceStatus.Paid)
                 {
                     var paidAt = invoice.PaidAt ?? DateTimeOffset.Now;
                     var result = await walletService.Settle(transaction, invoice.Amount, invoice.AmountReceived, invoice.Amount - invoice.AmountReceived, paidAt);

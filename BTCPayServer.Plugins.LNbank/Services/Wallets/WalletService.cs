@@ -319,6 +319,7 @@ public class WalletService
         {
             IncludingPending = true,
             IncludingExpired = false,
+            IncludingCancelled = false,
             IncludingPaid = false
         });
     }
@@ -413,6 +414,11 @@ public class WalletService
             queryable = queryable.Where(t => t.PaidAt != null);
         }
 
+        if (!query.IncludingCancelled)
+        {
+            queryable = queryable.Where(t => t.ExplicitStatus != Transaction.StatusCancelled);
+        }
+
         if (!query.IncludingExpired)
         {
             var enumerable = queryable.AsEnumerable(); // Switch to client side filtering
@@ -425,10 +431,16 @@ public class WalletService
     public async Task<bool> Cancel(string invoiceId)
     {
         var transaction = await GetTransaction(new TransactionQuery { InvoiceId = invoiceId });
+        
+        return await Cancel(transaction);
+    }
+    
+    public async Task<bool> Cancel(Transaction transaction)
+    {
         if (!transaction.SetCancelled()) return false;
         
         await UpdateTransaction(transaction);
-        await BroadcastTransactionUpdate(transaction, "cancelled");
+        await BroadcastTransactionUpdate(transaction, Transaction.StatusCancelled);
         return true;
     }
 
@@ -437,7 +449,7 @@ public class WalletService
         if (!transaction.SetSettled(amount, amountSettled, routingFee, date)) return false;
         
         await UpdateTransaction(transaction);
-        await BroadcastTransactionUpdate(transaction, "settled");
+        await BroadcastTransactionUpdate(transaction, Transaction.StatusSettled);
         return true;
     }
     

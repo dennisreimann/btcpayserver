@@ -31,11 +31,11 @@ public class Transaction
     public Wallet Wallet { get; set; }
     public string ExplicitStatus { get; set; }
 
-    private const string StatusSettled = "settled";
-    private const string StatusPaid = "paid";
-    private const string StatusUnpaid = "unpaid";
-    private const string StatusExpired = "expired";
-    private const string StatusCancelled = "cancelled";
+    public const string StatusSettled = "settled";
+    public const string StatusPaid = "paid";
+    public const string StatusUnpaid = "unpaid";
+    public const string StatusExpired = "expired";
+    public const string StatusCancelled = "cancelled";
     
     public string Status
     {
@@ -81,7 +81,7 @@ public class Transaction
 
     public bool SetCancelled()
     {
-        if (IsUnpaid || IsExpired) return false;
+        if (IsPaid || IsExpired) return false;
         ExplicitStatus = StatusCancelled;
         return true;
     }
