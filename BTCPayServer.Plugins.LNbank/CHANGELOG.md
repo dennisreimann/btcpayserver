@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - ongoing development
+
+### Added
+
+- Log exceptions in background watcher.
+
+### Fixed
+
+- Allow for empty description when creating invoices.
+- Handle cancelled invoices in background watcher.
+
 ## [1.2.0] - 2022-04-01
 
 ### Added
@@ -63,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Logo link on Share page
+- Logo link on Share page.
 
 ## [1.0.3] - 2022-02-01
 
@@ -73,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Improve create wallet for LN node connection case
+- Improve create wallet for LN node connection case.
 
 ### Fixed
 
