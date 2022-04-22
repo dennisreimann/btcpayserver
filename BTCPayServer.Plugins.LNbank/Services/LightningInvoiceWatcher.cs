@@ -88,14 +88,26 @@ public class LightningInvoiceWatcher : BackgroundService
             }
             else
             {
-                // TODO: Sending transaction
-                /*
+                // Sending transaction
                 var bolt11 = walletService.ParsePaymentRequest(transaction.PaymentRequest);
-                var payment = await _btcpayService.TrackPayment(bolt11.Hash, cancellationToken);
+                var paymentHash = bolt11.PaymentHash?.ToString();
+                var invoice = await _btcpayService.GetLightningInvoice(bolt11.Hash.ToString(), cancellationToken);
+                
+                // TODO: if inflight, this needs to be timed out - cancel after 3 seconds, potentially caused by HODL invoices
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); 
+                cts.CancelAfter(TimeSpan.FromSeconds(3));
+                var payment = await _btcpayService.GetLightningPayment(paymentHash, cts.Token);
+                    
+                    
                 
                 _logger.LogInformation("Checking pending transaction {TransactionId}", transaction.TransactionId);
-                */
             }
+        }
+        catch (Exception exception) when (exception is TaskCanceledException)
+        {
+            // TODO: potentially caused by HODL invoices
+            // Payment may be pending, handle settling/cancelling
+            _logger.LogError(exception, "Checking pending transaction {TransactionId} failed: {Message}", transaction.TransactionId, exception.Message);
         }
         catch (Exception exception)
         {
