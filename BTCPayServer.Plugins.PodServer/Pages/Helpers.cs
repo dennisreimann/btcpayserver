@@ -13,6 +13,17 @@ public static class Helpers
             ? new SelectListItem(string.Empty, string.Empty)
             : new SelectListItem(ci.DisplayName, ci.TwoLetterISOLanguageName));
 
+    public static IEnumerable<SelectListItem> MediumOptions => new[]
+    {
+        new SelectListItem { Text = "Audiobook", Value = "audiobook" },
+        new SelectListItem { Text = "Blog", Value = "blog" },
+        new SelectListItem { Text = "Film", Value = "film" },
+        new SelectListItem { Text = "Music", Value = "music" },
+        new SelectListItem { Text = "Newsletter", Value = "newsletter" },
+        new SelectListItem { Text = "Podcast", Value = "podcast" },
+        new SelectListItem { Text = "Video", Value = "video" }
+    };
+    
     public static IEnumerable<SelectListItem> CategoryOptions => new[]
     {
         new SelectListItem(string.Empty, string.Empty),

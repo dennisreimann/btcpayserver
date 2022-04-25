@@ -68,6 +68,7 @@ public class EditModel : BasePageModel
                 "podcast",
                 p => p.Title,
                 p => p.Description,
+                p => p.Medium,
                 p => p.Language,
                 p => p.Category,
                 p => p.Owner,

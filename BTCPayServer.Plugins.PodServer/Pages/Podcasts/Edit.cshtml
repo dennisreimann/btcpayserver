@@ -42,6 +42,11 @@
                 <span asp-validation-for="Podcast.Title" class="text-danger"></span>
             </div>
             <div class="form-group">
+                <label asp-for="Podcast.Medium" class="form-label" data-required></label>
+                <select asp-for="Podcast.Medium" asp-items="Helpers.MediumOptions" class="form-select" required></select>
+                <span asp-validation-for="Podcast.Medium" class="text-danger"></span>
+            </div>
+            <div class="form-group">
                 <label asp-for="Podcast.Language" class="form-label" data-required></label>
                 <select asp-for="Podcast.Language" asp-items="Helpers.LanguageOptions" class="form-select" required></select>
                 <span asp-validation-for="Podcast.Language" class="text-danger"></span>

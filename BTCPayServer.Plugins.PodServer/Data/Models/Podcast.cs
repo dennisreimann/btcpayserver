@@ -28,9 +28,13 @@ public class Podcast
     
     [Required]
     public string Description { get; set; }
+
+    [Required]
+    public string Medium { get; set; } = "podcast";
     
     [Required]
     public string Language { get; set; }
+
     public string Category { get; set; }
     
     public string ImageFileId { get; set; }
