@@ -4,14 +4,12 @@
 
 @section PageHeadContent {
     <partial name="_LayoutPodServerHead" />
-    @await RenderSectionAsync("Styles", false)
+    @await RenderSectionAsync("PodServerHead", false)
 }
 
 @section PageFootContent {
     <partial name="_LayoutPodServerFoot" />
-    @await RenderSectionAsync("Scripts", false)
+    @await RenderSectionAsync("PodServerFoot", false)
 }
 
-<div class="container">
-    @RenderBody()
-</div>
+@RenderBody()

@@ -4,14 +4,12 @@
 
 @section PageHeadContent {
     <partial name="_LayoutLNbankHead" />
-    @await RenderSectionAsync("Styles", false)
+    @await RenderSectionAsync("LNbankHead", false)
 }
 
 @section PageFootContent {
     <partial name="_LayoutLNbankFoot" />
-    @await RenderSectionAsync("Scripts", false)
+    @await RenderSectionAsync("LNbankFoot", false)
 }
 
-<div class="container">
-    @RenderBody()
-</div>
+@RenderBody()
