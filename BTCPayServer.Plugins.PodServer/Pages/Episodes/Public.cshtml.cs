@@ -20,7 +20,10 @@ public class PublicModel : BasePageModel
     {
         Episode = await PodcastService.GetEpisode(new EpisodesQuery {
             EpisodeId = episodeId,
-            IncludePodcast = true
+            IncludePodcast = true,
+            IncludeContributions = true,
+            IncludeEnclosures = true,
+            IncludeSeason = true
         });
         if (!Episode.IsPublished) return NotFound();
         

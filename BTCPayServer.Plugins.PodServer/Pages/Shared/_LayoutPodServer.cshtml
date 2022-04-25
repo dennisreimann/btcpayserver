@@ -4,6 +4,7 @@
 
 @section PageHeadContent {
     <partial name="_LayoutPodServerHead" />
+    <script>window.PodServer = {}</script>
     @await RenderSectionAsync("PodServerHead", false)
 }
 

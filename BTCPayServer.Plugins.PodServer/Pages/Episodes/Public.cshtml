@@ -1,10 +1,38 @@
 @page "/plugins/podserver/episodes/{episodeId}/public"
+@using BTCPayServer.Plugins.PodServer.Data.Models
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @using BTCPayServer.Abstractions.Contracts
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.PublicModel
-@inject IFileService _fileService
+@inject IFileService FileService
 
 @{
     Layout = "_LayoutSimple";
+    var rootUri = Request.GetAbsoluteRootUri();
+    var enclosure = Model.Episode.MainEnclosure;
+    var player = new Player(Model.Episode, FileService);
+    var imageUrl = await player.GetImageUrl(rootUri);
+    var enclosureUrl = await player.GetEnclosureUrl(rootUri);
+}
+
+@section PageHeadContent
+{
+    <meta property="og:type" content="article">
+    @if (imageUrl != null)
+    {
+        <meta property="og:image" content="@imageUrl.Replace("https://", "http://")">
+        <meta property="og:image:secure_url" content="@imageUrl">
+    }
+    @if (enclosure != null)
+    {
+        <meta property="og:audio:type" content="@enclosure.Type">
+    }
+    @if (!string.IsNullOrEmpty(enclosureUrl))
+    {
+        <meta property="og:audio:url" content="@enclosureUrl.Replace("https://", "http://")">
+        <meta property="og:audio:secure_url" content="@enclosureUrl">
+    }
+    <meta property="article:section" content="@Model.Podcast.Category">
+    <meta property="article:published_time" content="@Model.Episode.PublishedAt">
 }
 
 <div class="sticky-header-setup"></div>
@@ -15,9 +43,9 @@
     </div>
 </div>
 
-@if (!string.IsNullOrEmpty(Model.Episode.ImageFileId))
+@if (enclosure != null)
 {
-    <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Episode.ImageFileId))" alt="@Model.Episode.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+    <partial name="PodServerPlayer" model="@player"/>
 }
 
 @Html.Raw(Model.Episode.Description)

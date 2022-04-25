@@ -39,6 +39,11 @@ public class Episode
     
     public ICollection<Contribution> Contributions { get; set; } = new List<Contribution>();
     public ICollection<Enclosure> Enclosures { get; set; } = new List<Enclosure>();
+
+    public Enclosure MainEnclosure
+    {
+        get => Enclosures.FirstOrDefault(e => !e.IsAlternate);
+    }
     
     public bool IsPublished
     {

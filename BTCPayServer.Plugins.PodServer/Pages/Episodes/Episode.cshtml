@@ -1,28 +1,35 @@
 @page "/plugins/podserver/podcasts/{podcastId}/episodes/{episodeId}"
 @using BTCPayServer.Abstractions.Contracts
+@using BTCPayServer.Plugins.PodServer.Data.Models
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.EpisodeModel
-@inject IFileService _fileService
+@inject IFileService FileService
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.Episodes, Model.Episode.Title, Model.Podcast.PodcastId);
+    ViewData.SetActivePage(PodServerNavPages.Episodes, Model.Episode.Title, Model.Episode.PodcastId);
+    var enclosure = Model.Episode.MainEnclosure;
+    var player = new Player(Model.Episode, FileService);
 }
 
 <div class="sticky-header-setup"></div>
 <div class="sticky-header d-sm-flex align-items-center justify-content-between">
     <h2 class="mb-0">@ViewData["Title"]</h2>
     <div class="d-flex gap-3 mt-3 mt-sm-0">
-        <a asp-page="./Edit" asp-route-podcastId="@Model.Podcast.PodcastId" asp-route-episodeId="@Model.Episode.EpisodeId" class="btn btn-primary order-sm-1" role="button" id="EditEpisode">
+        <a asp-page="./Edit" asp-route-podcastId="@Model.Episode.PodcastId" asp-route-episodeId="@Model.Episode.EpisodeId" class="btn btn-primary order-sm-1" role="button" id="EditEpisode">
             Edit
         </a>
-        <a class="btn btn-secondary" asp-page="./Public" asp-route-episodeId="@Model.Episode.EpisodeId" id="ViewEpisode" target="episode_@Model.Episode.EpisodeId">View</a>
+        @if (Model.Episode.IsPublished)
+        {
+            <a class="btn btn-secondary" asp-page="./Public" asp-route-episodeId="@Model.Episode.EpisodeId" id="ViewEpisode" target="episode_@Model.Episode.EpisodeId">View</a>
+        }
     </div>
 </div>
 
 <partial name="_StatusMessage" />
 
-@if (!string.IsNullOrEmpty(Model.Episode.ImageFileId))
+@if (enclosure != null)
 {
-    <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Episode.ImageFileId))" alt="@Model.Episode.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+    <partial name="PodServerPlayer" model="@player"/>
 }
 
 @Html.Raw(Model.Episode.Description)

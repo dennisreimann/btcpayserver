@@ -9,6 +9,10 @@
         "dist/browser/signalr.min.js",
         "dist/browser/signalr.min.js.map"
       ]
+    },
+    {
+      "library": "amplitudejs@5.3.2",
+      "destination": "Resources/lib/amplitudejs"
     }
   ]
 }
