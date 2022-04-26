@@ -93,8 +93,10 @@ public class SendModel : BasePageModel
 
         try
         {
-            await WalletService.Send(Wallet, Bolt11, PaymentRequest, Description);
-            TempData[WellKnownTempData.SuccessMessage] = "Payment successfully sent.";
+            var transaction = await WalletService.Send(Wallet, Bolt11, PaymentRequest, Description);
+            TempData[WellKnownTempData.SuccessMessage] = transaction.IsPending
+                ? "Payment successfully sent, awaiting settlement."
+                : "Payment successfully sent and settled.";
             return RedirectToPage("./Wallet", new { walletId });
         }
         catch (Exception exception)

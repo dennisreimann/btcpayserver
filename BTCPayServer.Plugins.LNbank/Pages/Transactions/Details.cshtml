@@ -34,18 +34,21 @@
     }
     else
     {
-        <h3 id="LNbank-TransactionAmount" class="text-@(Model.Transaction.IsExpired ? "info" : "warning")">
+        <h3 id="LNbank-TransactionAmount" class="text-@Helpers.TransactionStateClass(Model.Transaction)">
             @Helpers.Sats(Model.Transaction.Amount)
             @Model.Transaction.Status
         </h3>
-        <h4 class="h4 text-muted">
-            @(Model.Transaction.IsExpired ? "Expired" : "Expires")
-            <time datetime="@Model.Transaction.ExpiresAt.ToString("o", CultureInfo.InvariantCulture)">
-                @Model.Transaction.ExpiresAt.ToTimeAgo()
-            </time>
-        </h4>
+        @if (!Model.Transaction.IsCancelled)
+        {
+            <h4 class="h4 text-muted">
+                @(Model.Transaction.IsExpired ? "Expired" : "Expires")
+                <time datetime="@Model.Transaction.ExpiresAt.ToString("o", CultureInfo.InvariantCulture)">
+                    @Model.Transaction.ExpiresAt.ToTimeAgo()
+                </time>
+            </h4>
+        }
 
-        @if (!Model.Transaction.IsExpired)
+        @if (!Model.Transaction.IsExpired && !Model.Transaction.IsCancelled)
         {
             <div class="mt-4">
                 <button class="btn btn-primary me-2 mb-2" type="button" data-clipboard="@Model.Transaction.PaymentRequest" id="LNbank-CopyPaymentRequest">Copy payment request</button>

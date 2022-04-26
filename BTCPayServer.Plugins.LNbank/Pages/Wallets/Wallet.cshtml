@@ -11,7 +11,7 @@
 {
     private string Tooltip(Transaction transaction)
     {
-        var tt = transaction.IsSettled ? "" : "Awaiting confirmation. ";
+        var tt = transaction.IsSettled ? "" : "Awaiting settlement. ";
         if (transaction.HasRoutingFee) tt += $"Includes {Helpers.Millisats(transaction.RoutingFee)} routing fee.";
         return string.IsNullOrEmpty(tt) ? null : tt;
     }
@@ -55,13 +55,13 @@
                         <td class="text-nowrap text-end">
                             @if (transaction.IsPaid || transaction.IsSettled)
                             {
-                                <span class="text-@(transaction.AmountSettled > 0 ? "success" : "danger") transaction-@(transaction.Status.ToLower())" data-bs-toggle="tooltip" data-bs-placement="left" title="@Tooltip(transaction)">
+                                <span class="text-@Helpers.TransactionStateClass(transaction) transaction-@(transaction.Status.ToLower())" data-bs-toggle="tooltip" data-bs-placement="left" title="@Tooltip(transaction)">
                                     @Helpers.Sats(transaction.AmountSettled)
                                 </span>
                             }
                             else
                             {
-                                <span class="text-@(transaction.IsExpired ? "info" : "warning") transaction-status">
+                                <span class="text-@Helpers.TransactionStateClass(transaction) transaction-status">
                                     @transaction.Status
                                 </span>
                             }

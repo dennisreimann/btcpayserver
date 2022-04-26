@@ -44,7 +44,14 @@ public class LightningInvoiceWatcher : BackgroundService
             {
                 _logger.LogDebug("Processing {Count} transactions", count);
 
-                await Task.WhenAll(list.Select(transaction => CheckPendingTransaction(walletService, transaction, cancellationToken)));
+                try
+                {
+                    await Task.WhenAll(list.Select(transaction => CheckPendingTransaction(walletService, transaction, cancellationToken)));
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogError(exception, "Checking pending transactions failed: {Message}", exception.Message);
+                }
             }
 
             await Task.Delay(5_000, cancellationToken);
@@ -91,23 +98,38 @@ public class LightningInvoiceWatcher : BackgroundService
                 // Sending transaction
                 var bolt11 = walletService.ParsePaymentRequest(transaction.PaymentRequest);
                 var paymentHash = bolt11.PaymentHash?.ToString();
-                var invoice = await _btcpayService.GetLightningInvoice(bolt11.Hash.ToString(), cancellationToken);
-                
-                // TODO: if inflight, this needs to be timed out - cancel after 3 seconds, potentially caused by HODL invoices
+
+                // inflight cases need to be timed out, potentially caused by hold invoices
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); 
                 cts.CancelAfter(TimeSpan.FromSeconds(3));
                 var payment = await _btcpayService.GetLightningPayment(paymentHash, cts.Token);
-                    
-                    
-                
-                _logger.LogInformation("Checking pending transaction {TransactionId}", transaction.TransactionId);
+
+                if (payment.Status == LightningPaymentStatus.Complete)
+                {
+                    var paidAt = payment.CreatedAt ?? DateTimeOffset.Now;
+                    var result = await walletService.Settle(transaction, payment.TotalAmount, payment.TotalAmount * -1, payment.FeeAmount, paidAt);
+
+                    _logger.LogInformation(
+                        // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                        result ? "Settled transaction {TransactionId}" : "Settling transaction {TransactionId} failed",
+                        transaction.TransactionId);
+                }
+                else if (payment.Status == LightningPaymentStatus.Failed)
+                {
+                    var result = await walletService.Cancel(transaction);
+
+                    _logger.LogInformation(
+                        // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                        result ? "Cancelled transaction {TransactionId}" : "Cancelling transaction {TransactionId} failed",
+                        transaction.TransactionId);
+                }
             }
         }
         catch (Exception exception) when (exception is TaskCanceledException)
         {
             // TODO: potentially caused by HODL invoices
             // Payment may be pending, handle settling/cancelling
-            _logger.LogError(exception, "Checking pending transaction {TransactionId} failed: {Message}", transaction.TransactionId, exception.Message);
+            _logger.LogDebug("Checking pending transaction {TransactionId} failed: {Message}", transaction.TransactionId, exception.Message);
         }
         catch (Exception exception)
         {

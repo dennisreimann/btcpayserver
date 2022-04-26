@@ -57,8 +57,11 @@ public class LightningController : BaseApiController
 
         try
         {
-            await _walletService.Send(Wallet, bolt11, paymentRequest, bolt11.ShortDescription);
-            var response = new PayResponse(PayResult.Ok);
+            var transaction = await _walletService.Send(Wallet, bolt11, paymentRequest, bolt11.ShortDescription);
+            var details = transaction.IsSettled
+                ? new PayDetails { TotalAmount = transaction.Amount, FeeAmount = transaction.RoutingFee }
+                : null;
+            var response = new PayResponse(PayResult.Ok, details);
             return Ok(response);
         }
         catch (Exception exception)

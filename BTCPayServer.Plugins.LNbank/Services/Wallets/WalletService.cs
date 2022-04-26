@@ -221,14 +221,15 @@ public class WalletService
         sendingTransaction.Amount = amountWithFee;
         sendingTransaction.AmountSettled = new LightMoney(amountWithFee.MilliSatoshi * -1);
         sendingTransaction.RoutingFee = maxFeeAmount;
+        sendingTransaction.ExplicitStatus = Transaction.StatusPending;
         var sendingEntry = await dbContext.Transactions.AddAsync(sendingTransaction, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         
         try
         {
-            // Pay the invoice - cancel after 5 seconds, potentially caused by HODL invoices
+            // Pay the invoice - cancel after 30 seconds, potentially caused by hold invoices
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(5));
+            cts.CancelAfter(TimeSpan.FromSeconds(30));
             var result = await _btcpayService.PayLightningInvoice(new LightningInvoicePayRequest
             {
                 PaymentRequest = sendingTransaction.PaymentRequest, 
@@ -253,10 +254,10 @@ public class WalletService
         }
         catch (Exception ex) when (ex is TaskCanceledException)
         {
-            // HttpClient.Timeout, potentially caused by HODL invoices
+            // Timeout, potentially caused by hold invoices
             // Payment may be pending, do not remove the transaction
             // LightningInvoiceWatcher will handle settling/cancelling
-            throw;
+            return sendingTransaction;
         }
         catch (Exception ex) when (ex is GreenfieldAPIException)
         {
@@ -439,7 +440,7 @@ public class WalletService
         if (!query.IncludingExpired)
         {
             var enumerable = queryable.AsEnumerable(); // Switch to client side filtering
-            return enumerable.Where(t => t.ExpiresAt > DateTimeOffset.UtcNow).ToList();
+            return enumerable.Where(t => t.ExpiresAt > DateTimeOffset.UtcNow || t.ExplicitStatus != null).ToList();
         }
 
         return await queryable.ToListAsync();
