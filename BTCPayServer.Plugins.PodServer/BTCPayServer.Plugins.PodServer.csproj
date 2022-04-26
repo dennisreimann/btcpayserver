@@ -10,7 +10,8 @@
         <PackageProjectUrl>https://github.com/dennisreimann/btcpayserver/tree/plugins</PackageProjectUrl>
         <RepositoryUrl>https://github.com/dennisreimann/btcpayserver/tree/plugins</RepositoryUrl>
         <Company>d11n</Company>
-        <AssemblyVersion>1.0.0</AssemblyVersion>
+        <AssemblyVersion>0.1.0</AssemblyVersion>
+        <PackageVersion>0.1.0</PackageVersion>
     </PropertyGroup>
     <ItemGroup>
       <ProjectReference Include="..\BTCPayServer.Abstractions\BTCPayServer.Abstractions.csproj" />
