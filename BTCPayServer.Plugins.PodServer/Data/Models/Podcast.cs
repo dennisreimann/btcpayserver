@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayServer.Plugins.PodServer.Data.Models;
 
@@ -11,10 +12,9 @@ public class Podcast
     public string PodcastId { get; set; }
 
     // Relations
-    [DisplayName("User ID")]
-    public string UserId { get; set; }
-    
-    public ICollection<Season> Seasons { get; set; }
+    public ICollection<Editor> Editors { get; set; } = new List<Editor>();
+
+    public ICollection<Season> Seasons { get; set; } = new List<Season>();
 
     public ICollection<Episode> Episodes { get; set; } = new List<Episode>();
     
@@ -45,4 +45,8 @@ public class Podcast
     
     [DisplayName("Website URL")]
     public string Url { get; set; }
+    
+    internal static void OnModelCreating(ModelBuilder builder)
+    {
+    }
 }

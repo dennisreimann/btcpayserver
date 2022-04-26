@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayServer.Plugins.PodServer.Data.Models;
 
@@ -24,4 +25,24 @@ public class Season
 
     [MaxLength(128)]
     public string Name { get; set; }
+    
+    internal static void OnModelCreating(ModelBuilder builder)
+    {
+        builder
+            .Entity<Season>()
+            .HasIndex("PodcastId", "Number")
+            .IsUnique();
+        
+        builder
+            .Entity<Season>()
+            .HasOne(e => e.Podcast)
+            .WithMany(p => p.Seasons)
+            .OnDelete(DeleteBehavior.Cascade);
+            
+        builder
+            .Entity<Season>()
+            .HasOne(o => o.Podcast)
+            .WithMany(w => w.Seasons)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
 }

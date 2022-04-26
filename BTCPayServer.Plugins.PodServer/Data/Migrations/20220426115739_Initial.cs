@@ -18,9 +18,9 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 columns: table => new
                 {
                     PodcastId = table.Column<string>(type: "text", nullable: false),
-                    UserId = table.Column<string>(type: "text", nullable: true),
                     Title = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false),
+                    Medium = table.Column<string>(type: "text", nullable: false),
                     Language = table.Column<string>(type: "text", nullable: false),
                     Category = table.Column<string>(type: "text", nullable: true),
                     ImageFileId = table.Column<string>(type: "text", nullable: true),
@@ -31,6 +31,27 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Podcasts", x => x.PodcastId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Editors",
+                schema: "BTCPayServer.Plugins.PodServer",
+                columns: table => new
+                {
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    PodcastId = table.Column<string>(type: "text", nullable: false),
+                    Role = table.Column<string>(type: "text", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Editors", x => new { x.UserId, x.PodcastId });
+                    table.ForeignKey(
+                        name: "FK_Editors_Podcasts_PodcastId",
+                        column: x => x.PodcastId,
+                        principalSchema: "BTCPayServer.Plugins.PodServer",
+                        principalTable: "Podcasts",
+                        principalColumn: "PodcastId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -180,7 +201,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Enclosure",
+                name: "Enclosures",
                 schema: "BTCPayServer.Plugins.PodServer",
                 columns: table => new
                 {
@@ -194,9 +215,9 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Enclosure", x => x.EnclosureId);
+                    table.PrimaryKey("PK_Enclosures", x => x.EnclosureId);
                     table.ForeignKey(
-                        name: "FK_Enclosure_Episodes_EpisodeId",
+                        name: "FK_Enclosures_Episodes_EpisodeId",
                         column: x => x.EpisodeId,
                         principalSchema: "BTCPayServer.Plugins.PodServer",
                         principalTable: "Episodes",
@@ -224,9 +245,15 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Enclosure_EpisodeId",
+                name: "IX_Editors_PodcastId",
                 schema: "BTCPayServer.Plugins.PodServer",
-                table: "Enclosure",
+                table: "Editors",
+                column: "PodcastId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Enclosures_EpisodeId",
+                schema: "BTCPayServer.Plugins.PodServer",
+                table: "Enclosures",
                 column: "EpisodeId");
 
             migrationBuilder.CreateIndex(
@@ -268,7 +295,11 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 schema: "BTCPayServer.Plugins.PodServer");
 
             migrationBuilder.DropTable(
-                name: "Enclosure",
+                name: "Editors",
+                schema: "BTCPayServer.Plugins.PodServer");
+
+            migrationBuilder.DropTable(
+                name: "Enclosures",
                 schema: "BTCPayServer.Plugins.PodServer");
 
             migrationBuilder.DropTable(

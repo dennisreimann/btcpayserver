@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 {
     [DbContext(typeof(PodServerPluginDbContext))]
-    [Migration("20220330154138_Initial")]
+    [Migration("20220426115739_Initial")]
     partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -60,6 +60,25 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.ToTable("Contributions", "BTCPayServer.Plugins.PodServer");
                 });
 
+            modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Editor", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PodcastId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("UserId", "PodcastId");
+
+                    b.HasIndex("PodcastId");
+
+                    b.ToTable("Editors", "BTCPayServer.Plugins.PodServer");
+                });
+
             modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Enclosure", b =>
                 {
                     b.Property<string>("EnclosureId")
@@ -91,7 +110,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 
                     b.HasIndex("EpisodeId");
 
-                    b.ToTable("Enclosure", "BTCPayServer.Plugins.PodServer");
+                    b.ToTable("Enclosures", "BTCPayServer.Plugins.PodServer");
                 });
 
             modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Episode", b =>
@@ -224,6 +243,10 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Medium")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Owner")
                         .HasColumnType("text");
 
@@ -232,9 +255,6 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Url")
-                        .HasColumnType("text");
-
-                    b.Property<string>("UserId")
                         .HasColumnType("text");
 
                     b.HasKey("PodcastId");
@@ -292,6 +312,17 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.Navigation("Podcast");
                 });
 
+            modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Editor", b =>
+                {
+                    b.HasOne("BTCPayServer.Plugins.PodServer.Data.Models.Podcast", "Podcast")
+                        .WithMany("Editors")
+                        .HasForeignKey("PodcastId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Podcast");
+                });
+
             modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Enclosure", b =>
                 {
                     b.HasOne("BTCPayServer.Plugins.PodServer.Data.Models.Episode", "Episode")
@@ -323,11 +354,13 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 
             modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Import", b =>
                 {
-                    b.HasOne("BTCPayServer.Plugins.PodServer.Data.Models.Podcast", null)
+                    b.HasOne("BTCPayServer.Plugins.PodServer.Data.Models.Podcast", "Podcast")
                         .WithMany("Imports")
                         .HasForeignKey("PodcastId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Podcast");
                 });
 
             modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Person", b =>
@@ -396,6 +429,8 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
             modelBuilder.Entity("BTCPayServer.Plugins.PodServer.Data.Models.Podcast", b =>
                 {
                     b.Navigation("Contributions");
+
+                    b.Navigation("Editors");
 
                     b.Navigation("Episodes");
 

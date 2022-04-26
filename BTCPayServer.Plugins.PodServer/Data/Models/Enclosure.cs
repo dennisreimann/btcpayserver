@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayServer.Plugins.PodServer.Data.Models;
 
@@ -28,4 +29,8 @@ public class Enclosure
     public bool IsAlternate { get; set; }
     
     public string Title { get; set; }
+    
+    internal static void OnModelCreating(ModelBuilder builder)
+    {
+    }
 }

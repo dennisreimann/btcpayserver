@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayServer.Plugins.PodServer.Data.Models;
 
@@ -48,5 +49,20 @@ public class Episode
     public bool IsPublished
     {
         get => PublishedAt >= DateTime.UtcNow;
+    }
+
+    internal static void OnModelCreating(ModelBuilder builder)
+    {
+        builder
+            .Entity<Episode>()
+            .HasOne(e => e.Podcast)
+            .WithMany(p => p.Episodes)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .Entity<Episode>()
+            .HasOne(e => e.Season)
+            .WithMany(s => s.Episodes)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
