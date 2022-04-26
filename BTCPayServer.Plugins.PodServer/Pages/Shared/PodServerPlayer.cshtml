@@ -1,4 +1,7 @@
+@using BTCPayServer.Abstractions.Services
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model BTCPayServer.Plugins.PodServer.Data.Models.Player
+@inject Safe Safe
 
 @{
     var rootUri = Context.Request.GetAbsoluteRootUri();
@@ -57,14 +60,13 @@
     </div>
 </div>
 <script>
-    @* TODO: Use Safe.Json() to output values *@
     window.PodServer.player = {
       songs: [
         {
-          "name": "@Model.Episode.Title",
-          "artist": "@Model.Podcast.Title",
-          "url": "@enclosureUrl",
-          "cover_art_url": "@imageUrl"
+          "name": @Safe.Json(Model.Episode.Title),
+          "artist": @Safe.Json(Model.Podcast.Title),
+          "url": @Safe.Json(enclosureUrl),
+          "cover_art_url": @Safe.Json(imageUrl)
         }
       ]
     };
