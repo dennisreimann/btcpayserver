@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayServer.Plugins.PodServer.Data.Models;
 
@@ -28,4 +29,18 @@ public class Contribution
     
     public string EpisodeId { get; set; }
     public Episode Episode { get; set; }
+    
+    internal static void OnModelCreating(ModelBuilder builder)
+    {
+        builder
+            .Entity<Contribution>()
+            .HasIndex("PodcastId", "EpisodeId", "PersonId")
+            .IsUnique();
+    
+        builder
+            .Entity<Contribution>()
+            .HasOne(e => e.Podcast)
+            .WithMany(p => p.Contributions)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
 }

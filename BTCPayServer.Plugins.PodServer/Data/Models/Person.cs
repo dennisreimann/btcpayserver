@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayServer.Plugins.PodServer.Data.Models;
 
@@ -26,4 +27,13 @@ public class Person
     public string ImageFileId { get; set; }
     
     public ValueRecipient ValueRecipient { get; set; }
+    
+    internal static void OnModelCreating(ModelBuilder builder)
+    {
+        builder
+            .Entity<Person>()
+            .HasOne(e => e.Podcast)
+            .WithMany(p => p.People)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
 }

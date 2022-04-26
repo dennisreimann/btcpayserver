@@ -25,7 +25,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastQuery {
+        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId
         });
@@ -36,7 +36,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastQuery {
+        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId
         });

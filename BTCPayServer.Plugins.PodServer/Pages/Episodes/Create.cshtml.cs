@@ -20,7 +20,7 @@ public class CreateModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastQuery { UserId = UserId, PodcastId = podcastId });
+        Podcast = await PodcastService.GetPodcast(new PodcastsQuery { UserId = UserId, PodcastId = podcastId });
         if (Podcast == null) return NotFound();
         
         return Page();
@@ -28,7 +28,7 @@ public class CreateModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastQuery { UserId = UserId, PodcastId = podcastId });
+        Podcast = await PodcastService.GetPodcast(new PodcastsQuery { UserId = UserId, PodcastId = podcastId });
         if (Podcast == null) return NotFound();
         
         if (!ModelState.IsValid) return Page();

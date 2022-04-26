@@ -18,7 +18,7 @@ public class PublicModel : BasePageModel
 
     public async Task<IActionResult> OnGetAsync(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastQuery {
+        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
             PodcastId = podcastId
         });
         if (Podcast == null) return NotFound();

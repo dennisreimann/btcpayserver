@@ -20,6 +20,8 @@ public class CreateModel : BasePageModel
 
     public IActionResult OnGet()
     {
+        Podcast = new Podcast();
+        
         return Page();
     }
 
@@ -27,10 +29,7 @@ public class CreateModel : BasePageModel
     {
         if (!ModelState.IsValid) return Page();
 
-        Podcast = new Podcast
-        {
-            UserId = UserId
-        };
+        Podcast = new Podcast();
 
         if (!await TryUpdateModelAsync(
             Podcast, 
@@ -43,8 +42,9 @@ public class CreateModel : BasePageModel
         {
             return Page();
         }
-            
+
         await PodcastService.AddOrUpdatePodcast(Podcast);
+        await PodcastService.AddEditor(new Editor(UserId, Podcast.PodcastId, EditorRole.Admin));
         
         TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully created.";
         return RedirectToPage("./Index", new { podcastId = Podcast.PodcastId });

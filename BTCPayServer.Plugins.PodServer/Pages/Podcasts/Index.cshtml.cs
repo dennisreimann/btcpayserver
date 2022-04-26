@@ -30,7 +30,7 @@ public class IndexModel : BasePageModel
         
         Podcasts = await PodcastService.GetPodcasts(new PodcastsQuery
         {
-            UserId = new[] { UserId }
+            UserId = UserId
         });
 
         IsReady = await _fileService.IsAvailable();

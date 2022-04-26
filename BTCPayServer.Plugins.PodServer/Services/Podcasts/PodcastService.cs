@@ -24,13 +24,13 @@ public class PodcastService
         return await FilterPodcasts(dbContext.Podcasts.AsQueryable(), query).ToListAsync();
     }
 
-    public async Task<Podcast> GetPodcast(PodcastQuery query)
+    public async Task<Podcast> GetPodcast(PodcastsQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
         return await FilterPodcasts(dbContext.Podcasts.AsQueryable(), new PodcastsQuery
         {
-            UserId = query.UserId is null ? null : new[] { query.UserId },
-            PodcastId = query.PodcastId is null ? null : new[] { query.PodcastId },
+            UserId = query.UserId,
+            PodcastId = query.PodcastId,
             IncludeSeasons = query.IncludeSeasons,
             IncludeEpisodes = query.IncludeEpisodes,
             IncludePeople = query.IncludePeople,
@@ -42,12 +42,13 @@ public class PodcastService
     {
         if (query.UserId != null)
         {
-            queryable = queryable.Where(podcast => query.UserId.Contains(podcast.UserId));
+            queryable = queryable.Include(podcast => podcast.Editors)
+                .Where(p => p.Editors.SingleOrDefault(e => e.UserId == query.UserId) != null);
         }
 
         if (query.PodcastId != null)
         {
-            queryable = queryable.Where(podcast => query.PodcastId.Contains(podcast.PodcastId));
+            queryable = queryable.Where(p => p.PodcastId == query.PodcastId);
         }
     
         if (query.IncludeEpisodes)
@@ -396,6 +397,24 @@ public class PodcastService
     {
         await using var dbContext = _dbContextFactory.CreateContext();
         dbContext.Contributions.Remove(contribution);
+        await dbContext.SaveChangesAsync();
+    }
+    
+    public async Task<Editor> AddEditor(Editor editor)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+
+        var entry = await dbContext.Editors.AddAsync(editor);
+        
+        await dbContext.SaveChangesAsync();
+
+        return entry.Entity;
+    }
+
+    public async Task RemoveEditor(Editor editor)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        dbContext.Editors.Remove(editor);
         await dbContext.SaveChangesAsync();
     }
 }

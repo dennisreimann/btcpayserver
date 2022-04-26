@@ -46,7 +46,6 @@ public class FeedImporter
         
         var podcast = new Podcast
         {
-            UserId = userId,
             Title = title,
             Description = description,
             Language = language,
@@ -56,9 +55,11 @@ public class FeedImporter
             Owner = owner,
             ImageFileId = imageFile?.Id
         };
-
+        
         // Create podcast and import job
         await _podcastService.AddOrUpdatePodcast(podcast);
+        await _podcastService.AddEditor(new Editor(userId, podcast.PodcastId, EditorRole.Admin));
+
         var import = await _importService.CreateImport(rss, podcast.PodcastId, userId);
         await _taskQueue.QueueAsync(cancellationToken => Import(import.ImportId, cancellationToken));
         //await Import(import.ImportId, new CancellationToken());
@@ -75,7 +76,7 @@ public class FeedImporter
             throw new Exception($"Unexpected import status: {import.Status}");
         }
         
-        var podcast = await _podcastService.GetPodcast(new PodcastQuery
+        var podcast = await _podcastService.GetPodcast(new PodcastsQuery
         {
             PodcastId = import.PodcastId,
             IncludeEpisodes = true,

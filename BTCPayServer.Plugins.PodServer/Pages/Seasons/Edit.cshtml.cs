@@ -23,7 +23,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId, string seasonId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastQuery {
+        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId,
             IncludeSeasons = true

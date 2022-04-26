@@ -20,7 +20,7 @@ public class PodcastModel : BasePageModel
 
     public async Task<IActionResult> OnGetAsync(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastQuery {
+        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId,
             IncludeEpisodes = true
