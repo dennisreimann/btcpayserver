@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Refresh transactions list on update.
 - Log exceptions in background watcher.
 - Handling for hold invoices.
 

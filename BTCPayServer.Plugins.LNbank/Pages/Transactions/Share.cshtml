@@ -77,17 +77,18 @@
                     </div>
                         
                     <script>
-                        window.LNbankHubs = window.LNbankHubs || []
-                        window.LNbankHubs.push({
-                            id: 'transaction',
-                            handlers: {
-                                'transaction-update': data => {
-                                    if (data.transactionId === "@Model.Transaction.TransactionId") {
-                                        window.location.reload();
+                        (function () {
+                            window.LNbank.hubs.push({
+                                id: 'transaction',
+                                handlers: {
+                                    'transaction-update': data => {
+                                        if (data.transactionId === "@Model.Transaction.TransactionId") {
+                                            window.location.reload();
+                                        }
                                     }
                                 }
-                            }
-                        })
+                            })
+                        })()
                     </script>
                 }
             }

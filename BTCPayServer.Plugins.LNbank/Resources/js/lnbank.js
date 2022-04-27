@@ -3,8 +3,10 @@
 const isDev = document.documentElement.hasAttribute("data-devenv");
 
 document.addEventListener("DOMContentLoaded", () => {
+    const { hubs } = window.LNbank
+    
     // SignalR
-    ;(window.LNbankHubs || []).forEach(hub => {
+    hubs.forEach(hub => {
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(`/plugins/lnbank/hubs/${hub.id}`)
             .withAutomaticReconnect()

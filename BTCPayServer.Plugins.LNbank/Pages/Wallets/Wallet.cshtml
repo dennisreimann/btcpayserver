@@ -1,10 +1,14 @@
 @page "/plugins/lnbank/wallets/{walletId}"
 @using System.Globalization
+@using BTCPayServer.Abstractions.Services
 @using BTCPayServer.Plugins.LNbank.Data.Models
+@inject Safe Safe
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.WalletModel
 
 @{
     ViewData.SetActivePage(LNbankNavPages.Wallet, Model.Wallet.Name, Model.Wallet.WalletId);
+
+    var pendingTransactionIds = Model.Transactions.Where(t => t.IsPending).Select(t => t.TransactionId);
 }
 
 @functions
@@ -72,6 +76,25 @@
             </table>
         </div>
     </div>
+    
+    @if (pendingTransactionIds.Any())
+    {
+        <script>
+            (function () {
+                const pending = @Safe.Json(pendingTransactionIds);
+                window.LNbank.hubs.push({
+                    id: 'transaction',
+                    handlers: {
+                        'transaction-update': data => {
+                            if (pending.includes(data.transactionId)) {
+                                window.location.reload();
+                            }
+                        }
+                    }
+                })
+            })()
+        </script>
+    }
     
     <a class="btn btn-secondary dropdown-toggle mt-4 ms-auto" href="#" role="button" id="ExportDropdownToggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         Export
