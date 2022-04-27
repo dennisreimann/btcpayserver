@@ -54,8 +54,10 @@ public class LightningInvoiceWatcher : BackgroundService
                 }
             }
 
-            await Task.Delay(5_000, cancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
         }
+        
+        _logger.LogInformation("Ending, cancellation requested");
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -98,11 +100,7 @@ public class LightningInvoiceWatcher : BackgroundService
                 // Sending transaction
                 var bolt11 = walletService.ParsePaymentRequest(transaction.PaymentRequest);
                 var paymentHash = bolt11.PaymentHash?.ToString();
-
-                // inflight cases need to be timed out, potentially caused by hold invoices
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); 
-                cts.CancelAfter(TimeSpan.FromSeconds(3));
-                var payment = await _btcpayService.GetLightningPayment(paymentHash, cts.Token);
+                var payment = await _btcpayService.GetLightningPayment(paymentHash, cancellationToken);
 
                 if (payment.Status == LightningPaymentStatus.Complete)
                 {
@@ -123,13 +121,11 @@ public class LightningInvoiceWatcher : BackgroundService
                         result ? "Cancelled transaction {TransactionId}" : "Cancelling transaction {TransactionId} failed",
                         transaction.TransactionId);
                 }
+                else
+                {
+                    _logger.LogDebug("Transaction {TransactionId} status: {Status}", transaction.TransactionId, payment.Status.ToString());
+                }
             }
-        }
-        catch (Exception exception) when (exception is TaskCanceledException)
-        {
-            // TODO: potentially caused by HODL invoices
-            // Payment may be pending, handle settling/cancelling
-            _logger.LogDebug("Checking pending transaction {TransactionId} failed: {Message}", transaction.TransactionId, exception.Message);
         }
         catch (Exception exception)
         {
