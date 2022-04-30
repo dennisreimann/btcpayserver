@@ -84,6 +84,9 @@ public class Transaction
     public bool SetCancelled()
     {
         if (IsPaid || IsExpired) return false;
+        AmountSettled = null;
+        RoutingFee = null;
+        PaidAt = null;
         ExplicitStatus = StatusCancelled;
         return true;
     }
