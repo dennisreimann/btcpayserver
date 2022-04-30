@@ -59,12 +59,9 @@ namespace BTCPayServer.Tests
             // Wallet
             Assert.Contains("0 sats", s.Driver.FindElement(By.Id("LNbank-WalletBalance")).Text);
             Assert.Contains("There are no transactions yet.", s.Driver.FindElement(By.Id("LNbank-WalletTransactions")).Text);
-            Assert.Single(s.Driver.FindElements(By.CssSelector("#LNbank-Wallets a")));
-            s.Driver.FindElement(By.CssSelector("#LNbank-Wallets a")).Click();
             s.Driver.FindElement(By.Id("LNbank-WalletSettings")).Click();
             Assert.Contains(walletName, s.Driver.FindElement(By.Id("LNbank-WalletName")).Text);
             var walletId = s.Driver.FindElement(By.Id("LNbank-WalletId")).Text;
-            s.Driver.FindElement(By.Id("LNbank-Back")).Click();
             
             // Receive
             var description = "First invoice";
@@ -80,9 +77,9 @@ namespace BTCPayServer.Tests
             var bolt11 = s.Driver.FindElement(By.Id("LNbank-CopyPaymentRequest")).GetAttribute("data-clipboard");
             var shareUrl = s.Driver.FindElement(By.Id("LNbank-CopyShareUrl")).GetAttribute("data-clipboard");
             Assert.StartsWith("ln", bolt11);
-            s.Driver.FindElement(By.Id("LNbank-Back")).Click();
             
             // List
+            s.Driver.FindElement(By.Id("LNbank-WalletOverview")).Click();
             var listUrl = s.Driver.Url;
             Assert.Single(s.Driver.FindElements(By.CssSelector("#LNbank-WalletTransactions tr")));
             Assert.Contains("21 sats", s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-amount")).Text);
@@ -101,7 +98,7 @@ namespace BTCPayServer.Tests
             TestUtils.Eventually(() =>
             {
                 s.Driver.Navigate().Refresh();
-                Assert.Contains("21 sats paid", s.Driver.FindElement(By.Id("LNbank-TransactionSettled")).Text);
+                Assert.Contains("21 sats settled", s.Driver.FindElement(By.Id("LNbank-TransactionSettled")).Text);
             });
             
             // List
@@ -124,8 +121,9 @@ namespace BTCPayServer.Tests
             s.Driver.FindElement(By.Id("Description")).SendKeys(" for Uncle Jim");
             s.Driver.FindElement(By.Id("LNbank-Send")).Click();
             
-            /*
             // List
+            /*
+            s.Driver.FindElement(By.Id("LNbank-WalletOverview")).Click();
             Assert.Equal(2, s.Driver.FindElements(By.CssSelector("#LNbank-WalletTransactions tr")).Count);
             Assert.Contains("21 sats", s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-amount")).Text);
             Assert.Contains("unpaid", s.Driver.FindElement(By.CssSelector("#LNbank-WalletTransactions tr .transaction-status")).Text);

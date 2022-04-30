@@ -9,6 +9,7 @@
 <partial name="_WalletHeader" model="Model.Wallet"/>
 
 <div class="mb-4">
+    <h2 id="LNbank-TransactionDescription">@ViewData["Title"]</h2>
     @if (Model.Transaction.IsPaid || Model.Transaction.IsSettled)
     {
         <h3 id="LNbank-TransactionSettled" class="text-@(Model.Transaction.AmountSettled > 0 ? "success" : "danger")">

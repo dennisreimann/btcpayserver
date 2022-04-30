@@ -2,7 +2,7 @@
 
 <div class="sticky-header-setup"></div>
 <div class="sticky-header d-sm-flex align-items-center justify-content-between">
-    <a asp-page="/Wallets/Wallet" asp-route-walletId="@Model.WalletId" class="unobtrusive-link">
+    <a asp-page="/Wallets/Wallet" asp-route-walletId="@Model.WalletId" class="unobtrusive-link" id="LNbank-WalletOverview">
         <h2 class="mb-1">@Model.Name</h2>
         <div class="text-muted fw-semibold" id="LNbank-WalletBalance">
             @Helpers.Sats(Model.Balance)
