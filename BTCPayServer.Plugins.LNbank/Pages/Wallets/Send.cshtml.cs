@@ -65,7 +65,8 @@ public class SendModel : BasePageModel
         if (!ModelState.IsValid) return Page();
 
         try
-        {            
+        {
+            PaymentRequest = PaymentRequest.Trim();
             Bolt11 = WalletService.ParsePaymentRequest(PaymentRequest);
             Description = Bolt11.ShortDescription;
             await WalletService.ValidatePaymentRequest(PaymentRequest);
@@ -89,6 +90,7 @@ public class SendModel : BasePageModel
         if (Wallet == null) return NotFound();
         if (!ModelState.IsValid) return Page();
 
+        PaymentRequest = PaymentRequest.Trim();
         Bolt11 = WalletService.ParsePaymentRequest(PaymentRequest);
 
         try
