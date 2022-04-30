@@ -227,12 +227,14 @@ public class WalletService
         
         try
         {
-            // Pay the invoice
+            // Pay the invoice - cancel after 20 seconds, potentially caused by hold invoices
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(20));
             var result = await _btcpayService.PayLightningInvoice(new LightningInvoicePayRequest
             {
                 PaymentRequest = sendingTransaction.PaymentRequest, 
                 MaxFeePercent = maxFeePercent
-            }, cancellationToken);
+            }, cts.Token);
             
             // Check result
             if (result.TotalAmount == null)
@@ -252,12 +254,14 @@ public class WalletService
         }
         catch (Exception ex) when (ex is TaskCanceledException)
         {
+            // Timeout, potentially caused by hold invoices
             // Payment may be pending, do not remove the transaction
             // LightningInvoiceWatcher will handle settling/cancelling
             return sendingTransaction;
         }
         catch (Exception ex) when (ex is GreenfieldAPIException)
         {
+            // Like incorrect_payment_details, in case a payment gets cancelled
             throw;
         }
         catch (Exception)
