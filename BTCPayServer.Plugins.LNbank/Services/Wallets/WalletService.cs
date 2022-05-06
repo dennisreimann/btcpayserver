@@ -128,7 +128,7 @@ public class WalletService
         return entry.Entity;
     }
 
-    public async Task<Transaction> Send(Wallet wallet, BOLT11PaymentRequest bolt11, string paymentRequest, string description, float maxFeePercent = 3, CancellationToken cancellationToken = default)
+    public async Task<Transaction> Send(Wallet wallet, BOLT11PaymentRequest bolt11, string paymentRequest, string description, LightMoney explicitAmount = null, float maxFeePercent = 3, CancellationToken cancellationToken = default)
     {
         if (bolt11.ExpiryDate <= DateTimeOffset.UtcNow)
         {
@@ -136,7 +136,7 @@ public class WalletService
         }
 
         // check balance
-        var amount = bolt11.MinimumAmount;
+        var amount = bolt11.MinimumAmount == LightMoney.Zero ? explicitAmount : bolt11.MinimumAmount;
         if (wallet.Balance < amount)
         {
             throw new Exception($"Insufficient balance: {Sats(wallet.Balance)} — tried to send {Sats(amount)}.");
@@ -233,7 +233,8 @@ public class WalletService
             var result = await _btcpayService.PayLightningInvoice(new LightningInvoicePayRequest
             {
                 PaymentRequest = sendingTransaction.PaymentRequest, 
-                MaxFeePercent = maxFeePercent
+                MaxFeePercent = maxFeePercent,
+                Amount = sendingTransaction.Amount
             }, cts.Token);
             
             // Check result
@@ -258,11 +259,6 @@ public class WalletService
             // Payment may be pending, do not remove the transaction
             // LightningInvoiceWatcher will handle settling/cancelling
             return sendingTransaction;
-        }
-        catch (Exception ex) when (ex is GreenfieldAPIException)
-        {
-            // Like incorrect_payment_details, in case a payment gets cancelled
-            throw;
         }
         catch (Exception)
         {

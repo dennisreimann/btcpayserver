@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Public wallet LNURL page for sharing.
 
+## Fixed
+
+- Allow specifying explicit amount for zero amount invoices.
+
 ## [1.2.1] - 2022-04-30
 
 ### Added

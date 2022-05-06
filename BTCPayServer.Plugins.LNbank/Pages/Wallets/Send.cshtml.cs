@@ -30,6 +30,11 @@ public class SendModel : BasePageModel
     public string PaymentRequest { get; set; }
     
     [BindProperty]
+    [DisplayName("Amount in sats")]
+    [Range(1, 2100000000000)]
+    public long ExplicitAmount { get; set; }
+    
+    [BindProperty]
     public string Description { get; set; }
 
     public SendModel(
@@ -95,7 +100,8 @@ public class SendModel : BasePageModel
 
         try
         {
-            var transaction = await WalletService.Send(Wallet, Bolt11, PaymentRequest, Description);
+            var explicitAmount = Bolt11.MinimumAmount == LightMoney.Zero ? LightMoney.Satoshis(ExplicitAmount) : null;
+            var transaction = await WalletService.Send(Wallet, Bolt11, PaymentRequest, Description, explicitAmount);
             TempData[WellKnownTempData.SuccessMessage] = transaction.IsPending
                 ? "Payment successfully sent, awaiting settlement."
                 : "Payment successfully sent and settled.";

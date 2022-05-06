@@ -54,10 +54,11 @@ public class LightningController : BaseApiController
 
         var paymentRequest = req.PaymentRequest;
         var bolt11 = _walletService.ParsePaymentRequest(paymentRequest);
+        var amount = bolt11.MinimumAmount == LightMoney.Zero ? req.Amount : null;
 
         try
         {
-            var transaction = await _walletService.Send(Wallet, bolt11, paymentRequest, bolt11.ShortDescription);
+            var transaction = await _walletService.Send(Wallet, bolt11, paymentRequest, bolt11.ShortDescription, amount);
             var details = transaction.IsSettled
                 ? new PayDetails { TotalAmount = transaction.Amount, FeeAmount = transaction.RoutingFee }
                 : null;
