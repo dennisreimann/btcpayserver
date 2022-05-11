@@ -1,11 +1,8 @@
 @page "/plugins/lnbank/wallets/{walletId}/receive"
-@using LNURL
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.ReceiveModel
 
 @{
     ViewData.SetActivePage(LNbankNavPages.Wallet, "Receive", Model.Wallet.WalletId);
-    var endpoint = new Uri($"{Request.Scheme}://{Request.Host}{Request.PathBase.ToUriComponent()}/api/v1/lnbank/lnurl/{Model.Wallet.WalletId}");
-    var lnurl = LNURL.EncodeUri(endpoint, "payRequest", true);
 }
 
 @section LNbankFoot {
@@ -43,10 +40,4 @@
     </div>
 </form>
 
-<h4 class="mt-5">LNURL</h4>
-<p>Alternatively you can use this LNURL to receive to your wallet.</p>
-<div class="qrcode">
-    <a href="@lnurl" rel="noreferrer noopener">
-        @await Component.InvokeAsync("QRCode", new { data = lnurl.ToString().ToUpperInvariant() })
-    </a>
-</div>
+<p class="mt-5 text-muted">Alternatively you can use <a asp-page="./ShareLNURL" asp-route-walletId="@Model.Wallet.WalletId" target="lnurl-@Model.Wallet.WalletId">LNURL</a> to receive to your wallet.</p>
