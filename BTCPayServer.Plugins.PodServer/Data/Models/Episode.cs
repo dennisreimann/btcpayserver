@@ -48,7 +48,7 @@ public class Episode
     
     public bool IsPublished
     {
-        get => PublishedAt >= DateTime.UtcNow;
+        get => PublishedAt <= DateTime.UtcNow && MainEnclosure != null;
     }
 
     internal static void OnModelCreating(ModelBuilder builder)

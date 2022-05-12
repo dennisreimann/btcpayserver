@@ -73,8 +73,8 @@ public class EditModel : BasePageModel
         
         if (EnclosureFile != null)
         {
-            // delete existing image
-            // TODO: Remove and allow for multiple enclosures
+            // delete existing enclosure
+            // TODO: Allow for multiple enclosures
             if (Episode.Enclosures.Any())
             {
                 foreach (var enclosure in Episode.Enclosures)

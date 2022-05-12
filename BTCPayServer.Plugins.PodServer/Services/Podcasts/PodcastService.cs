@@ -129,6 +129,11 @@ public class PodcastService
 
             queryable = queryable.Where(e => e.PodcastId == query.PodcastId);
         }
+
+        if (query.OnlyPublished)
+        {
+            query.IncludeEnclosures = true;
+        }
         
         if (query.IncludePodcast)
         {
@@ -169,7 +174,9 @@ public class PodcastService
 
         if (query.OnlyPublished)
         {
-            queryable = queryable.Where(e => e.PublishedAt >= DateTime.UtcNow);
+            queryable = queryable
+                    .Where(e => e.PublishedAt != null && e.PublishedAt <= DateTime.UtcNow && 
+                                e.Enclosures.FirstOrDefault(enc => !enc.IsAlternate) != null);
         }
         
         queryable = queryable.OrderByDescending(t => t.PublishedAt);

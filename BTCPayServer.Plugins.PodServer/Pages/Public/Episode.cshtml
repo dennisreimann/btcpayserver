@@ -1,12 +1,14 @@
-@page "/plugins/podserver/episodes/{episodeId}/public"
+@page "/plugins/podserver/episode/{episodeId}"
 @using BTCPayServer.Plugins.PodServer.Data.Models
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @using BTCPayServer.Abstractions.Contracts
-@model BTCPayServer.Plugins.PodServer.Pages.Episodes.PublicModel
+@model EpisodeModel
 @inject IFileService FileService
 
 @{
     Layout = "_LayoutSimple";
+    ViewData.SetActivePage(PodServerNavPages.Public, $"{Model.Episode.Title} - {Model.Podcast.Title}", Model.Episode.EpisodeId);
+    
     var rootUri = Request.GetAbsoluteRootUri();
     var enclosure = Model.Episode.MainEnclosure;
     var player = new Player(Model.Episode, FileService);

@@ -32,7 +32,7 @@
     <div class="description">
         @Html.Raw(Model.Podcast.Description)
         
-        <a asp-page="./Public" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-sm btn-secondary mt-3" role="button">Public Page</a>
+        <a asp-page="/Public/Podcast" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-sm btn-secondary mt-3" role="button">Public Page</a>
     </div>
 </div>
 

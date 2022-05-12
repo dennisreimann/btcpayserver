@@ -5,15 +5,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BTCPayServer.Plugins.PodServer.Pages.Podcasts;
+namespace BTCPayServer.Plugins.PodServer.Pages.Public;
 
 [AllowAnonymous]
-public class PublicModel : BasePageModel
+public class PodcastModel : BasePageModel
 {
     public Podcast Podcast { get; set; }
     public IEnumerable<Episode> Episodes { get; set; }
 
-    public PublicModel(UserManager<ApplicationUser> userManager,
+    public PodcastModel(UserManager<ApplicationUser> userManager,
         PodcastService podcastService) : base(userManager, podcastService) {}
 
     public async Task<IActionResult> OnGetAsync(string podcastId)
