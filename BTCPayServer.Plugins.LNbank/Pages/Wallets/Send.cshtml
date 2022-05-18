@@ -1,4 +1,5 @@
 @page "/plugins/lnbank/wallets/{walletId}/send/{handler?}"
+@using BTCPayServer.Lightning
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.SendModel
 
 @{
@@ -34,11 +35,27 @@
     {
         <input asp-for="PaymentRequest" type="hidden" required/>
         <dl class="row mb-0">
-            <dt>Amount</dt>
-            <dd id="LNbank-Amount">@Helpers.Sats(Model.Bolt11.MinimumAmount)</dd>
             <dt>Expiry</dt>
-            <dd>@Model.Bolt11.ExpiryDate.ToTimeAgo() (@Model.Bolt11.ExpiryDate)</dd>
+            <dd>
+                @Model.Bolt11.ExpiryDate.ToTimeAgo()
+                <span class="text-muted">(@Model.Bolt11.ExpiryDate)</span>
+            </dd>
         </dl>
+        @if (Model.Bolt11.MinimumAmount == LightMoney.Zero)
+        {
+            <div class="form-group">
+                <label asp-for="ExplicitAmount" class="form-label" data-required></label>
+                <input asp-for="ExplicitAmount" class="form-control text-end hide-number-spin" type="number" max="@Model.Wallet.Balance.ToUnit(LightMoneyUnit.Satoshi)" style="width:15ch;" autofocus required />
+                <span asp-validation-for="ExplicitAmount" class="text-danger"></span>
+            </div>
+        }
+        else
+        {
+            <dl class="row mb-0">
+                <dt>Amount</dt>
+                <dd id="LNbank-Amount">@Helpers.Sats(Model.Bolt11.MinimumAmount)</dd>
+            </dl>
+        }
         <div class="form-group">
             <label asp-for="Description" class="form-label"></label>
             <input asp-for="Description" class="form-control" autofocus style="max-width:70ch;" />
@@ -46,7 +63,11 @@
         </div>
         <div class="form-group">
             <button type="submit" class="btn btn-primary" id="LNbank-Send">
-                Send @Helpers.Sats(Model.Bolt11.MinimumAmount)
+                Send 
+                @if (Model.Bolt11.MinimumAmount != LightMoney.Zero)
+                {
+                    Helpers.Sats(Model.Bolt11.MinimumAmount);
+                }
             </button>
         </div>
     }

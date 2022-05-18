@@ -36,7 +36,8 @@ public class BTCPayService
         return await client.PayLightningInvoice(CryptoCode, new PayLightningInvoiceRequest
         {
             BOLT11 = req.PaymentRequest,
-            MaxFeePercent = req.MaxFeePercent
+            MaxFeePercent = req.MaxFeePercent,
+            Amount = req.Amount
         }, cancellationToken);
     }
 
