@@ -42,7 +42,7 @@ public class LightningInvoiceWatcher : BackgroundService
 
             if (count > 0)
             {
-                _logger.LogDebug("Processing {Count} transactions", count);
+                _logger.LogInformation("Processing {Count} transactions", count);
 
                 try
                 {
@@ -123,7 +123,7 @@ public class LightningInvoiceWatcher : BackgroundService
                 }
                 else
                 {
-                    _logger.LogDebug("Transaction {TransactionId} status: {Status}", transaction.TransactionId, payment.Status.ToString());
+                    _logger.LogInformation("Transaction {TransactionId} status: {Status}", transaction.TransactionId, payment.Status.ToString());
                 }
             }
         }
