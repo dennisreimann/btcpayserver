@@ -11,7 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Public wallet LNURL page for sharing.
 
-## Fixed
+### Changed
+
+- Distinguish original invoice amount and actual amount settled.
+
+### Fixed
 
 - Allow specifying explicit amount for zero amount invoices.
 

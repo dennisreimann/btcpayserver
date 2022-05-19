@@ -216,7 +216,7 @@ public class WalletService
         await using var dbContext = _dbContextFactory.CreateContext();
         
         // Create preliminary transaction entry - if something fails afterwards, the LightningInvoiceWatcher will handle cleanup
-        sendingTransaction.Amount = amountWithFee;
+        sendingTransaction.Amount = amount;
         sendingTransaction.AmountSettled = new LightMoney(amountWithFee.MilliSatoshi * -1);
         sendingTransaction.RoutingFee = maxFeeAmount;
         sendingTransaction.ExplicitStatus = Transaction.StatusPending;
@@ -244,9 +244,10 @@ public class WalletService
                 throw new Exception("Payment request has already been paid.");
             }
 
-            // Set amount to actual total amount paid, including fees
-            var amountSettled = new LightMoney(result.TotalAmount * -1);
-            sendingEntry.Entity.SetSettled(result.TotalAmount, amountSettled, result.FeeAmount, DateTimeOffset.UtcNow);
+            // Set amounts accoriding to actual amounts paid, including fees
+            var settledAmount = new LightMoney(result.TotalAmount * -1);
+            var originalAmount = result.TotalAmount - result.FeeAmount;
+            sendingEntry.Entity.SetSettled(originalAmount, settledAmount, result.FeeAmount, DateTimeOffset.UtcNow);
         }
         catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
         {

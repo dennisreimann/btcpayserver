@@ -89,7 +89,8 @@ public class LightningInvoiceWatcher : BackgroundService
                 else if (invoice.Status == LightningInvoiceStatus.Paid)
                 {
                     var paidAt = invoice.PaidAt ?? DateTimeOffset.Now;
-                    var result = await walletService.Settle(transaction, invoice.Amount, invoice.AmountReceived, invoice.Amount - invoice.AmountReceived, paidAt);
+                    var feeAmount = invoice.Amount - invoice.AmountReceived;
+                    var result = await walletService.Settle(transaction, invoice.Amount, invoice.AmountReceived, feeAmount, paidAt);
 
                     _logger.LogInformation(
                         // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
@@ -117,7 +118,8 @@ public class LightningInvoiceWatcher : BackgroundService
                 else if (payment.Status == LightningPaymentStatus.Complete)
                 {
                     var paidAt = payment.CreatedAt ?? DateTimeOffset.Now;
-                    var result = await walletService.Settle(transaction, payment.TotalAmount, payment.TotalAmount * -1, payment.FeeAmount, paidAt);
+                    var originalAmount = payment.TotalAmount - payment.FeeAmount;
+                    var result = await walletService.Settle(transaction, originalAmount, payment.TotalAmount * -1, payment.FeeAmount, paidAt);
 
                     _logger.LogInformation(
                         // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
