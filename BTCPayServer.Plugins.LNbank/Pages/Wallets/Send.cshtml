@@ -4,6 +4,7 @@
 
 @{
     ViewData.SetActivePage(LNbankNavPages.Wallet, "Send", Model.Wallet.WalletId);
+    var isReady = Model.Bolt11 != null && !Model.ValidationFailed && ModelState.IsValid;
 }
 
 @section LNbankFoot {
@@ -17,8 +18,8 @@
     <div asp-validation-summary="All" class="alert alert-danger mb-4"></div>
 }
 
-<form method="post" asp-page-handler="@(Model.Bolt11 == null ? "decode" : "confirm")">
-    @if (Model.Bolt11 == null)
+<form method="post" asp-page-handler="@(isReady ? "confirm" : "decode")">
+    @if (!isReady)
     {
         <div class="form-group">
             <label asp-for="PaymentRequest" class="form-label" data-required></label>

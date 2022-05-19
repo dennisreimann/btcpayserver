@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BTCPayServer.Client;
 using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Hubs;
@@ -230,12 +229,16 @@ public class WalletService
             // Pay the invoice - cancel after 20 seconds, potentially caused by hold invoices
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(20));
-            var result = await _btcpayService.PayLightningInvoice(new LightningInvoicePayRequest
+            
+            // Pass explicit amount only for zero amount invoices, because the implementations might throw an exception otherwise
+            var bolt11 = ParsePaymentRequest(sendingTransaction.PaymentRequest);
+            var request = new LightningInvoicePayRequest
             {
-                PaymentRequest = sendingTransaction.PaymentRequest, 
+                PaymentRequest = sendingTransaction.PaymentRequest,
                 MaxFeePercent = maxFeePercent,
-                Amount = sendingTransaction.Amount
-            }, cts.Token);
+                Amount = bolt11.MinimumAmount == LightMoney.Zero ? amount : null
+            };
+            var result = await _btcpayService.PayLightningInvoice(request, cts.Token);
             
             // Check result
             if (result.TotalAmount == null)
@@ -285,9 +288,9 @@ public class WalletService
 
         return transaction switch
         {
-            { IsExpired: true } => throw new Exception($"Payment request already expired at {transaction.ExpiresAt}."),
-            { IsSettled: true } => throw new Exception("Payment request has already been settled."),
-            { IsPaid: true } => throw new Exception("Payment request has already been paid."),
+            { IsExpired: true } => throw new PaymentRequestValidationException($"Payment request already expired at {transaction.ExpiresAt}."),
+            { IsSettled: true } => throw new PaymentRequestValidationException("Payment request has already been settled."),
+            { IsPaid: true } => throw new PaymentRequestValidationException("Payment request has already been paid."),
             _ => transaction
         };
     }

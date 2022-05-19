@@ -37,6 +37,8 @@ public class SendModel : BasePageModel
     [BindProperty]
     public string Description { get; set; }
 
+    public bool ValidationFailed { get; set; }
+
     public SendModel(
         ILogger<SendModel> logger,
         UserManager<ApplicationUser> userManager,
@@ -78,6 +80,7 @@ public class SendModel : BasePageModel
         }
         catch (Exception exception)
         {
+            ValidationFailed = exception is PaymentRequestValidationException;
             TempData[WellKnownTempData.ErrorMessage] = exception.Message;
         }
 
@@ -112,6 +115,7 @@ public class SendModel : BasePageModel
             const string message = "Payment failed";
             _logger.LogError(exception, message);
 
+            ValidationFailed = exception is PaymentRequestValidationException;
             TempData[WellKnownTempData.ErrorMessage] = string.IsNullOrEmpty(exception.Message)
                 ? message
                 : exception.Message;
