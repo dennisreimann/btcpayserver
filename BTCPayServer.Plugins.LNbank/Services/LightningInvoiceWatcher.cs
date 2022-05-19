@@ -77,11 +77,13 @@ public class LightningInvoiceWatcher : BackgroundService
                 var invoice = await _btcpayService.GetLightningInvoice(transaction.InvoiceId, cancellationToken);
                 if (invoice == null)
                 {
-                    var result = await walletService.Cancel(transaction);
+                    _logger.LogInformation("Unable to resolve invoice (Invoice Id = {InvoiceId}) for transaction {TransactionId} - invalidating transaction", transaction.InvoiceId, transaction.TransactionId);
+                    
+                    var result = await walletService.Invalidate(transaction);
 
                     _logger.LogInformation(
                         // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-                        result ? "Cancelled transaction {TransactionId}" : "Cancelling transaction {TransactionId} failed",
+                        result ? "Invalidated transaction {TransactionId}" : "Invalidating transaction {TransactionId} failed",
                         transaction.TransactionId);
                 }
                 else if (invoice.Status == LightningInvoiceStatus.Paid)
@@ -97,12 +99,22 @@ public class LightningInvoiceWatcher : BackgroundService
             }
             else
             {
-                // Sending transaction
+                // Sending transaction - cancelled payments return null, hence we need to null-check it
                 var bolt11 = walletService.ParsePaymentRequest(transaction.PaymentRequest);
                 var paymentHash = bolt11.PaymentHash?.ToString();
                 var payment = await _btcpayService.GetLightningPayment(paymentHash, cancellationToken);
+                if (payment == null)
+                {
+                    _logger.LogInformation("Unable to resolve payment (Payment Hash = {PaymentHash}) for transaction {TransactionId} - invalidating transaction", paymentHash, transaction.TransactionId);
+                    
+                    var result = await walletService.Invalidate(transaction);
 
-                if (payment.Status == LightningPaymentStatus.Complete)
+                    _logger.LogInformation(
+                        // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                        result ? "Invalidated transaction {TransactionId}" : "Invalidating transaction {TransactionId} failed",
+                        transaction.TransactionId);
+                }
+                else if (payment.Status == LightningPaymentStatus.Complete)
                 {
                     var paidAt = payment.CreatedAt ?? DateTimeOffset.Now;
                     var result = await walletService.Settle(transaction, payment.TotalAmount, payment.TotalAmount * -1, payment.FeeAmount, paidAt);

@@ -57,11 +57,17 @@
                             @Helpers.Sats(transaction.Amount)
                         </td>
                         <td class="text-nowrap text-end">
-                            @if (transaction.IsPaid || transaction.IsSettled)
+                            @if (transaction.IsPaid || transaction.IsSettled || transaction.IsPending)
                             {
                                 <span class="text-@Helpers.TransactionStateClass(transaction) transaction-@(transaction.Status.ToLower())" data-bs-toggle="tooltip" data-bs-placement="left" title="@Tooltip(transaction)">
                                     @Helpers.Sats(transaction.AmountSettled)
                                 </span>
+                                @if (transaction.IsPending)
+                                {
+                                    <span class="text-@Helpers.TransactionStateClass(transaction) transaction-status">
+                                        @transaction.Status
+                                    </span>
+                                }
                             }
                             else
                             {

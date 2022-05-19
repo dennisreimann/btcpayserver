@@ -213,16 +213,14 @@ public class WalletService
                 $"Insufficient balance: {Sats(walletBalance)} — tried to send {Sats(amount)} and need to keep a fee reserve of {Millisats(maxFeeAmount)}.");
         }
 
-        Transaction transaction;
         await using var dbContext = _dbContextFactory.CreateContext();
         
-        // Create preliminary transaction entry
+        // Create preliminary transaction entry - if something fails afterwards, the LightningInvoiceWatcher will handle cleanup
         sendingTransaction.Amount = amountWithFee;
         sendingTransaction.AmountSettled = new LightMoney(amountWithFee.MilliSatoshi * -1);
         sendingTransaction.RoutingFee = maxFeeAmount;
         sendingTransaction.ExplicitStatus = Transaction.StatusPending;
         var sendingEntry = await dbContext.Transactions.AddAsync(sendingTransaction, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
         
         try
         {
@@ -249,29 +247,16 @@ public class WalletService
             // Set amount to actual total amount paid, including fees
             var amountSettled = new LightMoney(result.TotalAmount * -1);
             sendingEntry.Entity.SetSettled(result.TotalAmount, amountSettled, result.FeeAmount, DateTimeOffset.UtcNow);
-
-            // Update entry with payment data
-            sendingEntry.State = EntityState.Modified;
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            transaction = sendingEntry.Entity;
         }
-        catch (Exception ex) when (ex is TaskCanceledException)
+        catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
         {
             // Timeout, potentially caused by hold invoices
-            // Payment may be pending, do not remove the transaction
-            // LightningInvoiceWatcher will handle settling/cancelling
-            return sendingTransaction;
+            // Payment will be saved as pending, the LightningInvoiceWatcher will handle settling/cancelling
         }
-        catch (Exception)
-        {
-            // Remove preliminary transaction only in case the payment could not be initiated.
-            dbContext.Transactions.Remove(sendingEntry.Entity);
-            await dbContext.SaveChangesAsync(cancellationToken);
-            throw;
-        }
+        
+        await dbContext.SaveChangesAsync(cancellationToken);
 
-        return transaction;
+        return sendingEntry.Entity;
     }
 
     public bool ValidateDescriptionHash(string paymentRequest, string metadata)
@@ -459,6 +444,15 @@ public class WalletService
         
         await UpdateTransaction(transaction);
         await BroadcastTransactionUpdate(transaction, Transaction.StatusCancelled);
+        return true;
+    }
+    
+    public async Task<bool> Invalidate(Transaction transaction)
+    {
+        if (!transaction.SetInvalid()) return false;
+        
+        await UpdateTransaction(transaction);
+        await BroadcastTransactionUpdate(transaction, Transaction.StatusInvalid);
         return true;
     }
 

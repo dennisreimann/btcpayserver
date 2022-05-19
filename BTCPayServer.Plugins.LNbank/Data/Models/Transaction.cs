@@ -37,6 +37,7 @@ public class Transaction
     public const string StatusExpired = "expired";
     public const string StatusPending = "pending";
     public const string StatusCancelled = "cancelled";
+    public const string StatusInvalid = "invalid";
     
     public string Status
     {
@@ -76,6 +77,7 @@ public class Transaction
     public bool IsExpired => Status == StatusExpired;
     public bool IsPending  => Status == StatusPending;
     public bool IsCancelled  => Status == StatusCancelled;
+    public bool IsInvalid  => Status == StatusInvalid;
     public bool IsOverpaid => (IsPaid || IsSettled) && AmountSettled > Amount;
     public bool IsPaidPartially => (IsPaid || IsSettled) && AmountSettled < Amount;
 
@@ -88,6 +90,16 @@ public class Transaction
         RoutingFee = null;
         PaidAt = null;
         ExplicitStatus = StatusCancelled;
+        return true;
+    }
+    
+    public bool SetInvalid()
+    {
+        if (IsPaid || IsExpired) return false;
+        AmountSettled = null;
+        RoutingFee = null;
+        PaidAt = null;
+        ExplicitStatus = StatusInvalid;
         return true;
     }
     
