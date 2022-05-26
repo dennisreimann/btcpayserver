@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data.Models;
+using BTCPayServer.Plugins.LNbank.Exceptions;
 using BTCPayServer.Plugins.LNbank.Services;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Identity;
@@ -33,15 +34,9 @@ public class LightningController : BaseApiController
     {
         if (Wallet == null) return NotFound();
 
-        Transaction transaction;
-        if (req.Description is null)
-        {
-            transaction = await _walletService.Receive(Wallet, req.Amount, req.DescriptionHash, req.PrivateRouteHints, req.Expiry);
-        }
-        else
-        {
-            transaction = await _walletService.Receive(Wallet, req.Amount, req.Description, true, req.PrivateRouteHints, req.Expiry);
-        }
+        var transaction = req.Description is null
+            ? await _walletService.Receive(Wallet, req.Amount, req.DescriptionHash, req.PrivateRouteHints, req.Expiry)
+            : await _walletService.Receive(Wallet, req.Amount, req.Description, true, req.PrivateRouteHints, req.Expiry);
           
         var data = ToLightningInvoiceData(transaction);
         return Ok(data);
@@ -58,7 +53,13 @@ public class LightningController : BaseApiController
 
         try
         {
-            var transaction = await _walletService.Send(Wallet, bolt11, paymentRequest, bolt11.ShortDescription, amount);
+            // load wallet including transactions to do the balance check
+            var wallet = await _walletService.GetWallet(new WalletQuery
+            {
+                WalletId = Wallet.WalletId,
+                IncludeTransactions = true
+            });
+            var transaction = await _walletService.Send(wallet, bolt11, paymentRequest, bolt11.ShortDescription, amount);
             var details = transaction.IsSettled
                 ? new PayDetails { TotalAmount = transaction.Amount, FeeAmount = transaction.RoutingFee }
                 : null;
@@ -67,7 +68,8 @@ public class LightningController : BaseApiController
         }
         catch (Exception exception)
         {
-            return new PayResponse(PayResult.Error, exception.Message);
+            var response = new PayResponse(PayResult.Error, exception.Message);
+            return UnprocessableEntity(response);
         }
     }
 

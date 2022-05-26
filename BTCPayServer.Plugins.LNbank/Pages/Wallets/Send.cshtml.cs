@@ -7,6 +7,7 @@ using BTCPayServer.Client;
 using BTCPayServer.Data;
 using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data.Models;
+using BTCPayServer.Plugins.LNbank.Exceptions;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;

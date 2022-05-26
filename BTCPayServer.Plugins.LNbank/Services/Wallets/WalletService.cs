@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data.Models;
+using BTCPayServer.Plugins.LNbank.Exceptions;
 using BTCPayServer.Plugins.LNbank.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -131,14 +132,14 @@ public class WalletService
     {
         if (bolt11.ExpiryDate <= DateTimeOffset.UtcNow)
         {
-            throw new Exception($"Payment request already expired at {bolt11.ExpiryDate}.");
+            throw new PaymentRequestValidationException($"Payment request already expired at {bolt11.ExpiryDate}.");
         }
 
         // check balance
         var amount = bolt11.MinimumAmount == LightMoney.Zero ? explicitAmount : bolt11.MinimumAmount;
         if (wallet.Balance < amount)
         {
-            throw new Exception($"Insufficient balance: {Sats(wallet.Balance)} — tried to send {Sats(amount)}.");
+            throw new InsufficientBalanceException($"Insufficient balance: {Sats(wallet.Balance)} — tried to send {Sats(amount)}.");
         }
 
         // check if the invoice exists already
@@ -209,7 +210,7 @@ public class WalletService
         var amountWithFee = amount + maxFeeAmount;
         if (walletBalance < amountWithFee)
         {
-            throw new Exception(
+            throw new InsufficientBalanceException(
                 $"Insufficient balance: {Sats(walletBalance)} — tried to send {Sats(amount)} and need to keep a fee reserve of {Millisats(maxFeeAmount)}.");
         }
 
@@ -241,7 +242,7 @@ public class WalletService
             // Check result
             if (result.TotalAmount == null)
             {
-                throw new Exception("Payment request has already been paid.");
+                throw new PaymentRequestValidationException("Payment request has already been paid.");
             }
 
             // Set amounts accoriding to actual amounts paid, including fees

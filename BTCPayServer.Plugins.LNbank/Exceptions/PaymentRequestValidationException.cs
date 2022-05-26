@@ -1,6 +1,6 @@
 using System;
 
-namespace BTCPayServer.Plugins.LNbank;
+namespace BTCPayServer.Plugins.LNbank.Exceptions;
 
 public class PaymentRequestValidationException : Exception
 {

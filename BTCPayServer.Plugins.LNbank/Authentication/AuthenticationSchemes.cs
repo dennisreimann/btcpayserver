@@ -1,6 +1,6 @@
 namespace BTCPayServer.Plugins.LNbank.Authentication;
 
-public class AuthenticationSchemes
+public static class AuthenticationSchemes
 {
     public const string Api = "LNbank.BTCPayAPIKey";
 }
