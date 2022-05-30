@@ -66,7 +66,10 @@ public class Transaction
             StatusSettled => LightningInvoiceStatus.Paid,
             StatusPaid => LightningInvoiceStatus.Paid,
             StatusUnpaid => LightningInvoiceStatus.Unpaid,
+            StatusPending => LightningInvoiceStatus.Unpaid,
             StatusExpired => LightningInvoiceStatus.Expired,
+            StatusInvalid => LightningInvoiceStatus.Expired,
+            StatusCancelled => LightningInvoiceStatus.Expired,
             _ => throw new NotSupportedException($"'{Status}' cannot be mapped to any LightningInvoiceStatus")
         };
     }
