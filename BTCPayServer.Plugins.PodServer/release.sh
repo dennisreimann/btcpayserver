@@ -14,9 +14,13 @@ remoteRepo="btcpayserver"
 remoteBranch="plugins"
 pluginsBranch="podserver-${versionName}"
 pluginsDir=~/Sources/btcpay/plugins
-pluginsTarget=${pluginsDir}/PodServer/${version}.0
+pluginsBuild=bin/packed/BTCPayServer.Plugins.PodServer
+pluginsTarget=${pluginsDir}/PodServer
 tagName="BTCPayServer.PodServer/${versionName}"
 tagDesc="PodServer ${versionName}"
+
+# Cleanup
+rm -rf $pluginsBuild
 
 # Parse changelog
 changes=$(awk -v ver=${version} '/^#+ \[/ { if (p) { exit }; if ($2 == "["ver"]") { p=1; next} } p' CHANGELOG.md | sed -rz 's/^\n+//; s/\n+$/\n/g')
@@ -30,17 +34,20 @@ printf "\n\n=====> Update version and package plugin\n\n"
 sed -i "s%<AssemblyVersion>.*</AssemblyVersion>%<AssemblyVersion>$version</AssemblyVersion>%g" ./BTCPayServer.Plugins.PodServer.csproj
 sed -i "s%<PackageVersion>.*</PackageVersion>%<PackageVersion>$version</PackageVersion>%g" ./BTCPayServer.Plugins.PodServer.csproj
 ./pack.sh
-cd bin/packed
-sha256sum BTCPayServer.Plugins.PodServer.btcpay* > SHA256SUMS
-gpg  --armor --sign SHA256SUMS
-shasums=$(cat SHA256SUMS)
-notes="${changes}
+cd $pluginsBuild
+
+shasums=$(cat "${version}.0/SHA256SUMS")
+echo $shasums
+notes=$(cat << EOF
+${changes}
 
 ### SHA256SUMS
 
-```
+\`\`\`
 ${shasums}
-```"
+\`\`\`
+EOF
+)
 cd -
 
 printf "\n\n=====> Prepare plugins repo\n\n"
@@ -53,7 +60,7 @@ cd -
 
 printf "\n\n=====> Copy and commit plugin files\n\n"
 mkdir -p ${pluginsTarget}
-cp bin/packed/* $pluginsTarget
+cp $pluginsBuild/* $pluginsTarget
 cd ${pluginsDir}
 git add .
 git commit -a -m "${tagDesc}"

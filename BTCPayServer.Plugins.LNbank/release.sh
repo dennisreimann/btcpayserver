@@ -14,10 +14,13 @@ remoteRepo="btcpayserver"
 remoteBranch="plugins"
 pluginsBranch="lnbank-${versionName}"
 pluginsDir=~/Sources/btcpay/plugins
-pluginsBuild=bin/packed/BTCPayServer.Plugins.LNbank/${version}.0
-pluginsTarget=${pluginsDir}/LNbank/${version}.0
+pluginsBuild=bin/packed/BTCPayServer.Plugins.LNbank
+pluginsTarget=${pluginsDir}/LNbank
 tagName="BTCPayServer.LNbank/${versionName}"
 tagDesc="LNbank ${versionName}"
+
+# Cleanup
+rm -rf $pluginsBuild
 
 # Parse changelog
 changes=$(awk -v ver=${version} '/^#+ \[/ { if (p) { exit }; if ($2 == "["ver"]") { p=1; next} } p' CHANGELOG.md | sed -rz 's/^\n+//; s/\n+$/\n/g')
@@ -32,15 +35,17 @@ sed -i "s%<AssemblyVersion>.*</AssemblyVersion>%<AssemblyVersion>$version</Assem
 sed -i "s%<PackageVersion>.*</PackageVersion>%<PackageVersion>$version</PackageVersion>%g" ./BTCPayServer.Plugins.LNbank.csproj
 ./pack.sh
 cd $pluginsBuild
-shasums=$(cat SHA256SUMS)
+
+shasums=$(cat "${version}.0/SHA256SUMS")
+echo $shasums
 notes=$(cat << EOF
 ${changes}
 
 ### SHA256SUMS
 
-```
+\`\`\`
 ${shasums}
-```
+\`\`\`
 EOF
 )
 cd -
