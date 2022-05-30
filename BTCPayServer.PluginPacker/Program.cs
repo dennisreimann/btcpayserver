@@ -69,7 +69,7 @@ namespace BTCPayServer.PluginPacker
             try
             {
                 Process cmd = new();
-                cmd.StartInfo.FileName = "powershell.exe";
+                cmd.StartInfo.FileName = "pwsh";
                 cmd.StartInfo.RedirectStandardInput = true;
                 cmd.StartInfo.RedirectStandardOutput = true;
                 cmd.StartInfo.CreateNoWindow = false;

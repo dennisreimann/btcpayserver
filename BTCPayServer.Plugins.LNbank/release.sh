@@ -14,6 +14,7 @@ remoteRepo="btcpayserver"
 remoteBranch="plugins"
 pluginsBranch="lnbank-${versionName}"
 pluginsDir=~/Sources/btcpay/plugins
+pluginsBuild=bin/packed/BTCPayServer.Plugins.LNbank/${version}.0
 pluginsTarget=${pluginsDir}/LNbank/${version}.0
 tagName="BTCPayServer.LNbank/${versionName}"
 tagDesc="LNbank ${versionName}"
@@ -30,9 +31,7 @@ printf "\n\n=====> Update version and package plugin\n\n"
 sed -i "s%<AssemblyVersion>.*</AssemblyVersion>%<AssemblyVersion>$version</AssemblyVersion>%g" ./BTCPayServer.Plugins.LNbank.csproj
 sed -i "s%<PackageVersion>.*</PackageVersion>%<PackageVersion>$version</PackageVersion>%g" ./BTCPayServer.Plugins.LNbank.csproj
 ./pack.sh
-cd bin/packed
-sha256sum BTCPayServer.Plugins.LNbank.btcpay* > SHA256SUMS
-gpg --armor --sign SHA256SUMS
+cd $pluginsBuild
 shasums=$(cat SHA256SUMS)
 notes=$(cat << EOF
 ${changes}
@@ -56,7 +55,7 @@ cd -
 
 printf "\n\n=====> Copy and commit plugin files\n\n"
 mkdir -p ${pluginsTarget}
-cp bin/packed/* $pluginsTarget
+cp $pluginsBuild/* $pluginsTarget
 cd ${pluginsDir}
 git add .
 git commit -a -m "${tagDesc}"
