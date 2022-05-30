@@ -12,7 +12,7 @@ namespace BTCPayServer.Plugins.LNbank.Controllers.API;
 [ApiController]
 [Route("~/plugins/lnbank/api/[controller]")]
 [Authorize(AuthenticationSchemes=AuthenticationSchemes.Api)]
-public abstract class BaseApiController : Controller
+public abstract class BaseApiController : ControllerBase
 {
     private readonly IOptionsMonitor<IdentityOptions> _identityOptions;
 

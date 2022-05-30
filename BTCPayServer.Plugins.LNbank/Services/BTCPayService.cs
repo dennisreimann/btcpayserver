@@ -68,7 +68,8 @@ public class BTCPayService
     public async Task<string> GetLightningDepositAddress(CancellationToken cancellationToken = default)
     {
         var client = await Client();
-        return await client.GetLightningDepositAddress(CryptoCode, cancellationToken);
+        var addr = await client.GetLightningDepositAddress(CryptoCode, cancellationToken);
+        return addr;
     }
 
     public async Task OpenLightningChannel(OpenLightningChannelRequest req, CancellationToken cancellationToken = default)

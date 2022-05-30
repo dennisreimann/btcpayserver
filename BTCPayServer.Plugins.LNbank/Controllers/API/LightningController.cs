@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data.Models;
-using BTCPayServer.Plugins.LNbank.Exceptions;
 using BTCPayServer.Plugins.LNbank.Services;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Identity;
@@ -30,26 +30,39 @@ public class LightningController : BaseApiController
     // --- Custom methods ---
 
     [HttpPost("invoice")]
-    public async Task<ActionResult<LightningInvoiceData>> CreateLightningInvoice(LightningInvoiceCreateRequest req)
+    public async Task<IActionResult> CreateLightningInvoice(LightningInvoiceCreateRequest req)
     {
-        if (Wallet == null) return NotFound();
+        if (Wallet == null) return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
 
-        var transaction = req.Description is null
-            ? await _walletService.Receive(Wallet, req.Amount, req.DescriptionHash, req.PrivateRouteHints, req.Expiry)
-            : await _walletService.Receive(Wallet, req.Amount, req.Description, true, req.PrivateRouteHints, req.Expiry);
-          
-        var data = ToLightningInvoiceData(transaction);
-        return Ok(data);
+        try
+        {
+            var transaction = req.Description is null
+                ? await _walletService.Receive(Wallet, req.Amount, req.DescriptionHash, req.PrivateRouteHints, req.Expiry)
+                : await _walletService.Receive(Wallet, req.Amount, req.Description, true, req.PrivateRouteHints, req.Expiry);
+              
+            var data = ToLightningInvoiceData(transaction);
+            return Ok(data);
+        }
+        catch (Exception exception)
+        {
+            return this.CreateAPIError("generic-error", exception.Message);
+        }
     }
 
     [HttpPost("pay")]
-    public async Task<ActionResult<PayResponse>> Pay(LightningInvoicePayRequest req)
+    public async Task<IActionResult> Pay(LightningInvoicePayRequest req)
     {
-        if (Wallet == null) return NotFound();
+        if (Wallet == null) return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
 
         var paymentRequest = req.PaymentRequest;
         var bolt11 = _walletService.ParsePaymentRequest(paymentRequest);
-        var amount = bolt11.MinimumAmount == LightMoney.Zero ? req.Amount : null;
+        var isZeroAmount = bolt11.MinimumAmount == LightMoney.Zero;
+        var amount = isZeroAmount ? req.Amount : null;
+        if (isZeroAmount && amount == null)
+        {
+            ModelState.AddModelError(nameof(req.Amount), "Amount is required to pay a zero amount invoice");
+            return this.CreateValidationError(ModelState);
+        }
 
         try
         {
@@ -68,8 +81,7 @@ public class LightningController : BaseApiController
         }
         catch (Exception exception)
         {
-            var response = new PayResponse(PayResult.Error, exception.Message);
-            return UnprocessableEntity(response);
+            return this.CreateAPIError("generic-error", exception.Message);
         }
     }
 
@@ -83,27 +95,41 @@ public class LightningController : BaseApiController
     }
 
     [HttpGet("invoice/{invoiceId}")]
-    public async Task<ActionResult<LightningInvoiceData>> GetLightningInvoice(string invoiceId)
+    public async Task<IActionResult> GetLightningInvoice(string invoiceId)
     {
-        var transaction = await _walletService.GetTransaction(new TransactionQuery
+        try
         {
-            UserId = UserId,
-            WalletId = WalletId,
-            InvoiceId = invoiceId
-        });
-        if (transaction == null) return NotFound();
+            var transaction = await _walletService.GetTransaction(new TransactionQuery
+            {
+                UserId = UserId,
+                WalletId = WalletId,
+                InvoiceId = invoiceId
+            });
+            if (transaction == null) return this.CreateAPIError(404, "invoice-not-found", "The invoice was not found");
         
-        var invoice = ToLightningInvoiceData(transaction);
-        return Ok(invoice);
+            var invoice = ToLightningInvoiceData(transaction);
+            return Ok(invoice);
+        }
+        catch (Exception exception)
+        {
+            return this.CreateAPIError("generic-error", exception.Message);
+        }
     }
     
     [HttpGet("payment/{paymentHash}")]
-    public async Task<ActionResult<LightningPaymentData>> GetLightningPayment(string paymentHash)
+    public async Task<IActionResult> GetLightningPayment(string paymentHash)
     {
-        var payment = await _btcpayService.GetLightningPayment(paymentHash);
-        if (payment == null) return NotFound();
-        
-        return Ok(payment);
+        try
+        {
+            var payment = await _btcpayService.GetLightningPayment(paymentHash);
+            if (payment == null) return this.CreateAPIError(404, "payment-not-found", "The payment was not found");
+            
+            return Ok(payment);
+        }
+        catch (Exception exception)
+        {
+            return this.CreateAPIError("generic-error", exception.Message);
+        }
     }
     
     [HttpDelete("invoice/{invoiceId}")]
