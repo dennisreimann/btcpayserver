@@ -443,29 +443,53 @@ public class WalletService
     
     public async Task<bool> Cancel(Transaction transaction)
     {
-        if (!transaction.SetCancelled()) return false;
+        var result = transaction.SetCancelled();
+        if (result)
+        {
+            await UpdateTransaction(transaction);
+            await BroadcastTransactionUpdate(transaction, Transaction.StatusCancelled);
+        }
         
-        await UpdateTransaction(transaction);
-        await BroadcastTransactionUpdate(transaction, Transaction.StatusCancelled);
+        _logger.LogInformation(
+            // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+            result ? "Cancelled transaction {TransactionId}" : "Cancelling transaction {TransactionId} failed",
+            transaction.TransactionId);
+        
         return true;
     }
     
     public async Task<bool> Invalidate(Transaction transaction)
     {
-        if (!transaction.SetInvalid()) return false;
+        var result = transaction.SetInvalid();
+        if (result)
+        {
+            await UpdateTransaction(transaction);
+            await BroadcastTransactionUpdate(transaction, Transaction.StatusInvalid);
+        }
         
-        await UpdateTransaction(transaction);
-        await BroadcastTransactionUpdate(transaction, Transaction.StatusInvalid);
-        return true;
+        _logger.LogInformation(
+            // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+            result ? "Invalidated transaction {TransactionId}" : "Invalidating transaction {TransactionId} failed",
+            transaction.TransactionId);
+        
+        return result;
     }
 
     public async Task<bool> Settle(Transaction transaction, LightMoney amount, LightMoney amountSettled, LightMoney routingFee, DateTimeOffset date)
     {
-        if (!transaction.SetSettled(amount, amountSettled, routingFee, date)) return false;
+        var result = transaction.SetSettled(amount, amountSettled, routingFee, date);
+        if (result)
+        {
+            await UpdateTransaction(transaction);
+            await BroadcastTransactionUpdate(transaction, Transaction.StatusSettled);
+        }
         
-        await UpdateTransaction(transaction);
-        await BroadcastTransactionUpdate(transaction, Transaction.StatusSettled);
-        return true;
+        _logger.LogInformation(
+            // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+            result ? "Settled transaction {TransactionId}" : "Settling transaction {TransactionId} failed",
+            transaction.TransactionId);
+        
+        return result;
     }
     
     private async Task BroadcastTransactionUpdate(Transaction transaction, string eventName)
