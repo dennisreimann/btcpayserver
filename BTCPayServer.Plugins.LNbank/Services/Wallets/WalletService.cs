@@ -101,7 +101,8 @@ public class WalletService
     private async Task<Transaction> Receive(Wallet wallet, long amount, string description, uint256 descriptionHash, bool attachDescription, bool privateRouteHints, TimeSpan? expiry, CancellationToken cancellationToken = default)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        if (amount < 0) throw new ArgumentException("Amount must be a non-negative value", nameof(amount));
+        if (amount < 0) throw new ArgumentException("Amount should be a non-negative value", nameof(amount));
+        if (expiry <= TimeSpan.Zero) throw new ArgumentException("Expiry should be more than 0", nameof(expiry));
 
         var desc = attachDescription && !string.IsNullOrEmpty(description) ? description : string.Empty;
         var data = await _btcpayService.CreateLightningInvoice(new LightningInvoiceCreateRequest
