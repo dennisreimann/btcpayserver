@@ -67,17 +67,32 @@ public class LightningController : BaseApiController
         try
         {
             // load wallet including transactions to do the balance check
-            var wallet = await _walletService.GetWallet(new WalletQuery
-            {
-                WalletId = Wallet.WalletId,
-                IncludeTransactions = true
-            });
+            var wallet = await GetWalletWithTransactions(Wallet.WalletId);
             var transaction = await _walletService.Send(wallet, bolt11, paymentRequest, bolt11.ShortDescription, amount);
             var details = transaction.IsSettled
                 ? new PayDetails { TotalAmount = transaction.Amount, FeeAmount = transaction.RoutingFee }
                 : null;
             var response = new PayResponse(PayResult.Ok, details);
             return Ok(response);
+        }
+        catch (Exception exception)
+        {
+            return this.CreateAPIError("generic-error", exception.Message);
+        }
+    }
+
+    [HttpGet("balance")]
+    public async Task<IActionResult> GetLightningNodeBalance()
+    {
+        if (Wallet == null) return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
+        
+        try
+        {
+            // load wallet including transactions to see the balance
+            var wallet = await GetWalletWithTransactions(Wallet.WalletId);
+            var offchain = new OffchainBalance { Local = wallet.Balance };
+            var balance = new LightningNodeBalance(null, offchain);
+            return Ok(balance);
         }
         catch (Exception exception)
         {
@@ -178,4 +193,13 @@ public class LightningController : BaseApiController
             BOLT11 = transaction.PaymentRequest,
             ExpiresAt = transaction.ExpiresAt
         };
+
+    private async Task<Wallet> GetWalletWithTransactions(string walletId)
+    {
+        return await _walletService.GetWallet(new WalletQuery
+        {
+            WalletId = walletId,
+            IncludeTransactions = true
+        });
+    }
 }

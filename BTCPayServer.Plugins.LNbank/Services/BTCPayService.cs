@@ -59,6 +59,12 @@ public class BTCPayService
         return await client.GetLightningNodeInfo(CryptoCode, cancellationToken);
     }
 
+    public async Task<LightningNodeBalanceData> GetLightningNodeBalance(CancellationToken cancellationToken = default)
+    {
+        var client = await Client();
+        return await client.GetLightningNodeBalance(CryptoCode, cancellationToken);
+    }
+
     public async Task<IEnumerable<LightningChannelData>> ListLightningChannels(CancellationToken cancellationToken = default)
     {
         var client = await Client();
