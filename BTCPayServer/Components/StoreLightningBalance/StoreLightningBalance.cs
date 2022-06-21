@@ -20,7 +20,6 @@ public class StoreLightningBalance : ViewComponent
 {
     private string _cryptoCode;
     private readonly StoreRepository _storeRepo;
-    private readonly BTCPayNetworkBase _network;
     private readonly BTCPayServerOptions _btcpayServerOptions;
     private readonly BTCPayNetworkProvider _networkProvider;
     private readonly LightningClientFactoryService _lightningClientFactory;
@@ -41,8 +40,7 @@ public class StoreLightningBalance : ViewComponent
         _externalServiceOptions = externalServiceOptions;
         _lightningClientFactory = lightningClientFactory;
         _lightningNetworkOptions = lightningNetworkOptions;
-        _network = _networkProvider.DefaultNetwork;
-        _cryptoCode = _network.CryptoCode;
+        _cryptoCode = _networkProvider.DefaultNetwork.CryptoCode;
     }
 
     public async Task<IViewComponentResult> InvokeAsync(StoreData store)
@@ -63,13 +61,13 @@ public class StoreLightningBalance : ViewComponent
                 var balance = await lightningClient.GetBalance();
                 vm.Balance = balance;
                 vm.TotalOnchain = balance.OnchainBalance != null
-                    ? balance.OnchainBalance.Confirmed + balance.OnchainBalance.Reserved +
-                      balance.OnchainBalance.Unconfirmed
-                    : LightMoney.Zero;
+                    ? (balance.OnchainBalance.Confirmed?? 0) + (balance.OnchainBalance.Reserved ?? 0) +
+                      (balance.OnchainBalance.Unconfirmed ?? 0)
+                    : null;
                 vm.TotalOffchain = balance.OffchainBalance != null
-                    ? balance.OffchainBalance.Opening + balance.OffchainBalance.Local +
-                      balance.OffchainBalance.Closing
-                    : LightMoney.Zero;
+                    ? (balance.OffchainBalance.Opening?? 0) + (balance.OffchainBalance.Local?? 0) +
+                      (balance.OffchainBalance.Closing?? 0)
+                    : null;
             }
             catch (NotSupportedException)
             {
