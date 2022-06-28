@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
@@ -25,6 +26,7 @@ using BTCPayServer.Services.Stores;
 using BTCPayServer.Storage.Models;
 using BTCPayServer.Storage.Services;
 using BTCPayServer.Storage.Services.Providers;
+using BTCPayServer.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -1006,7 +1008,6 @@ namespace BTCPayServer.Controllers
         [HttpPost]
         public async Task<IActionResult> Emails(EmailsViewModel model, string command)
         {
-
             if (command == "Test")
             {
                 try
@@ -1016,18 +1017,18 @@ namespace BTCPayServer.Controllers
                         var settings = await _SettingsRepository.GetSettingAsync<EmailSettings>() ?? new EmailSettings();
                         model.Settings.Password = settings.Password;
                     }
-                    if (!model.Settings.IsComplete())
-                    {
-                        TempData[WellKnownTempData.ErrorMessage] = "Required fields missing";
+                    model.Settings.Validate("Settings.", ModelState);
+                    if (string.IsNullOrEmpty(model.TestEmail))
+                        ModelState.AddModelError(nameof(model.TestEmail), new RequiredAttribute().FormatErrorMessage(nameof(model.TestEmail)));
+                    if (!ModelState.IsValid)
                         return View(model);
-                    }
                     using (var client = await model.Settings.CreateSmtpClient())
-                    using (var message = model.Settings.CreateMailMessage(new MailboxAddress(model.TestEmail, model.TestEmail), "BTCPay test", "BTCPay test", false))
+                    using (var message = model.Settings.CreateMailMessage(MailboxAddress.Parse(model.TestEmail), "BTCPay test", "BTCPay test", false))
                     {
                         await client.SendAsync(message);
                         await client.DisconnectAsync(true);
                     }
-                    TempData[WellKnownTempData.SuccessMessage] = "Email sent to " + model.TestEmail + ", please, verify you received it";
+                    TempData[WellKnownTempData.SuccessMessage] = $"Email sent to {model.TestEmail}. Please verify you received it.";
                 }
                 catch (Exception ex)
                 {
@@ -1035,16 +1036,21 @@ namespace BTCPayServer.Controllers
                 }
                 return View(model);
             }
-            else if (command == "ResetPassword")
+            if (command == "ResetPassword")
             {
                 var settings = await _SettingsRepository.GetSettingAsync<EmailSettings>() ?? new EmailSettings();
                 settings.Password = null;
-                await _SettingsRepository.UpdateSetting(model.Settings);
+                await _SettingsRepository.UpdateSetting(settings);
                 TempData[WellKnownTempData.SuccessMessage] = "Email server password reset";
                 return RedirectToAction(nameof(Emails));
             }
-            else // if(command == "Save")
+            else // if (command == "Save")
             {
+                if (model.Settings.From is not null && !MailboxAddressValidator.IsMailboxAddress(model.Settings.From))
+                {
+                    ModelState.AddModelError("Settings.From", "Invalid email");
+                    return View(model);
+                }
                 var oldSettings = await _SettingsRepository.GetSettingAsync<EmailSettings>() ?? new EmailSettings();
                 if (new EmailsViewModel(oldSettings).PasswordSet)
                 {
