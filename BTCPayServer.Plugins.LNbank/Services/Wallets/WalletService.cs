@@ -25,6 +25,8 @@ public class WalletService
     private readonly IHubContext<TransactionHub> _transactionHub;
     private readonly Network _network;
 
+    private static readonly TimeSpan _sendTimeout = TimeSpan.FromSeconds(20);
+
     public WalletService(
         ILogger<WalletService> logger,
         IHubContext<TransactionHub> transactionHub,
@@ -155,7 +157,7 @@ public class WalletService
             Description = description,
             Amount = amount,
             AmountSettled = new LightMoney(amount.MilliSatoshi * -1),
-        };  
+        };
         
         var finalizedTransaction = await (isInternal
             ? SendInternal(sendingTransaction, receivingTransaction, amount, cancellationToken)
@@ -191,12 +193,19 @@ public class WalletService
                 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await dbTransaction.CommitAsync(cancellationToken);
+                await BroadcastTransactionUpdate(receivingTransaction, Transaction.StatusSettled);
+                
+                _logger.LogInformation("Settled transaction {TransactionId} internally. Paid by {SendingTransactionId}", 
+                    receivingTransaction.TransactionId, sendingTransaction.TransactionId);
 
                 transaction = sendingEntry.Entity;
             }
             catch (Exception)
             {
                 await dbTransaction.RollbackAsync(cancellationToken);
+                
+                _logger.LogInformation("Settling transaction {TransactionId} internally failed", receivingTransaction.TransactionId);
+                
                 throw;
             }
         });
@@ -226,9 +235,9 @@ public class WalletService
         
         try
         {
-            // Pay the invoice - cancel after 20 seconds, potentially caused by hold invoices
+            // Pay the invoice - cancel after timeout, potentially caused by hold invoices
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(20));
+            cts.CancelAfter(_sendTimeout);
             
             // Pass explicit amount only for zero amount invoices, because the implementations might throw an exception otherwise
             var bolt11 = ParsePaymentRequest(sendingTransaction.PaymentRequest);
@@ -246,18 +255,19 @@ public class WalletService
                 throw new PaymentRequestValidationException("Payment request has already been paid.");
             }
 
-            // Set amounts accoriding to actual amounts paid, including fees
+            // Set amounts according to actual amounts paid, including fees
             var settledAmount = new LightMoney(result.TotalAmount * -1);
             var originalAmount = result.TotalAmount - result.FeeAmount;
-            sendingEntry.Entity.SetSettled(originalAmount, settledAmount, result.FeeAmount, DateTimeOffset.UtcNow);
+
+            await Settle(sendingEntry.Entity, originalAmount, settledAmount, result.FeeAmount, DateTimeOffset.UtcNow);
         }
         catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
         {
             // Timeout, potentially caused by hold invoices
             // Payment will be saved as pending, the LightningInvoiceWatcher will handle settling/cancelling
+            await dbContext.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Sending transaction {TransactionId} timed out. Saved as pending", sendingEntry.Entity.TransactionId);
         }
-        
-        await dbContext.SaveChangesAsync(cancellationToken);
 
         return sendingEntry.Entity;
     }
@@ -507,6 +517,5 @@ public class WalletService
     }
         
     private static string Sats(LightMoney amount) => $"{Math.Round(amount.ToUnit(LightMoneyUnit.Satoshi))} sats";
-    public static string Millisats(LightMoney amount) => $"{amount.ToUnit(LightMoneyUnit.MilliSatoshi)} millisats";
-
+    private static string Millisats(LightMoney amount) => $"{amount.ToUnit(LightMoneyUnit.MilliSatoshi)} millisats";
 }
