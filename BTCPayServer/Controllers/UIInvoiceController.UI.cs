@@ -187,22 +187,23 @@ namespace BTCPayServer.Controllers
 
             var paymentMethods = invoice.GetBlob(_NetworkProvider).GetPaymentMethods();
             var pmis = paymentMethods.Select(method => method.GetId()).ToList();
-            var options = (await payoutHandlers.GetSupportedPaymentMethods(invoice.StoreData)).Where(id => pmis.Contains(id)).ToList();
+            pmis = pmis.Concat(pmis.Where(id => id.PaymentType == LNURLPayPaymentType.Instance)
+                .Select(id => new PaymentMethodId(id.CryptoCode, LightningPaymentType.Instance))).ToList();
+            var relevant = payoutHandlers.Where(handler => pmis.Any(handler.CanHandle));
+            var options = (await relevant.GetSupportedPaymentMethods(invoice.StoreData)).Where(id => pmis.Contains(id)).ToList();
             if (!options.Any())
             {
-                TempData.SetStatusMessageModel(new StatusMessageModel()
-                {
-                    Severity = StatusMessageModel.StatusSeverity.Error,
-                    Message = "There were no payment methods available to provide refunds with for this invoice."
-                });
-                return RedirectToAction(nameof(Invoice), new { invoiceId });
+                var vm = new RefundModel { Title = "No matching payment method" };
+                ModelState.AddModelError(nameof(vm.AvailablePaymentMethods), 
+                    "There are no payment methods available to provide refunds with for this invoice.");
+                return View("_RefundModal", vm);
             }
 
             var defaultRefund = invoice.Payments
                 .Select(p => p.GetBlob(_NetworkProvider))
                 .Select(p => p?.GetPaymentMethodId())
                 .FirstOrDefault(p => p != null && options.Contains(p));
-            // TODO: What if no option?
+
             var refund = new RefundModel
             {
                 Title = "Payment method",
@@ -825,6 +826,7 @@ namespace BTCPayServer.Controllers
             invoiceQuery.StoreId = model.StoreIds;
             invoiceQuery.Take = model.Count;
             invoiceQuery.Skip = model.Skip;
+            invoiceQuery.IncludeRefunds = true;
             var list = await _InvoiceRepository.GetInvoices(invoiceQuery);
 
             model.IncludeArchived = invoiceQuery.IncludeArchived;
@@ -844,6 +846,7 @@ namespace BTCPayServer.Controllers
                     CanMarkInvalid = state.CanMarkInvalid(),
                     CanMarkSettled = state.CanMarkComplete(),
                     Details = InvoicePopulatePayments(invoice),
+                    HasRefund = invoice.Refunds.Any(data => !data.PullPaymentData.Archived)
                 });
             }
             return View(model);
