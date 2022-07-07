@@ -54,6 +54,8 @@ public class LNbankPluginDbContext : DbContext
         modelBuilder.Entity<Transaction>().HasIndex(o => o.WalletId);
             
         modelBuilder.Entity<Wallet>().HasQueryFilter(w => !w.IsSoftDeleted);
+        modelBuilder.Entity<Transaction>().HasQueryFilter(t => 
+            t.ExplicitStatus != Transaction.StatusCancelled && t.ExplicitStatus != Transaction.StatusInvalid);
         
         modelBuilder
             .Entity<AccessKey>()

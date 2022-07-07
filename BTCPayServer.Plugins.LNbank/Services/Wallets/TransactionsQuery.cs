@@ -9,4 +9,5 @@ public class TransactionsQuery
     public bool IncludingPaid { get; set; } = true;
     public bool IncludeWallet { get; set; }
     public bool IncludingCancelled { get; set; }
+    public bool IncludingInvalid { get; set; }
 }

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Improve send error handling.
 - Improve API responses.
 - Allow creation of zero amount invoices.
 

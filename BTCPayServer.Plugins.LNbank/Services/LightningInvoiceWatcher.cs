@@ -17,6 +17,12 @@ public class LightningInvoiceWatcher : BackgroundService
     private readonly ILogger<LightningInvoiceWatcher> _logger;
     private readonly BTCPayService _btcpayService;
 
+    private static readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(5);
+    
+    // grace period before starting to check a pending transaction, which is inflight
+    // and might get handled in the request context that initiated the payment 
+    private static readonly TimeSpan _inflightDelay = WalletService.SendTimeout + _checkInterval;
+
     public LightningInvoiceWatcher(
         BTCPayService btcpayService,
         IServiceScopeFactory serviceScopeFactory,
@@ -54,7 +60,7 @@ public class LightningInvoiceWatcher : BackgroundService
                 }
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            await Task.Delay(_checkInterval, cancellationToken);
         }
         
         _logger.LogInformation("Ending, cancellation requested");
@@ -95,11 +101,16 @@ public class LightningInvoiceWatcher : BackgroundService
                 var bolt11 = walletService.ParsePaymentRequest(transaction.PaymentRequest);
                 var paymentHash = bolt11.PaymentHash?.ToString();
                 var payment = await _btcpayService.GetLightningPayment(paymentHash, cancellationToken);
+                
                 if (payment == null)
                 {
-                    _logger.LogWarning("Unable to resolve payment (Payment Hash = {PaymentHash}) for transaction {TransactionId} - invalidating transaction", paymentHash, transaction.TransactionId);
+                    var isInflight = transaction.IsPending && transaction.CreatedAt > DateTimeOffset.Now - _inflightDelay;
+                    if (!isInflight)
+                    {
+                        _logger.LogWarning("Unable to resolve payment (Payment Hash = {PaymentHash}) for transaction {TransactionId} - invalidating transaction", paymentHash, transaction.TransactionId);
                     
-                    await walletService.Invalidate(transaction);
+                        await walletService.Invalidate(transaction);
+                    }
                 }
                 else switch (payment.Status)
                 {
@@ -111,7 +122,7 @@ public class LightningInvoiceWatcher : BackgroundService
                         break;
                     }
                     case LightningPaymentStatus.Failed:
-                        await walletService.Cancel(transaction);
+                        await walletService.Invalidate(transaction);
                         break;
                     case LightningPaymentStatus.Unknown:
                     case LightningPaymentStatus.Pending:

@@ -25,7 +25,7 @@ public class WalletService
     private readonly IHubContext<TransactionHub> _transactionHub;
     private readonly Network _network;
 
-    private static readonly TimeSpan _sendTimeout = TimeSpan.FromSeconds(20);
+    public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(20);
 
     public WalletService(
         ILogger<WalletService> logger,
@@ -159,23 +159,17 @@ public class WalletService
             AmountSettled = new LightMoney(amount.MilliSatoshi * -1),
         };
         
-        var finalizedTransaction = await (isInternal
-            ? SendInternal(sendingTransaction, receivingTransaction, amount, cancellationToken)
+        return await (isInternal
+            ? SendInternal(sendingTransaction, receivingTransaction, cancellationToken)
             : SendExternal(sendingTransaction, amount, wallet.Balance, maxFeePercent, cancellationToken));
-
-        if (finalizedTransaction != null)
-        {
-            await BroadcastTransactionUpdate(finalizedTransaction, "paid");
-        }
-        
-        return finalizedTransaction;
     }
 
-    private async Task<Transaction> SendInternal(Transaction sendingTransaction, Transaction receivingTransaction, LightMoney amount, CancellationToken cancellationToken = default)
+    private async Task<Transaction> SendInternal(Transaction sendingTransaction, Transaction receivingTransaction, CancellationToken cancellationToken = default)
     {
         Transaction transaction = null;
         await using var dbContext = _dbContextFactory.CreateContext();
         var executionStrategy = dbContext.Database.CreateExecutionStrategy();
+        var isSettled = false;
         
         await executionStrategy.ExecuteAsync(async () =>
         {
@@ -190,15 +184,14 @@ public class WalletService
                 sendingEntry.Entity.SetSettled(sendingTransaction.Amount, sendingTransaction.AmountSettled, null, now);
                 receiveEntry.Entity.SetSettled(sendingTransaction.Amount, sendingTransaction.Amount, null, now);
                 receiveEntry.State = EntityState.Modified;
-                
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await dbTransaction.CommitAsync(cancellationToken);
-                await BroadcastTransactionUpdate(receivingTransaction, Transaction.StatusSettled);
                 
                 _logger.LogInformation("Settled transaction {TransactionId} internally. Paid by {SendingTransactionId}", 
                     receivingTransaction.TransactionId, sendingTransaction.TransactionId);
 
                 transaction = sendingEntry.Entity;
+                isSettled = transaction.IsSettled;
             }
             catch (Exception)
             {
@@ -209,6 +202,12 @@ public class WalletService
                 throw;
             }
         });
+
+        if (isSettled)
+        {
+            await BroadcastTransactionUpdate(sendingTransaction, Transaction.StatusSettled);
+            await BroadcastTransactionUpdate(receivingTransaction, Transaction.StatusSettled);
+        }
 
         return transaction;
     }
@@ -232,12 +231,13 @@ public class WalletService
         sendingTransaction.RoutingFee = maxFeeAmount;
         sendingTransaction.ExplicitStatus = Transaction.StatusPending;
         var sendingEntry = await dbContext.Transactions.AddAsync(sendingTransaction, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
         
         try
         {
             // Pay the invoice - cancel after timeout, potentially caused by hold invoices
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(_sendTimeout);
+            cts.CancelAfter(SendTimeout);
             
             // Pass explicit amount only for zero amount invoices, because the implementations might throw an exception otherwise
             var bolt11 = ParsePaymentRequest(sendingTransaction.PaymentRequest);
@@ -265,7 +265,6 @@ public class WalletService
         {
             // Timeout, potentially caused by hold invoices
             // Payment will be saved as pending, the LightningInvoiceWatcher will handle settling/cancelling
-            await dbContext.SaveChangesAsync(cancellationToken);
             _logger.LogInformation("Sending transaction {TransactionId} timed out. Saved as pending", sendingEntry.Entity.TransactionId);
         }
 
@@ -333,6 +332,7 @@ public class WalletService
         {
             IncludingPending = true,
             IncludingExpired = false,
+            IncludingInvalid = false,
             IncludingCancelled = false,
             IncludingPaid = false
         });
@@ -433,6 +433,11 @@ public class WalletService
         if (!query.IncludingCancelled)
         {
             queryable = queryable.Where(t => t.ExplicitStatus != Transaction.StatusCancelled);
+        }
+
+        if (!query.IncludingInvalid)
+        {
+            queryable = queryable.Where(t => t.ExplicitStatus != Transaction.StatusInvalid);
         }
 
         if (!query.IncludingExpired)
