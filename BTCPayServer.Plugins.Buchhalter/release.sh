@@ -55,12 +55,13 @@ cd ${pluginsDir}
 git reset --hard
 git checkout master
 git pull --rebase
+git update-ref -d refs/heads/${pluginsBranch}
 git checkout -b ${pluginsBranch}
 cd -
 
 printf "\n\n=====> Copy and commit plugin files\n\n"
 mkdir -p ${pluginsTarget}
-cp $pluginsBuild/* $pluginsTarget
+cp -r $pluginsBuild/* $pluginsTarget
 cd ${pluginsDir}
 git add .
 git commit -a -m "${tagDesc}"
