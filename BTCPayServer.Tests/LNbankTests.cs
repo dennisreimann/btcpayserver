@@ -68,7 +68,6 @@ namespace BTCPayServer.Tests
                 Assert.Contains("There are no transactions yet.", s.Driver.FindElement(By.Id("LNbank-WalletTransactions")).Text);
                 s.Driver.FindElement(By.Id("LNbank-WalletSettings")).Click();
                 Assert.Contains(walletName, s.Driver.FindElement(By.Id("LNbank-WalletName")).Text);
-                var walletId = s.Driver.FindElement(By.Id("LNbank-WalletId")).Text;
                 
                 // Receive
                 var description = "First invoice";

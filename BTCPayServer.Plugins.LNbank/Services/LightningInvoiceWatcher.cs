@@ -83,9 +83,7 @@ public class LightningInvoiceWatcher : BackgroundService
                 var invoice = await _btcpayService.GetLightningInvoice(transaction.InvoiceId, cancellationToken);
                 if (invoice == null)
                 {
-                    _logger.LogWarning("Unable to resolve invoice (Invoice Id = {InvoiceId}) for transaction {TransactionId} - invalidating transaction", transaction.InvoiceId, transaction.TransactionId);
-                    
-                    await walletService.Invalidate(transaction);
+                    _logger.LogWarning("Unable to resolve invoice (Invoice Id = {InvoiceId}) for transaction {TransactionId}", transaction.InvoiceId, transaction.TransactionId);
                 }
                 else if (invoice.Status == LightningInvoiceStatus.Paid)
                 {
@@ -107,9 +105,7 @@ public class LightningInvoiceWatcher : BackgroundService
                     var isInflight = transaction.IsPending && transaction.CreatedAt > DateTimeOffset.Now - _inflightDelay;
                     if (!isInflight)
                     {
-                        _logger.LogWarning("Unable to resolve payment (Payment Hash = {PaymentHash}) for transaction {TransactionId} - invalidating transaction", paymentHash, transaction.TransactionId);
-                    
-                        await walletService.Invalidate(transaction);
+                        _logger.LogWarning("Unable to resolve payment (Payment Hash = {PaymentHash}) for transaction {TransactionId}", paymentHash, transaction.TransactionId);
                     }
                 }
                 else switch (payment.Status)
@@ -122,6 +118,7 @@ public class LightningInvoiceWatcher : BackgroundService
                         break;
                     }
                     case LightningPaymentStatus.Failed:
+                        _logger.LogWarning("Failed payment (Payment Hash = {PaymentHash}) for transaction {TransactionId} - invalidating transaction", paymentHash, transaction.TransactionId);
                         await walletService.Invalidate(transaction);
                         break;
                     case LightningPaymentStatus.Unknown:
