@@ -44,7 +44,6 @@ namespace BTCPayServer.Plugins.LNbank
         public override void Execute(IApplicationBuilder applicationBuilder, IServiceProvider applicationBuilderApplicationServices)
         {
             base.Execute(applicationBuilder, applicationBuilderApplicationServices);
-            applicationBuilderApplicationServices.GetService<LNbankPluginDbContextFactory>()?.CreateContext().Database.Migrate();
 
             applicationBuilder.UseEndpoints(endpoints =>
             {

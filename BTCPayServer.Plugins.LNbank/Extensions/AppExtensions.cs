@@ -9,6 +9,7 @@ public static class AppExtensions
 {
     public static void AddAppServices(this IServiceCollection services)
     {
+        services.AddHostedService<LNbankPluginMigrationRunner>();
         services.AddHostedService<LightningInvoiceWatcher>();
         services.AddSingleton<BTCPayService>();
         services.AddSingleton<WalletService>();
