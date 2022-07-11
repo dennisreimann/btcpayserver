@@ -49,40 +49,7 @@ public class LNbankPluginDbContext : DbContext
         }
         
         AccessKey.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<Wallet>().HasIndex(o => o.UserId);
-        modelBuilder.Entity<Transaction>().HasIndex(o => o.InvoiceId);
-        modelBuilder.Entity<Transaction>().HasIndex(o => o.WalletId);
-            
-        modelBuilder.Entity<Wallet>().HasQueryFilter(w => !w.IsSoftDeleted);
-        modelBuilder.Entity<Transaction>().HasQueryFilter(t => 
-            t.ExplicitStatus != Transaction.StatusCancelled && t.ExplicitStatus != Transaction.StatusInvalid);
-            
-        modelBuilder
-            .Entity<Transaction>()
-            .HasOne(o => o.Wallet)
-            .WithMany(w => w.Transactions)
-            .OnDelete(DeleteBehavior.Cascade);
-            
-        modelBuilder
-            .Entity<Transaction>()
-            .Property(e => e.Amount)
-            .HasConversion(
-                v => v.MilliSatoshi,
-                v => new LightMoney(v));
-
-        modelBuilder
-            .Entity<Transaction>()
-            .Property(e => e.AmountSettled)
-            .HasConversion(
-                v => v.MilliSatoshi,
-                v => new LightMoney(v));
-
-        modelBuilder
-            .Entity<Transaction>()
-            .Property(e => e.RoutingFee)
-            .HasConversion(
-                v => v.MilliSatoshi,
-                v => new LightMoney(v));
+        Transaction.OnModelCreating(modelBuilder);
+        Wallet.OnModelCreating(modelBuilder);
     }
 }

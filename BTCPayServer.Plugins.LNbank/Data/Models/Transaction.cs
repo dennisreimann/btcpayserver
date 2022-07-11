@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using BTCPayServer.Lightning;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayServer.Plugins.LNbank.Data.Models;
 
@@ -118,4 +119,46 @@ public class Transaction
     }
 
     public bool HasRoutingFee => RoutingFee != null && RoutingFee > 0;
+
+    internal static void OnModelCreating(ModelBuilder builder)
+    {
+        builder
+            .Entity<Transaction>()
+            .HasIndex(o => o.InvoiceId);
+        
+        builder
+            .Entity<Transaction>()
+            .HasIndex(o => o.WalletId);
+        
+        builder
+            .Entity<Transaction>()
+            .HasQueryFilter(t => t.ExplicitStatus != StatusCancelled && t.ExplicitStatus != StatusInvalid);
+            
+        builder
+            .Entity<Transaction>()
+            .HasOne(o => o.Wallet)
+            .WithMany(w => w.Transactions)
+            .OnDelete(DeleteBehavior.Cascade);
+            
+        builder
+            .Entity<Transaction>()
+            .Property(e => e.Amount)
+            .HasConversion(
+                v => v.MilliSatoshi,
+                v => new LightMoney(v));
+
+        builder
+            .Entity<Transaction>()
+            .Property(e => e.AmountSettled)
+            .HasConversion(
+                v => v.MilliSatoshi,
+                v => new LightMoney(v));
+
+        builder
+            .Entity<Transaction>()
+            .Property(e => e.RoutingFee)
+            .HasConversion(
+                v => v.MilliSatoshi,
+                v => new LightMoney(v));
+    }
 }

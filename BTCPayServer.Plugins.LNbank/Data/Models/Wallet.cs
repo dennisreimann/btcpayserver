@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using BTCPayServer.Lightning;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayServer.Plugins.LNbank.Data.Models;
 
@@ -35,4 +36,15 @@ public class Wallet
     public ICollection<AccessKey> AccessKeys { get; set; } = new List<AccessKey>();
 
     public bool IsSoftDeleted { get; set; }
+
+    internal static void OnModelCreating(ModelBuilder builder)
+    {
+        builder
+            .Entity<Wallet>()
+            .HasIndex(o => o.UserId);
+            
+        builder
+            .Entity<Wallet>()
+            .HasQueryFilter(w => !w.IsSoftDeleted);
+    }
 }
