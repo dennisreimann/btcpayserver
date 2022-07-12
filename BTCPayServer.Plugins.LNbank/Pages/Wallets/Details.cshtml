@@ -2,10 +2,11 @@
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.DetailsModel
 
 @{
-    ViewData.SetActivePage(LNbankNavPages.Wallet, Model.Wallet.Name, Model.Wallet.WalletId);
+    ViewData.SetActivePage(LNbankNavPages.WalletSettings, Model.Wallet.Name, Model.Wallet.WalletId);
 }
 
 <partial name="_WalletHeader" model="Model.Wallet"/>
+<partial name="_Nav" model="Model.Wallet"/>
 
 <dl class="row">
     <dt class="col-sm-3 col-xl-2">

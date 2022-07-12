@@ -22,12 +22,7 @@ public class DeleteModel : BasePageModel
 
     public async Task<IActionResult> OnGetAsync(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
 
         return Page();
@@ -35,12 +30,7 @@ public class DeleteModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
 
         try

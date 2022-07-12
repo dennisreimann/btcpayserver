@@ -8,7 +8,6 @@
 
 @{
     ViewData.SetActivePage(LNbankNavPages.Wallet, Model.Wallet.Name, Model.Wallet.WalletId);
-
     var pendingTransactionIds = Model.Transactions.Where(t => t.IsPending).Select(t => t.TransactionId);
 }
 

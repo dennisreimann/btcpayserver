@@ -64,9 +64,9 @@ public class WalletsController : ControllerBase
     [HttpGet("{walletId}")]
     public async Task<IActionResult> GetWallet(string walletId)
     {
-        var wallet = await _walletService.GetWallet(new WalletQuery {
-            UserId = GetUserId(),
-            WalletId = walletId,
+        var wallet = await _walletService.GetWallet(new WalletsQuery {
+            UserId = new []{ GetUserId() },
+            WalletId = new []{ walletId },
             IncludeTransactions = true,
             IncludeAccessKeys = true
         });
@@ -86,9 +86,9 @@ public class WalletsController : ControllerBase
             return validationResult;
         }
 
-        var wallet = await _walletService.GetWallet(new WalletQuery {
-            UserId = GetUserId(),
-            WalletId = walletId,
+        var wallet = await _walletService.GetWallet(new WalletsQuery {
+            UserId = new []{ GetUserId() },
+            WalletId = new []{ walletId },
             IncludeTransactions = true,
             IncludeAccessKeys = true
         });
@@ -106,9 +106,9 @@ public class WalletsController : ControllerBase
     [HttpDelete("{walletId}")]
     public async Task<IActionResult> DeleteWallet(string walletId)
     {
-        var wallet = await _walletService.GetWallet(new WalletQuery {
-            UserId = GetUserId(),
-            WalletId = walletId,
+        var wallet = await _walletService.GetWallet(new WalletsQuery {
+            UserId = new []{ GetUserId() },
+            WalletId = new []{ walletId },
             IncludeTransactions = true,
             IncludeAccessKeys = true
         });

@@ -196,9 +196,9 @@ public class LightningController : BaseApiController
 
     private async Task<Wallet> GetWalletWithTransactions(string walletId)
     {
-        return await _walletService.GetWallet(new WalletQuery
+        return await _walletService.GetWallet(new WalletsQuery
         {
-            WalletId = walletId,
+            WalletId = new []{ walletId },
             IncludeTransactions = true
         });
     }

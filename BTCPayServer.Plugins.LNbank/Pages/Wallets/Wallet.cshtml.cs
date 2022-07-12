@@ -24,12 +24,7 @@ public class WalletModel : BasePageModel
 
     public async Task<IActionResult> OnGetAsync(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-        
+        Wallet = await GetWallet(UserId, walletId);
         Transactions = Wallet.Transactions.OrderByDescending(t => t.CreatedAt);
         
         return Page();

@@ -50,12 +50,7 @@ public class SendModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
 
         return Page();
@@ -63,12 +58,7 @@ public class SendModel : BasePageModel
 
     public async Task<IActionResult> OnPostDecodeAsync(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
         if (!ModelState.IsValid) return Page();
 
@@ -90,12 +80,7 @@ public class SendModel : BasePageModel
 
     public async Task<IActionResult> OnPostConfirmAsync(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
         if (!ModelState.IsValid) return Page();
 

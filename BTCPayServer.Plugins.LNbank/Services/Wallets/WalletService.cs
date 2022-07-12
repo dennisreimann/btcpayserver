@@ -44,15 +44,23 @@ public class WalletService
     public async Task<IEnumerable<Wallet>> GetWallets(WalletsQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        return await FilterWallets(dbContext.Wallets.AsQueryable(), query).ToListAsync();
+        var wallets = await FilterWallets(dbContext.Wallets.AsQueryable(), query).ToListAsync();
+        return wallets.Select(wallet =>
+        {
+            wallet.AccessLevel = wallet.AccessKeys.Single(ak => query.UserId.Contains(ak.UserId)).Level;
+            return wallet;
+        });
     }
 
     private IQueryable<Wallet> FilterWallets(IQueryable<Wallet> queryable, WalletsQuery query)
     {
         if (query.UserId != null)
         {
-            queryable = queryable.Where(wallet => query.UserId.Contains(wallet.UserId));
+            queryable = queryable
+                .Include(w => w.AccessKeys)
+                .Where(w => w.AccessKeys.Any(ak => query.UserId.Contains(ak.UserId)));
         }
+        
         if (query.AccessKey != null)
         {
             queryable = queryable.Include(wallet => wallet.AccessKeys).Where(wallet =>
@@ -77,18 +85,15 @@ public class WalletService
         return queryable;
     }
 
-    public async Task<Wallet> GetWallet(WalletQuery query)
+    public async Task<Wallet> GetWallet(WalletsQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        var walletsQuery = new WalletsQuery
+        var wallet = await FilterWallets(dbContext.Wallets.AsQueryable(), query).FirstOrDefaultAsync();
+        if (wallet != null && query.UserId != null)
         {
-            IncludeTransactions = query.IncludeTransactions,
-            IncludeAccessKeys = query.IncludeAccessKeys,
-            UserId = query.UserId is null? null : new []{ query.UserId},
-            WalletId = query.WalletId is null? null : new []{ query.WalletId},
-            AccessKey = query.AccessKey is null? null : new []{ query.AccessKey},
-        };
-        return await FilterWallets(dbContext.Wallets.AsQueryable(), walletsQuery).FirstOrDefaultAsync();
+            wallet.AccessLevel = wallet.AccessKeys.Single(ak => query.UserId.Contains(ak.UserId)).Level;
+        }
+        return wallet;
     }
 
     public async Task<Transaction> Receive(Wallet wallet, long amount, string description, bool attachDescription, bool privateRouteHints, TimeSpan? expiry, CancellationToken cancellationToken = default) =>
@@ -302,7 +307,8 @@ public class WalletService
             wallet.AccessKeys ??= new List<AccessKey>();
             wallet.AccessKeys.Add(new AccessKey
             {
-                Key = Encoders.Hex.EncodeData(RandomUtils.GetBytes(20))
+                UserId = wallet.UserId,
+                Level = AccessLevel.Admin
             });
             entry = await dbContext.Wallets.AddAsync(wallet);
         }
@@ -313,6 +319,40 @@ public class WalletService
         await dbContext.SaveChangesAsync();
 
         return (Wallet)entry.Entity;
+    }
+
+    public async Task<AccessKey> AddOrUpdateAccessKey(string walletId, string userId, AccessLevel level)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        var accessKey = await dbContext.AccessKeys.FirstOrDefaultAsync(a => a.WalletId == walletId && a.UserId == userId);
+
+        if (accessKey == null)
+        {
+            accessKey = new AccessKey
+            {
+                UserId = userId,
+                WalletId = walletId,
+                Level = level
+            };
+            await dbContext.AccessKeys.AddAsync(accessKey);
+        }
+        else if (accessKey.Level != level)
+        {
+            accessKey.Level = level;
+            dbContext.Update(accessKey);
+        }
+        await dbContext.SaveChangesAsync();
+
+        return accessKey;
+    }
+
+    public async Task DeleteAccessKey(string walletId, string key)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        var accessKey = await dbContext.AccessKeys.FirstAsync(a => a.WalletId == walletId && a.Key == key);
+
+        dbContext.AccessKeys.Remove(accessKey);
+        await dbContext.SaveChangesAsync();
     }
 
     public async Task RemoveWallet(Wallet wallet)
@@ -345,13 +385,13 @@ public class WalletService
 
         if (query.WalletId != null)
         {
-            var walletQuery = new WalletQuery
+            var walletQuery = new WalletsQuery
             {
-                WalletId = query.WalletId,
+                WalletId = new[] { query.WalletId },
                 IncludeTransactions = true
             };
 
-            if (query.UserId != null) walletQuery.UserId = query.UserId;
+            if (query.UserId != null) walletQuery.UserId = new[] { query.UserId };
 
             var wallet = await GetWallet(walletQuery);
 

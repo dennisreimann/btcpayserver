@@ -32,7 +32,7 @@ public class LnurlController : ControllerBase
     [HttpGet("{walletId}")]
     public async Task<IActionResult> GetLnurl(string walletId)
     {
-        var wallet = await _walletService.GetWallet(new WalletQuery { WalletId = walletId});
+        var wallet = await _walletService.GetWallet(new WalletsQuery { WalletId = new []{ walletId } });
         if (wallet == null)
         {
             return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
@@ -49,7 +49,7 @@ public class LnurlController : ControllerBase
     public async Task<IActionResult> LnurlPay(string walletId,
         [FromQuery] long? amount = null, string comment = null)
     {
-        var wallet = await _walletService.GetWallet(new WalletQuery { WalletId = walletId });
+        var wallet = await _walletService.GetWallet(new WalletsQuery { WalletId = new[] { walletId } });
         if (wallet == null)
         {
             return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");

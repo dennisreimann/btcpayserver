@@ -23,12 +23,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnGetAsync(string walletId, string transactionId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
         
         Transaction = Wallet.Transactions.FirstOrDefault(t => t.TransactionId == transactionId);
@@ -40,11 +35,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string walletId, string transactionId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
         
         Transaction = await WalletService.GetTransaction(new TransactionQuery

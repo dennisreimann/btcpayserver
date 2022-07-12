@@ -4,5 +4,7 @@ public enum LNbankNavPages
 {
     Wallets,
     Wallet,
+    WalletSettings,
+    WalletAccessKeys,
     Share
 }

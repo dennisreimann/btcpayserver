@@ -2,10 +2,11 @@
 @model BTCPayServer.Plugins.LNbank.Pages.Wallets.EditModel
 
 @{
-    ViewData.SetActivePage(LNbankNavPages.Wallet, "Edit your wallet", Model.Wallet.WalletId);
+    ViewData.SetActivePage(LNbankNavPages.WalletSettings, "Edit your wallet", Model.Wallet.WalletId);
 }
 
 <partial name="_WalletHeader" model="Model.Wallet"/>
+<partial name="_Nav" model="Model.Wallet"/>
 
 <div class="row">
     <div class="col-xl-8">

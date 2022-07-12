@@ -19,8 +19,8 @@ public class ShareLNURLModel : BasePageModel
         
     public async Task<IActionResult> OnGet(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            WalletId = walletId
+        Wallet = await WalletService.GetWallet(new WalletsQuery {
+            WalletId = new[] { walletId }
         });
 
         if (Wallet == null) return NotFound();

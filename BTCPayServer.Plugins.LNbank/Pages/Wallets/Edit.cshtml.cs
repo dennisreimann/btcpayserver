@@ -21,12 +21,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnGetAsync(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
 
         return Page();
@@ -39,12 +34,7 @@ public class EditModel : BasePageModel
             return Page();
         }
 
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
 
         if (await TryUpdateModelAsync(Wallet, "wallet", w => w.Name))

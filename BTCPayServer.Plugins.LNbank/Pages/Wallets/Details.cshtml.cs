@@ -21,14 +21,7 @@ public class DetailsModel : BasePageModel
 
     public async Task<IActionResult> OnGetAsync(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true,
-            IncludeAccessKeys = true
-                
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
 
         return Page();

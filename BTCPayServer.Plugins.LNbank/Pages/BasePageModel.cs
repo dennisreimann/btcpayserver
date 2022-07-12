@@ -1,4 +1,6 @@
+using System.Threading.Tasks;
 using BTCPayServer.Data;
+using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -8,15 +10,24 @@ namespace BTCPayServer.Plugins.LNbank.Pages;
 
 public abstract class BasePageModel : PageModel
 {
-    private readonly UserManager<ApplicationUser> _userManager;
+    protected readonly UserManager<ApplicationUser> UserManager;
     protected readonly WalletService WalletService;
-    protected string UserId => _userManager.GetUserId(User);
+    protected string UserId => UserManager.GetUserId(User);
         
     protected BasePageModel(
         UserManager<ApplicationUser> userManager,
         WalletService walletService)
     {
-        _userManager = userManager;
+        UserManager = userManager;
         WalletService = walletService;
+    }
+
+    protected async Task<Wallet> GetWallet(string userId, string walletId)
+    {
+        return await WalletService.GetWallet(new WalletsQuery {
+            UserId = new []{ UserId },
+            WalletId = new []{ walletId },
+            IncludeTransactions = true
+        });
     }
 }

@@ -49,12 +49,7 @@ public class ReceiveModel : BasePageModel
         
     public async Task<IActionResult> OnGet(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
 
         return Page();
@@ -62,12 +57,7 @@ public class ReceiveModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletQuery {
-            UserId = UserId,
-            WalletId = walletId,
-            IncludeTransactions = true
-        });
-
+        Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
         if (!ModelState.IsValid) return Page();
 

@@ -34,6 +34,9 @@ public class Wallet
     }
 
     public ICollection<AccessKey> AccessKeys { get; set; } = new List<AccessKey>();
+    
+    [NotMapped]
+    public AccessLevel AccessLevel { get; set; }
 
     public bool IsSoftDeleted { get; set; }
 

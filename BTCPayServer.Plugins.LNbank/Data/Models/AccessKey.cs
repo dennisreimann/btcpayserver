@@ -1,21 +1,27 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using NBitcoin;
+using NBitcoin.DataEncoders;
 
 namespace BTCPayServer.Plugins.LNbank.Data.Models;
 
 public enum AccessLevel
 {
+    [Display(Name = "Read-only")]
     ReadOnly,
+    
+    [Display(Name = "Create invoices")]
     Invoice,
+    
+    [Display(Name = "Send money")]
     Send,
     Admin
 }
 
 public class AccessKey
 {
-    [Key]
-    public string Key { get; set; }
+    [Key] public string Key { get; set; } = Encoders.Hex.EncodeData(RandomUtils.GetBytes(20));
     
     // Relations
     [DisplayName("Wallet ID")]

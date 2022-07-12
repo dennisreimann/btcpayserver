@@ -31,7 +31,7 @@ public class ExportController : Controller
     [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewInvoices)]
     public async Task<IActionResult> Export(string walletId, string format)
     {
-        var wallet = await _walletService.GetWallet(new WalletQuery { WalletId = walletId, IncludeTransactions = true });
+        var wallet = await _walletService.GetWallet(new WalletsQuery { WalletId = new []{ walletId }, IncludeTransactions = true });
         if (wallet == null)
         {
             return NotFound();
