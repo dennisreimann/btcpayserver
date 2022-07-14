@@ -14,12 +14,13 @@ public class ShareModel : BasePageModel
     public Transaction Transaction { get; set; }
 
     public ShareModel(
-        UserManager<ApplicationUser> userManager, 
-        WalletService walletService) : base(userManager, walletService) {}
+        UserManager<ApplicationUser> userManager,
+        WalletRepository walletRepository, 
+        WalletService walletService) : base(userManager, walletRepository, walletService) {}
 
     public async Task<IActionResult> OnGetAsync(string transactionId)
     {
-        Transaction = await WalletService.GetTransaction(new TransactionQuery
+        Transaction = await WalletRepository.GetTransaction(new TransactionQuery
         {
             TransactionId = transactionId
         });

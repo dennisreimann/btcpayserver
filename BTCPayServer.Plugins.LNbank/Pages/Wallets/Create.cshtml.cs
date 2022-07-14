@@ -18,8 +18,9 @@ public class CreateModel : BasePageModel
     public string ReturnUrl { get; set; }
 
     public CreateModel(
-        UserManager<ApplicationUser> userManager, 
-        WalletService walletService) : base(userManager, walletService) {}
+        UserManager<ApplicationUser> userManager,
+        WalletRepository walletRepository,
+        WalletService walletService) : base(userManager, walletRepository, walletService) {}
 
     public IActionResult OnGet()
     {
@@ -37,7 +38,7 @@ public class CreateModel : BasePageModel
 
         if (!await TryUpdateModelAsync(Wallet, "wallet", w => w.Name)) return Page();
             
-        await WalletService.AddOrUpdateWallet(Wallet);
+        await WalletRepository.AddOrUpdateWallet(Wallet);
         
         if (!string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl))
         {

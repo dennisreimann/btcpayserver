@@ -19,8 +19,9 @@ public class WalletModel : BasePageModel
     public IEnumerable<Transaction> Transactions { get; set; }
 
     public WalletModel(
-        UserManager<ApplicationUser> userManager, 
-        WalletService walletService) : base(userManager, walletService) {}
+        UserManager<ApplicationUser> userManager,
+        WalletRepository walletRepository,
+        WalletService walletService) : base(userManager, walletRepository, walletService) {}
 
     public async Task<IActionResult> OnGetAsync(string walletId)
     {

@@ -16,6 +16,7 @@ public class LightningInvoiceWatcher : BackgroundService
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<LightningInvoiceWatcher> _logger;
     private readonly BTCPayService _btcpayService;
+    private readonly WalletRepository _walletRepository;
 
     private static readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(5);
     
@@ -25,11 +26,13 @@ public class LightningInvoiceWatcher : BackgroundService
 
     public LightningInvoiceWatcher(
         BTCPayService btcpayService,
+        WalletRepository walletRepository,
         IServiceScopeFactory serviceScopeFactory,
         ILogger<LightningInvoiceWatcher> logger)
     {
         _logger = logger;
         _btcpayService = btcpayService;
+        _walletRepository = walletRepository;
         _serviceScopeFactory = serviceScopeFactory;
     }
 
@@ -42,7 +45,7 @@ public class LightningInvoiceWatcher : BackgroundService
             using var scope = _serviceScopeFactory.CreateScope();
             var walletService = scope.ServiceProvider.GetRequiredService<WalletService>();
 
-            var transactions = await walletService.GetPendingTransactions();
+            var transactions = await _walletRepository.GetPendingTransactions();
             var list = transactions.ToList();
             int count = list.Count;
 

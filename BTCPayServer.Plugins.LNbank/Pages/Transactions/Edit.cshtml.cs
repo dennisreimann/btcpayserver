@@ -19,7 +19,8 @@ public class EditModel : BasePageModel
 
     public EditModel(
         UserManager<ApplicationUser> userManager, 
-        WalletService walletService) : base(userManager, walletService) {}
+        WalletRepository walletRepository,
+        WalletService walletService) : base(userManager, walletRepository, walletService) {}
 
     public async Task<IActionResult> OnGetAsync(string walletId, string transactionId)
     {
@@ -38,7 +39,7 @@ public class EditModel : BasePageModel
         Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
         
-        Transaction = await WalletService.GetTransaction(new TransactionQuery
+        Transaction = await WalletRepository.GetTransaction(new TransactionQuery
         {
             UserId = UserId,
             WalletId = Wallet.WalletId,
@@ -50,7 +51,7 @@ public class EditModel : BasePageModel
 
         if (await TryUpdateModelAsync(Transaction, "transaction", t => t.Description))
         {
-            await WalletService.UpdateTransaction(Transaction);
+            await WalletRepository.UpdateTransaction(Transaction);
             return RedirectToPage("/Wallets/Wallet", new { Wallet.WalletId });
         }
 

@@ -42,7 +42,8 @@ public class ReceiveModel : BasePageModel
     public ReceiveModel(
         ILogger<ReceiveModel> logger,
         UserManager<ApplicationUser> userManager,
-        WalletService walletService) : base(userManager, walletService)
+        WalletRepository walletRepository,
+        WalletService walletService) : base(userManager, walletRepository, walletService)
     {
         _logger = logger;
     }

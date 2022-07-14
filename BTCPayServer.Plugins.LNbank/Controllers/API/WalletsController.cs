@@ -20,19 +20,19 @@ namespace BTCPayServer.Plugins.LNbank.Controllers.API;
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield, Policy = Policies.CanModifyProfile)]
 public class WalletsController : ControllerBase
 {
-    private readonly WalletService _walletService;
+    private readonly WalletRepository _walletRepository;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public WalletsController(UserManager<ApplicationUser> userManager, WalletService walletService)
+    public WalletsController(UserManager<ApplicationUser> userManager, WalletRepository walletRepository)
     {
         _userManager = userManager;
-        _walletService = walletService;
+        _walletRepository = walletRepository;
     }
     
     [HttpGet("")]
     public async Task<IActionResult> GetWallets()
     {
-        var wallets = await _walletService.GetWallets(new WalletsQuery {
+        var wallets = await _walletRepository.GetWallets(new WalletsQuery {
             UserId = new[] { GetUserId() },
             IncludeTransactions = true,
             IncludeAccessKeys = true
@@ -56,7 +56,7 @@ public class WalletsController : ControllerBase
             Name = request.Name
         };
 
-        var entry = await _walletService.AddOrUpdateWallet(wallet);
+        var entry = await _walletRepository.AddOrUpdateWallet(wallet);
         
         return Ok(FromModel(entry));
     }
@@ -64,7 +64,7 @@ public class WalletsController : ControllerBase
     [HttpGet("{walletId}")]
     public async Task<IActionResult> GetWallet(string walletId)
     {
-        var wallet = await _walletService.GetWallet(new WalletsQuery {
+        var wallet = await _walletRepository.GetWallet(new WalletsQuery {
             UserId = new []{ GetUserId() },
             WalletId = new []{ walletId },
             IncludeTransactions = true,
@@ -86,7 +86,7 @@ public class WalletsController : ControllerBase
             return validationResult;
         }
 
-        var wallet = await _walletService.GetWallet(new WalletsQuery {
+        var wallet = await _walletRepository.GetWallet(new WalletsQuery {
             UserId = new []{ GetUserId() },
             WalletId = new []{ walletId },
             IncludeTransactions = true,
@@ -98,7 +98,7 @@ public class WalletsController : ControllerBase
 
         wallet.Name = request.Name;
 
-        var entry = await _walletService.AddOrUpdateWallet(wallet);
+        var entry = await _walletRepository.AddOrUpdateWallet(wallet);
 
         return Ok(FromModel(entry));
     }
@@ -106,7 +106,7 @@ public class WalletsController : ControllerBase
     [HttpDelete("{walletId}")]
     public async Task<IActionResult> DeleteWallet(string walletId)
     {
-        var wallet = await _walletService.GetWallet(new WalletsQuery {
+        var wallet = await _walletRepository.GetWallet(new WalletsQuery {
             UserId = new []{ GetUserId() },
             WalletId = new []{ walletId },
             IncludeTransactions = true,
@@ -118,7 +118,7 @@ public class WalletsController : ControllerBase
 
         try
         {
-            await _walletService.RemoveWallet(wallet);
+            await _walletRepository.RemoveWallet(wallet);
 
             return Ok();
         }

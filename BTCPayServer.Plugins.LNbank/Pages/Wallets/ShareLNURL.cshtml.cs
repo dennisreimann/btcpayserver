@@ -15,11 +15,12 @@ public class ShareLNURLModel : BasePageModel
     
     public ShareLNURLModel(
         UserManager<ApplicationUser> userManager,
-        WalletService walletService) : base(userManager, walletService) {}
+        WalletRepository walletRepository,
+        WalletService walletService) : base(userManager, walletRepository, walletService) {}
         
     public async Task<IActionResult> OnGet(string walletId)
     {
-        Wallet = await WalletService.GetWallet(new WalletsQuery {
+        Wallet = await WalletRepository.GetWallet(new WalletsQuery {
             WalletId = new[] { walletId }
         });
 

@@ -19,20 +19,22 @@ namespace BTCPayServer.Plugins.LNbank.Controllers.API;
 public class LnurlController : ControllerBase
 {
     private readonly WalletService _walletService;
+    private readonly WalletRepository _walletRepository;
 
     private static readonly LightMoney _minSendable = new(1, LightMoneyUnit.Satoshi);
     private static readonly LightMoney _maxSendable = LightMoney.FromUnit(6.12m, LightMoneyUnit.BTC);
     private int _commentLength = 615;
 
-    public LnurlController(WalletService walletService)
+    public LnurlController(WalletService walletService, WalletRepository walletRepository)
     {
         _walletService = walletService;
+        _walletRepository = walletRepository;
     }
     
     [HttpGet("{walletId}")]
     public async Task<IActionResult> GetLnurl(string walletId)
     {
-        var wallet = await _walletService.GetWallet(new WalletsQuery { WalletId = new []{ walletId } });
+        var wallet = await _walletRepository.GetWallet(new WalletsQuery { WalletId = new []{ walletId } });
         if (wallet == null)
         {
             return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
@@ -49,7 +51,7 @@ public class LnurlController : ControllerBase
     public async Task<IActionResult> LnurlPay(string walletId,
         [FromQuery] long? amount = null, string comment = null)
     {
-        var wallet = await _walletService.GetWallet(new WalletsQuery { WalletId = new[] { walletId } });
+        var wallet = await _walletRepository.GetWallet(new WalletsQuery { WalletId = new[] { walletId } });
         if (wallet == null)
         {
             return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");

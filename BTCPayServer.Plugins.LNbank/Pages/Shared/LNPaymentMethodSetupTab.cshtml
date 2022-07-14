@@ -7,11 +7,11 @@
 @model object
 @inject UserManager<ApplicationUser> _userManager;
 @inject ContentSecurityPolicies _contentSecurityPolicies;
-@inject WalletService _walletService;
+@inject WalletRepository _walletRepository;
 
 @{
     var userId = _userManager.GetUserId(User);
-    var wallets = await _walletService.GetWallets(new WalletsQuery
+    var wallets = await _walletRepository.GetWallets(new WalletsQuery
     {
         UserId = new[] { userId },
         IncludeAccessKeys = true

@@ -19,7 +19,7 @@ public class LnBankAuthenticationOptions : AuthenticationSchemeOptions
 public class LnBankAuthenticationHandler : AuthenticationHandler<LnBankAuthenticationOptions>
 {
     private readonly IOptionsMonitor<IdentityOptions> _identityOptions;
-    private readonly WalletService _walletService;
+    private readonly WalletRepository _walletRepository;
 
     public LnBankAuthenticationHandler(
         IOptionsMonitor<IdentityOptions> identityOptions,
@@ -27,10 +27,10 @@ public class LnBankAuthenticationHandler : AuthenticationHandler<LnBankAuthentic
         ILoggerFactory logger,
         UrlEncoder encoder,
         ISystemClock clock,
-        WalletService walletService) : base(options, logger, encoder, clock)
+        WalletRepository walletRepository) : base(options, logger, encoder, clock)
     {
         _identityOptions = identityOptions;
-        _walletService = walletService;
+        _walletRepository = walletRepository;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -40,7 +40,7 @@ public class LnBankAuthenticationHandler : AuthenticationHandler<LnBankAuthentic
             return AuthenticateResult.NoResult();
 
         string apiKey = authHeader.Substring("Bearer ".Length);
-        var wallet = await _walletService.GetWallet(new WalletsQuery
+        var wallet = await _walletRepository.GetWallet(new WalletsQuery
         {
             AccessKey = new []{ apiKey },
             IncludeTransactions = false

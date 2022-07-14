@@ -16,8 +16,9 @@ public class EditModel : BasePageModel
     public Wallet Wallet { get; set; }
 
     public EditModel(
-        UserManager<ApplicationUser> userManager, 
-        WalletService walletService) : base(userManager, walletService) {}
+        UserManager<ApplicationUser> userManager,
+        WalletRepository walletRepository,
+        WalletService walletService) : base(userManager, walletRepository, walletService) {}
 
     public async Task<IActionResult> OnGetAsync(string walletId)
     {
@@ -39,7 +40,7 @@ public class EditModel : BasePageModel
 
         if (await TryUpdateModelAsync(Wallet, "wallet", w => w.Name))
         {
-            await WalletService.AddOrUpdateWallet(Wallet);
+            await WalletRepository.AddOrUpdateWallet(Wallet);
             TempData[WellKnownTempData.SuccessMessage] = "Wallet successfully updated.";
             return RedirectToPage("./Wallet", new { walletId });
         }

@@ -17,14 +17,17 @@ public class LightningController : BaseApiController
 {
     private readonly BTCPayService _btcpayService;
     private readonly WalletService _walletService;
+    private readonly WalletRepository _walletRepository;
 
     public LightningController(
         BTCPayService btcpayService,
         WalletService walletService,
+        WalletRepository walletRepository,
         IOptionsMonitor<IdentityOptions> identityOptions) : base(identityOptions)
     {
         _btcpayService = btcpayService;
         _walletService = walletService;
+        _walletRepository = walletRepository;
     }
 
     // --- Custom methods ---
@@ -114,7 +117,7 @@ public class LightningController : BaseApiController
     {
         try
         {
-            var transaction = await _walletService.GetTransaction(new TransactionQuery
+            var transaction = await _walletRepository.GetTransaction(new TransactionQuery
             {
                 UserId = UserId,
                 WalletId = WalletId,
@@ -196,7 +199,7 @@ public class LightningController : BaseApiController
 
     private async Task<Wallet> GetWalletWithTransactions(string walletId)
     {
-        return await _walletService.GetWallet(new WalletsQuery
+        return await _walletRepository.GetWallet(new WalletsQuery
         {
             WalletId = new []{ walletId },
             IncludeTransactions = true

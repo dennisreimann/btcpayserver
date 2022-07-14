@@ -12,19 +12,23 @@ public abstract class BasePageModel : PageModel
 {
     protected readonly UserManager<ApplicationUser> UserManager;
     protected readonly WalletService WalletService;
+    protected readonly WalletRepository WalletRepository;
+    
     protected string UserId => UserManager.GetUserId(User);
         
     protected BasePageModel(
         UserManager<ApplicationUser> userManager,
+        WalletRepository walletRepository,
         WalletService walletService)
     {
         UserManager = userManager;
         WalletService = walletService;
+        WalletRepository = walletRepository;
     }
 
     protected async Task<Wallet> GetWallet(string userId, string walletId)
     {
-        return await WalletService.GetWallet(new WalletsQuery {
+        return await WalletRepository.GetWallet(new WalletsQuery {
             UserId = new []{ UserId },
             WalletId = new []{ walletId },
             IncludeTransactions = true

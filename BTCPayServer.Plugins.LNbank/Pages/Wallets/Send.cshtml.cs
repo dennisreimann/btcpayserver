@@ -43,7 +43,8 @@ public class SendModel : BasePageModel
     public SendModel(
         ILogger<SendModel> logger,
         UserManager<ApplicationUser> userManager,
-        WalletService walletService) : base(userManager, walletService)
+        WalletRepository walletRepository,
+        WalletService walletService) : base(userManager, walletRepository, walletService)
     {
         _logger = logger;
     }

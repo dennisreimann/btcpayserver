@@ -20,18 +20,18 @@ namespace BTCPayServer.Plugins.LNbank.Controllers;
 [Route("/plugins/lnbank/export")]
 public class ExportController : Controller
 {
-    private readonly WalletService _walletService;
+    private readonly WalletRepository _walletRepository;
 
-    public ExportController(WalletService walletService)
+    public ExportController(WalletRepository walletRepository)
     {
-        _walletService = walletService;
+        _walletRepository = walletRepository;
     }
     
     [HttpGet("{walletId}/{format}")]
     [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewInvoices)]
     public async Task<IActionResult> Export(string walletId, string format)
     {
-        var wallet = await _walletService.GetWallet(new WalletsQuery { WalletId = new []{ walletId }, IncludeTransactions = true });
+        var wallet = await _walletRepository.GetWallet(new WalletsQuery { WalletId = new []{ walletId }, IncludeTransactions = true });
         if (wallet == null)
         {
             return NotFound();

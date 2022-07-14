@@ -1,11 +1,11 @@
 @using BTCPayServer.Plugins.LNbank.Services.Wallets
 @using Microsoft.AspNetCore.Identity
 @using BTCPayServer.Data
-@inject WalletService _walletService;
+@inject WalletRepository _walletRepository;
 @inject UserManager<ApplicationUser> _userManager;
 @{
     var userId = _userManager.GetUserId(User);
-    var wallets = await _walletService.GetWallets(new WalletsQuery
+    var wallets = await _walletRepository.GetWallets(new WalletsQuery
     {
         UserId = new[] { userId }
     });

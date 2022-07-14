@@ -20,12 +20,13 @@ public class IndexModel : BasePageModel
     public LightMoney TotalBalance { get; set; }
 
     public IndexModel(
-        UserManager<ApplicationUser> userManager, 
-        WalletService walletService) : base(userManager, walletService) {}
+        UserManager<ApplicationUser> userManager,
+        WalletRepository walletRepository,
+        WalletService walletService) : base(userManager, walletRepository, walletService) {}
 
     public async Task<IActionResult> OnGetAsync(string walletId)
     {
-        Wallets = await WalletService.GetWallets(new WalletsQuery
+        Wallets = await WalletRepository.GetWallets(new WalletsQuery
         {
             UserId = new[] { UserId },
             IncludeTransactions = true

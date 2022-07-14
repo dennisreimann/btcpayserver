@@ -33,8 +33,9 @@ public class AccessKeysModel : BasePageModel
     }
 
     public AccessKeysModel(
-        UserManager<ApplicationUser> userManager, 
-        WalletService walletService) : base(userManager, walletService) {}
+        UserManager<ApplicationUser> userManager,
+        WalletRepository walletRepository,
+        WalletService walletService) : base(userManager, walletRepository, walletService) {}
 
     public async Task<IActionResult> OnGetAsync(string walletId)
     {
@@ -67,7 +68,7 @@ public class AccessKeysModel : BasePageModel
             return Page();
         }
         
-        await WalletService.AddOrUpdateAccessKey(Wallet.WalletId, user.Id, AccessKey.Level);
+        await WalletRepository.AddOrUpdateAccessKey(Wallet.WalletId, user.Id, AccessKey.Level);
         TempData[WellKnownTempData.SuccessMessage] = "Access key added successfully.";
         return RedirectToPage("./AccessKeys", new { walletId });
     }
@@ -79,7 +80,7 @@ public class AccessKeysModel : BasePageModel
 
         try
         {
-            await WalletService.DeleteAccessKey(Wallet.WalletId, key);
+            await WalletRepository.DeleteAccessKey(Wallet.WalletId, key);
             
             TempData[WellKnownTempData.SuccessMessage] = "Access key removed successfully.";
             return RedirectToPage("./AccessKeys", new { walletId });
