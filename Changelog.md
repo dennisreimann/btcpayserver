@@ -1,6 +1,34 @@
 # Changelog
 
+## 1.6.2
+
+### Bug fixes:
+
+* Fix: Cannot withdraw refund (payouts) with LNURL (#3953 #3953) @Kukks
+* Fix: Cannot withdraw refund (payouts) with LN Address (#3953 #3960) @Kukks
+* Fix: Missing pager in the wallet transaction list @NicolasDorier
+* Fix: webhook "Send specific events" display issue (#3959) @rustywave
+
+### Improvements:
+
+* Added HRF and Strike to the list of supporters #3965 @dennisreimann
+* Invoice summary: Fix indentation and heading levels (#3956) @dennisreimann
+
+## 1.6.1
+
+This fix a critical issue introduced by 1.6.0.
+If you are using altcoins integration, you need to update urgently as some change rate may be inverted for some pairs.
+
+### Bug fixes:
+
+* Fix stack overflow if ripio rate provider is unavailable @NicolasDorier
+* Fix: For some asset pair the kraken rate was inverted (#3957) @NicolasDorier
+
 ## 1.6.0
+
+In the past six months, we fixed a critical security vulnerability in one of BTCPay's versions. The security vulnerability has been disclosed responsibly, and we granted a bounty to the security researcher who discovered it. As far as we know, this particular vulnerability has not been exploited in the wild as it depends on multiple factors. For security reasons, we will not publicly disclose details yet. Timeframe for public disclosure is 6-12 months. We already have a CVE number reserved for it.
+
+It's very likely that by updating BTCPay Server in the past six months, you've already patched this vulnerability. To be safe, update your instance if you haven't done so in a long time.
 
 ### New features:
 
