@@ -288,10 +288,6 @@
                         "type": "string",
                         "description": "The name of the wallet"
                     },
-                    "accessKey": {
-                        "type": "string",
-                        "description": "The access key of the wallet"
-                    },
                     "createdAt": {
                         "description": "The creation time of the wallet",
                         "allOf": [ {"$ref": "#/components/schemas/UnixTimestamp"}]

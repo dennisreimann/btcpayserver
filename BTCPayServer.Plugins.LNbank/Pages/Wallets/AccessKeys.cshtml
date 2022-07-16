@@ -50,6 +50,7 @@
                     <thead>
                     <tr>
                         <th>Email</th>
+                        <th>Key</th>
                         <th>Level</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -59,6 +60,7 @@
                     {
                         <tr>
                             <td>@accessKey.Email</td>
+                            <td>@accessKey.Key</td>
                             <td>@typeof(AccessLevel).DisplayName(accessKey.Level.ToString())</td>
                             <td class="text-end">
                                 <a asp-page-handler="remove" asp-route-key="@accessKey.Key" data-bs-toggle="modal" data-bs-target="#ConfirmModal" data-description="This action will prevent <strong>@accessKey.Email</strong> from accessing this wallet." data-confirm-input="REMOVE">Remove</a>

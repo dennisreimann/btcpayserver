@@ -24,15 +24,6 @@
     <dd class="col-sm-9 col-xl-10" id="LNbank-WalletId">
         @Model.Wallet.WalletId
     </dd>
-    @foreach (var accessKey in Model.Wallet.AccessKeys)
-    {
-        <dt class="col-sm-3 col-xl-2">
-            Access Key
-        </dt>
-        <dd class="col-sm-9 col-xl-10" id="LNbank-WalletAccessKey">
-            @accessKey.Key
-        </dd>
-    }
     <dt class="col-sm-3 col-xl-2">
         @Html.DisplayNameFor(model => model.Wallet.CreatedAt)
     </dt>

@@ -34,8 +34,7 @@ public class WalletsController : ControllerBase
     {
         var wallets = await _walletRepository.GetWallets(new WalletsQuery {
             UserId = new[] { GetUserId() },
-            IncludeTransactions = true,
-            IncludeAccessKeys = true
+            IncludeTransactions = true
         });
 
         return Ok(wallets.Select(FromModel));
@@ -64,17 +63,10 @@ public class WalletsController : ControllerBase
     [HttpGet("{walletId}")]
     public async Task<IActionResult> GetWallet(string walletId)
     {
-        var wallet = await _walletRepository.GetWallet(new WalletsQuery {
-            UserId = new []{ GetUserId() },
-            WalletId = new []{ walletId },
-            IncludeTransactions = true,
-            IncludeAccessKeys = true
-        });
-
-        if (wallet == null) 
-            return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
-
-        return Ok(FromModel(wallet));
+        var wallet = await FetchWallet(walletId);
+        return wallet == null 
+            ? this.CreateAPIError(404, "wallet-not-found", "The wallet was not found")
+            : Ok(FromModel(wallet));
     }
     
     [HttpPut("{walletId}")]
@@ -106,20 +98,13 @@ public class WalletsController : ControllerBase
     [HttpDelete("{walletId}")]
     public async Task<IActionResult> DeleteWallet(string walletId)
     {
-        var wallet = await _walletRepository.GetWallet(new WalletsQuery {
-            UserId = new []{ GetUserId() },
-            WalletId = new []{ walletId },
-            IncludeTransactions = true,
-            IncludeAccessKeys = true
-        });
-
+        var wallet = await FetchWallet(walletId);
         if (wallet == null) 
             return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
 
         try
         {
             await _walletRepository.RemoveWallet(wallet);
-
             return Ok();
         }
         catch (Exception e)
@@ -127,6 +112,13 @@ public class WalletsController : ControllerBase
             return this.CreateAPIError("wallet-not-empty", e.Message);
         }
     }
+
+    private async Task<Wallet> FetchWallet(string walletId) =>
+        await _walletRepository.GetWallet(new WalletsQuery {
+            UserId = new []{ GetUserId() },
+            WalletId = new []{ walletId },
+            IncludeTransactions = true
+        });
 
     private IActionResult Validate(EditWalletRequest request)
     {
@@ -150,7 +142,6 @@ public class WalletsController : ControllerBase
             Name = model.Name,
             CreatedAt = model.CreatedAt,
             Balance = model.Balance,
-            AccessKey = model.AccessKeys.First().Key
         };
 
     private string GetUserId() => _userManager.GetUserId(User);
