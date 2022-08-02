@@ -76,14 +76,12 @@ public class Transaction
     }
 
     public bool IsSettled => Status == StatusSettled;
-    public bool IsPaid => Status == StatusPaid;
-    public bool IsUnpaid => Status != StatusPaid;
+    public bool IsPaid => Status == StatusPaid || IsSettled;
+    public bool IsUnpaid => !IsPaid;
     public bool IsExpired => Status == StatusExpired;
     public bool IsPending  => Status == StatusPending;
     public bool IsCancelled  => Status == StatusCancelled;
     public bool IsInvalid  => Status == StatusInvalid;
-    public bool IsOverpaid => (IsPaid || IsSettled) && AmountSettled > Amount;
-    public bool IsPaidPartially => (IsPaid || IsSettled) && AmountSettled < Amount;
 
     public DateTimeOffset Date => PaidAt ?? CreatedAt;
 
