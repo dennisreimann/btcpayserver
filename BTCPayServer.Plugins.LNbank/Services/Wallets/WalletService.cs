@@ -83,6 +83,12 @@ public class WalletService
 
         return entry.Entity;
     }
+    
+    public async Task<Transaction> Send(Wallet wallet, string paymentRequest)
+    {
+        var bolt11 = ParsePaymentRequest(paymentRequest);
+        return await Send(wallet, bolt11, paymentRequest, bolt11.ShortDescription);
+    }
 
     public async Task<Transaction> Send(Wallet wallet, BOLT11PaymentRequest bolt11, string description, LightMoney explicitAmount = null, float maxFeePercent = 3, CancellationToken cancellationToken = default)
     {
