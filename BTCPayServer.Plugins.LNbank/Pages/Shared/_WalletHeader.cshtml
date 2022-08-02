@@ -1,4 +1,5 @@
-﻿@model BTCPayServer.Plugins.LNbank.Data.Models.Wallet
+﻿@using BTCPayServer.Plugins.LNbank.Authentication
+@model BTCPayServer.Plugins.LNbank.Data.Models.Wallet
 
 <div class="sticky-header-setup"></div>
 <div class="sticky-header d-sm-flex align-items-center justify-content-between">
@@ -9,13 +10,13 @@
         </div>
     </a>
     <div class="d-flex gap-3 mt-3 mt-sm-0">
-        <a asp-page="/Wallets/Send" asp-route-walletId="@Model.WalletId" class="btn btn-primary d-inline-flex align-items-center" id="LNbank-WalletSend">
+        <a asp-page="/Wallets/Send" asp-route-walletId="@Model.WalletId" class="btn btn-primary d-inline-flex align-items-center" id="LNbank-WalletSend" permission="@LNbankPolicies.CanSendMoney">
             Send
         </a>
-        <a asp-page="/Wallets/Receive" asp-route-walletId="@Model.WalletId" class="btn btn-primary d-inline-flex align-items-center" id="LNbank-WalletReceive">
+        <a asp-page="/Wallets/Receive" asp-route-walletId="@Model.WalletId" class="btn btn-primary d-inline-flex align-items-center" id="LNbank-WalletReceive" permission="@LNbankPolicies.CanCreateInvoices">
             Receive
         </a>
-        <a asp-page="/Wallets/Details" asp-route-walletId="@Model.WalletId" class="btn btn-secondary d-inline-flex align-items-center" id="LNbank-WalletSettings">
+        <a asp-page="/Wallets/Details" asp-route-walletId="@Model.WalletId" class="btn btn-secondary d-inline-flex align-items-center" id="LNbank-WalletSettings" permission="@LNbankPolicies.CanManageWallet">
             @await Component.InvokeAsync("Icon", new { symbol = "settings" })
         </a>
     </div>

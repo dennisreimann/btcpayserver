@@ -4,10 +4,10 @@ using BTCPayServer.Abstractions.Models;
 using BTCPayServer.Abstractions.Services;
 using BTCPayServer.Plugins.LNbank.Data;
 using BTCPayServer.Plugins.LNbank.Extensions;
+using BTCPayServer.Plugins.LNbank.Hooks;
 using BTCPayServer.Plugins.LNbank.Hubs;
 using BTCPayServer.Plugins.LNbank.Services;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BTCPayServer.Plugins.LNbank
@@ -25,12 +25,15 @@ namespace BTCPayServer.Plugins.LNbank
                 Condition = ">=1.6.0.0"
             }
         };
-
+        
         public override void Execute(IServiceCollection services)
         {
             services.AddSingleton<IUIExtension>(new UIExtension("LNbankNavExtension", "header-nav"));
             services.AddSingleton<IUIExtension>(new UIExtension("LNPaymentMethodSetupTabhead", "ln-payment-method-setup-tabhead"));
             services.AddSingleton<IUIExtension>(new UIExtension("LNPaymentMethodSetupTab", "ln-payment-method-setup-tab"));
+
+            services.AddSingleton<IPluginHookFilter, AuthorizationRequirementHandler>();
+                
             services.AddSingleton<LNbankPluginDbContextFactory>();
             services.AddDbContext<LNbankPluginDbContext>((provider, o) =>
             {
@@ -39,6 +42,7 @@ namespace BTCPayServer.Plugins.LNbank
             });
             services.AddAppServices();
             services.AddAppAuthentication();
+            services.AddAppAuthorization();
         }
 
         public override void Execute(IApplicationBuilder applicationBuilder, IServiceProvider applicationBuilderApplicationServices)
