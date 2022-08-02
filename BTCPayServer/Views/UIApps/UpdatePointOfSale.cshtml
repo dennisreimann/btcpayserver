@@ -1,6 +1,5 @@
 @using BTCPayServer.Services.Apps
 @using BTCPayServer.Abstractions.Models
-@addTagHelper *, BundlerMinifier.TagHelpers
 @model UpdatePointOfSaleViewModel
 @{
     ViewData.SetActivePage(AppsNavPages.Update, "Update Point of Sale", Model.Id);
@@ -87,13 +86,13 @@
             </div>
             <section id="discounts" class="p-0">
                 <h3 class="mt-5 mb-4">Discounts</h3>
-                <div class="form-check mb-4">
-                    <input asp-for="ShowDiscount" type="checkbox" class="form-check-input" />
-                    <label asp-for="ShowDiscount" class="form-check-label"></label>
-                    <span asp-validation-for="ShowDiscount" class="text-danger"></span>
-                    <div class="mt-2">
-                        <span class="text-secondary">Not recommended for customer self-checkout.</span>
+                <div class="form-group d-flex align-items-center">
+                    <input asp-for="ShowDiscount" type="checkbox" class="btcpay-toggle me-3" />
+                    <div>
+                        <label asp-for="ShowDiscount" class="form-label mb-0"></label>
+                        <div class="text-muted">Not recommended for customer self-checkout.</div>
                     </div>
+                    <span asp-validation-for="ShowDiscount" class="text-danger"></span>
                 </div>
             </section>
             <section id="custom-payments" class="p-0">
@@ -335,6 +334,7 @@
         function handleStyleSelected(style) {
             switch (style) {
                 case '0': // Item list only
+                case '3': // Print
                     hideDiscountsSection();
                     hideButtonPriceTextSection();
                     showCustomPaymentAmountSection();
@@ -347,7 +347,7 @@
                     showTipsSection();
                     break;
                 case '2': // Keypad only
-                    hideDiscountsSection();
+                    showDiscountsSection();
                     hideButtonPriceTextSection();
                     hideCustomPaymentAmountSection();
                     showTipsSection();
