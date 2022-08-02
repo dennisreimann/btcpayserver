@@ -9,6 +9,8 @@ public class WalletData
 {
     public string Id { get; set; }
     public string Name { get; set; }
+    
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     public string AccessKey { get; set; }
     
     [JsonConverter(typeof(LightMoneyJsonConverter))]

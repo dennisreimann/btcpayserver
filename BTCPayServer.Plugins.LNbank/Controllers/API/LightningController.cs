@@ -1,33 +1,47 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
+using BTCPayServer.Plugins.LNbank.Authentication;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Services;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using NBitcoin;
+using Transaction = BTCPayServer.Plugins.LNbank.Data.Models.Transaction;
 
 namespace BTCPayServer.Plugins.LNbank.Controllers.API;
 
-public class LightningController : BaseApiController
+[ApiController]
+[Route("~/plugins/lnbank/api/[controller]")]
+[Authorize(AuthenticationSchemes = LNbankAuthenticationSchemes.AccessKey)]
+public class LightningController : ControllerBase
 {
+    private string UserId => User.Claims.First(c => c.Type == _identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType).Value;
+    private string WalletId => User.Claims.First(c => c.Type == "WalletId").Value;
+    private Wallet Wallet => (Wallet)ControllerContext.HttpContext.Items.TryGet("BTCPAY.LNBANK.WALLET");
+
     private readonly BTCPayService _btcpayService;
     private readonly WalletService _walletService;
     private readonly WalletRepository _walletRepository;
+    private readonly IOptionsMonitor<IdentityOptions> _identityOptions;
 
     public LightningController(
         BTCPayService btcpayService,
         WalletService walletService,
         WalletRepository walletRepository,
-        IOptionsMonitor<IdentityOptions> identityOptions) : base(identityOptions)
+        IOptionsMonitor<IdentityOptions> identityOptions)
     {
         _btcpayService = btcpayService;
         _walletService = walletService;
         _walletRepository = walletRepository;
+        _identityOptions = identityOptions;
     }
 
     // --- Custom methods ---

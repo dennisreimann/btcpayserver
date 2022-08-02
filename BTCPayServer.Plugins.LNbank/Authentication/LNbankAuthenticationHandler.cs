@@ -12,18 +12,18 @@ using Microsoft.Extensions.Options;
 
 namespace BTCPayServer.Plugins.LNbank.Authentication;
 
-public class LnBankAuthenticationOptions : AuthenticationSchemeOptions
+public class LNbankAuthenticationOptions : AuthenticationSchemeOptions
 {
 }
 
-public class LnBankAuthenticationHandler : AuthenticationHandler<LnBankAuthenticationOptions>
+public class LNbankAuthenticationHandler : AuthenticationHandler<LNbankAuthenticationOptions>
 {
     private readonly IOptionsMonitor<IdentityOptions> _identityOptions;
     private readonly WalletRepository _walletRepository;
 
-    public LnBankAuthenticationHandler(
+    public LNbankAuthenticationHandler(
         IOptionsMonitor<IdentityOptions> identityOptions,
-        IOptionsMonitor<LnBankAuthenticationOptions> options,
+        IOptionsMonitor<LNbankAuthenticationOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
         ISystemClock clock,
@@ -39,7 +39,7 @@ public class LnBankAuthenticationHandler : AuthenticationHandler<LnBankAuthentic
         if (authHeader == null || !authHeader.StartsWith("Bearer ", StringComparison.InvariantCultureIgnoreCase))
             return AuthenticateResult.NoResult();
 
-        string apiKey = authHeader.Substring("Bearer ".Length);
+        var apiKey = authHeader.Substring("Bearer ".Length);
         var wallet = await _walletRepository.GetWallet(new WalletsQuery
         {
             AccessKey = new []{ apiKey },
@@ -51,18 +51,17 @@ public class LnBankAuthenticationHandler : AuthenticationHandler<LnBankAuthentic
         }
 
         var accessKey = wallet.AccessKeys.First(a => a.Key == apiKey);
-
         var claims = new List<Claim>
         {
             new(_identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType, wallet.UserId),
             new("WalletId", wallet.WalletId),
-            new("AccessKey", accessKey.Key)
+            new("AccessKey", accessKey.Key),
+            new("AccessLevel", accessKey.Level.ToString())
         };
-        var claimsIdentity = new ClaimsIdentity(claims, AuthenticationSchemes.Api);
+        var claimsIdentity = new ClaimsIdentity(claims, LNbankAuthenticationSchemes.AccessKey);
         var principal = new ClaimsPrincipal(claimsIdentity);
-        var ticket = new AuthenticationTicket(principal, AuthenticationSchemes.Api);
-        Context.Items.Add("Wallet", wallet);
-        Context.Items.Add("AccessKey", accessKey);
+        var ticket = new AuthenticationTicket(principal, LNbankAuthenticationSchemes.AccessKey);
+        Context.Items.Add("BTCPAY.LNBANK.WALLET", wallet);
         return AuthenticateResult.Success(ticket);
     }
 }

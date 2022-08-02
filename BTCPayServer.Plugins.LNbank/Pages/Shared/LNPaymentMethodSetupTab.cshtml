@@ -1,4 +1,5 @@
 ﻿@using BTCPayServer.Data
+@using BTCPayServer.Plugins.LNbank.Data.Models
 @using BTCPayServer.Plugins.LNbank.Services.Wallets
 @using BTCPayServer.Security
 @using Microsoft.AspNetCore.Identity
@@ -11,11 +12,12 @@
 
 @{
     var userId = _userManager.GetUserId(User);
-    var wallets = await _walletRepository.GetWallets(new WalletsQuery
+    var requiredLevel = AccessLevel.Admin;
+    var wallets = (await _walletRepository.GetWallets(new WalletsQuery
     {
         UserId = new[] { userId },
         IncludeAccessKeys = true
-    });
+    })).Where(w => w.AccessKeys.Any(ak => ak.UserId == userId && ak.Level == requiredLevel));
     var storeId = Context.GetRouteValue("storeId");
     var cryptoCode = Context.GetRouteValue("cryptoCode");
     var baseUrl = Context.Request.PathBase.ToUriComponent();
@@ -36,7 +38,7 @@
             <option value="">Select a wallet</option>
             @foreach (var wallet in wallets)
             {
-                <option value="@wallet.AccessKeys.First().Key" data-wallet-id="@wallet.WalletId">@wallet.Name</option>
+                <option value="@wallet.AccessKeys.First(ak => ak.Level == requiredLevel).Key" data-wallet-id="@wallet.WalletId">@wallet.Name</option>
             }
         </select>
     </div>

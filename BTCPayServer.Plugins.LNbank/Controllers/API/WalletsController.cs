@@ -12,14 +12,13 @@ using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
-using AuthenticationSchemes = BTCPayServer.Abstractions.Constants.AuthenticationSchemes;
 using WalletData = BTCPayServer.Plugins.LNbank.Data.API.WalletData;
 
 namespace BTCPayServer.Plugins.LNbank.Controllers.API;
 
 [ApiController]
 [Route("~/api/v1/lnbank/[controller]")]
-[Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield, Policy = LNbankPolicies.CanManageWallet)]
+[Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
 public class WalletsController : ControllerBase
 {
     private readonly WalletRepository _walletRepository;
@@ -32,6 +31,7 @@ public class WalletsController : ControllerBase
     }
     
     [HttpGet("")]
+    [Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield, Policy = Policies.CanModifyProfile)]
     public async Task<IActionResult> GetWallets()
     {
         var wallets = await _walletRepository.GetWallets(new WalletsQuery {
@@ -43,6 +43,7 @@ public class WalletsController : ControllerBase
     }
 
     [HttpPost("")]
+    [Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield, Policy = Policies.CanModifyProfile)]
     public async Task<IActionResult> CreateWallet(EditWalletRequest request)
     {
         var validationResult = Validate(request);
@@ -63,6 +64,7 @@ public class WalletsController : ControllerBase
     }
     
     [HttpGet("{walletId}")]
+    [Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield, Policy = LNbankPolicies.CanViewWallet)]
     public async Task<IActionResult> GetWallet(string walletId)
     {
         var wallet = await FetchWallet(walletId);
@@ -72,6 +74,7 @@ public class WalletsController : ControllerBase
     }
     
     [HttpPut("{walletId}")]
+    [Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield, Policy = LNbankPolicies.CanManageWallet)]
     public async Task<IActionResult> UpdateWallet(string walletId, EditWalletRequest request)
     {
         var validationResult = Validate(request);
@@ -98,6 +101,7 @@ public class WalletsController : ControllerBase
     }
     
     [HttpDelete("{walletId}")]
+    [Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield, Policy = LNbankPolicies.CanManageWallet)]
     public async Task<IActionResult> DeleteWallet(string walletId)
     {
         var wallet = await FetchWallet(walletId);
@@ -144,6 +148,7 @@ public class WalletsController : ControllerBase
             Name = model.Name,
             CreatedAt = model.CreatedAt,
             Balance = model.Balance,
+            AccessKey = model.AccessKeys.FirstOrDefault(ak => ak.UserId == GetUserId())?.Key
         };
 
     private string GetUserId() => _userManager.GetUserId(User);

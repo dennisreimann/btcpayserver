@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Data;
@@ -37,9 +38,8 @@ public class AuthorizationRequirementHandler : IPluginHookFilter
         {
             wallet = await _walletRepository.GetWallet(new WalletsQuery {
                 UserId = new []{ userId },
-                WalletId = new []{ walletId },
+                WalletId = new []{ walletId }
             });
-            httpContext.Items["BTCPAY.LNBANK.WALLET"] = wallet;
         }
 
         switch (obj.Requirement.Policy)
@@ -60,6 +60,11 @@ public class AuthorizationRequirementHandler : IPluginHookFilter
                 if (wallet != null)
                     obj.MarkSuccessful();
                 break;
+        }
+
+        if (obj.Success)
+        {
+            httpContext.Items["BTCPAY.LNBANK.WALLET"] = wallet;
         }
         
         return obj;

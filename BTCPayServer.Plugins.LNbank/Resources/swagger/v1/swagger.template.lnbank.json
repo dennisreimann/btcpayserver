@@ -24,8 +24,7 @@
                     {
                         "API_Key": [
                             "btcpay.user.canmodifyprofile"
-                        ],
-                        "Basic": []
+                        ]
                     }
                 ]
             },
@@ -41,7 +40,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/LNbankEditWalletData"
+                                "$ref": "#/components/schemas/LNbankEditWalletRequest"
                             }
                         }
                     },
@@ -77,8 +76,7 @@
                     {
                         "API_Key": [
                             "btcpay.user.canmodifyprofile"
-                        ],
-                        "Basic": []
+                        ]
                     }
                 ]
             }
@@ -123,9 +121,8 @@
                 "security": [
                     {
                         "API_Key": [
-                            "btcpay.user.canmodifyprofile"
-                        ],
-                        "Basic": []
+                            "btcpay.plugin.lnbank.canviewwallet"
+                        ]
                     }
                 ]
             },
@@ -151,7 +148,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/LNbankEditWalletData"
+                                "$ref": "#/components/schemas/LNbankEditWalletRequest"
                             }
                         }
                     },
@@ -190,9 +187,8 @@
                 "security": [
                     {
                         "API_Key": [
-                            "btcpay.user.canmodifyprofile"
-                        ],
-                        "Basic": []
+                            "btcpay.plugin.lnbank.canmanagewallet"
+                        ]
                     }
                 ]
             },
@@ -237,9 +233,8 @@
                 "security": [
                     {
                         "API_Key": [
-                            "btcpay.user.canmodifyprofile"
-                        ],
-                        "Basic": []
+                            "btcpay.plugin.lnbank.canmanagewallet"
+                        ]
                     }
                 ]
             }
@@ -247,13 +242,7 @@
     },
     "components": {
         "schemas": {
-            "LNbankWalletDataList": {
-                "type": "array",
-                "items": {
-                    "$ref": "#/components/schemas/LNbankWalletData"
-                }
-            },
-            "LNbankEditWalletData": {
+            "LNbankEditWalletRequest": {
                 "type": "object",
                 "properties": {
                     "name": {
@@ -262,28 +251,22 @@
                     }
                 }
             },
-            "LNbankWalletData": {
-                "allOf": [
-                    {
-                        "$ref": "#/components/schemas/LNbankWalletBaseData"
-                    },
-                    {
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "type": "string",
-                                "description": "The id of the wallet",
-                                "nullable": false
-                            }
-                        }
-                    }
-                ]
+            "LNbankWalletDataList": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/components/schemas/LNbankWalletData"
+                }
             },
-            "LNbankWalletBaseData": {
+            "LNbankWalletData": {
                 "type": "object",
                 "x-abstract": true,
                 "additionalProperties": false,
                 "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "The id of the wallet",
+                        "nullable": false
+                    },
                     "name": {
                         "type": "string",
                         "description": "The name of the wallet"
@@ -295,6 +278,10 @@
                     "balance": {
                         "type": "string",
                         "description": "Amount wrapped in a string, represented in a millistatoshi string. (1000 millisatoshi = 1 satoshi)"
+                    },
+                    "accessKey": {
+                        "type": "string",
+                        "description": "The access key for the wallet"
                     }
                 }
             }

@@ -42,7 +42,7 @@ public class WalletRepository
         if (query.UserId != null)
         {
             queryable = queryable
-                .Include(w => w.AccessKeys)
+                .Include(w => w.AccessKeys).AsNoTracking()
                 .Where(w => 
                     // Owner
                     query.UserId.Contains(w.UserId) || 
@@ -52,8 +52,9 @@ public class WalletRepository
         
         if (query.AccessKey != null)
         {
-            queryable = queryable.Include(wallet => wallet.AccessKeys).Where(wallet =>
-                wallet.AccessKeys.Any(key => query.AccessKey.Contains(key.Key)));
+            queryable = queryable
+                .Include(w => w.AccessKeys).AsNoTracking()
+                .Where(w => w.AccessKeys.Any(key => query.AccessKey.Contains(key.Key)));
         }
 
         if (query.WalletId != null)
