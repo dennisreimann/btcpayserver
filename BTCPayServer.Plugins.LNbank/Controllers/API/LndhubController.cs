@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BTCPayServer.Lightning.LNDhub.Models;
 using BTCPayServer.Plugins.LNbank.Authentication;
 using BTCPayServer.Plugins.LNbank.Data.Lndhub;
 using BTCPayServer.Plugins.LNbank.Data.Models;
@@ -13,6 +14,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using NBitcoin;
+using AuthRequest = BTCPayServer.Plugins.LNbank.Data.Lndhub.AuthRequest;
+using AuthResponse = BTCPayServer.Plugins.LNbank.Data.Lndhub.AuthResponse;
 using Transaction = BTCPayServer.Plugins.LNbank.Data.Models.Transaction;
 
 namespace BTCPayServer.Plugins.LNbank.Controllers.API;
