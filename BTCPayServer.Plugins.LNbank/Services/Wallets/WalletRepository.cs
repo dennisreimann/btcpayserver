@@ -226,6 +226,11 @@ public class WalletRepository
             queryable = queryable.Where(t => t.PaymentRequest == query.PaymentRequest);
         }
 
+        if (query.PaymentHash != null)
+        {
+            queryable = queryable.Where(t => t.PaymentHash == query.PaymentHash);
+        }
+
         return queryable.FirstOrDefault();
     }
 

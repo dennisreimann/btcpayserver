@@ -3,6 +3,7 @@ using System;
 using BTCPayServer.Plugins.LNbank.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BTCPayServer.Plugins.LNbank.Data.Migrations
 {
     [DbContext(typeof(LNbankPluginDbContext))]
-    partial class LNbankPluginDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220809221925_AddPaymentHash")]
+    partial class AddPaymentHash
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,7 +32,9 @@ namespace BTCPayServer.Plugins.LNbank.Data.Migrations
 
                     b.Property<string>("Level")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Admin");
 
                     b.Property<string>("UserId")
                         .HasColumnType("text");
@@ -40,8 +44,9 @@ namespace BTCPayServer.Plugins.LNbank.Data.Migrations
 
                     b.HasKey("Key");
 
-                    b.HasIndex("WalletId", "UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("WalletId");
 
                     b.ToTable("AccessKeys", "BTCPayServer.Plugins.LNbank");
                 });

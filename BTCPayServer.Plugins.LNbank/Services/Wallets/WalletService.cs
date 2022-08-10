@@ -43,6 +43,18 @@ public class WalletService
         _lnurlService = lnurlService;
         _network = btcPayNetworkProvider.GetNetwork<BTCPayNetwork>(BTCPayService.CryptoCode).NBitcoinNetwork;
     }
+
+    public async Task<bool> IsPaid(string paymentHash)
+    {
+        var transaction = await _walletRepository.GetTransaction(new TransactionQuery
+        {
+            PaymentHash = paymentHash
+        });
+        if (transaction != null) return transaction.IsPaid;
+        
+        var payment = await _btcpayService.GetLightningPayment(paymentHash);
+        return payment?.Status == LightningPaymentStatus.Complete;
+    }
     
     public async Task<Transaction> Receive(Wallet wallet, long amount, string description, bool attachDescription, bool privateRouteHints, TimeSpan? expiry, CancellationToken cancellationToken = default) =>
         await Receive(wallet, amount, description, null, attachDescription, privateRouteHints, expiry, cancellationToken);
@@ -69,6 +81,7 @@ public class WalletService
         });
 
         await using var dbContext = _dbContextFactory.CreateContext();
+        var bolt11 = ParsePaymentRequest(data.BOLT11);
         var entry = await dbContext.Transactions.AddAsync(new Transaction
         {
             WalletId = wallet.WalletId,
@@ -76,6 +89,7 @@ public class WalletService
             Amount = data.Amount,
             ExpiresAt = data.ExpiresAt,
             PaymentRequest = data.BOLT11,
+            PaymentHash = bolt11.PaymentHash?.ToString(),
             Description = description
         }, cancellationToken);
 
@@ -113,6 +127,7 @@ public class WalletService
         {
             WalletId = wallet.WalletId,
             PaymentRequest = paymentRequest,
+            PaymentHash = bolt11.PaymentHash?.ToString(),
             ExpiresAt = bolt11.ExpiryDate,
             Description = description,
             Amount = amount,
