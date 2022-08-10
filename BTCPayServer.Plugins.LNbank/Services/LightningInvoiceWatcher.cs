@@ -99,16 +99,14 @@ public class LightningInvoiceWatcher : BackgroundService
             else
             {
                 // Sending transaction - cancelled payments return null, hence we need to null-check it
-                var bolt11 = walletService.ParsePaymentRequest(transaction.PaymentRequest);
-                var paymentHash = bolt11.PaymentHash?.ToString();
-                var payment = await _btcpayService.GetLightningPayment(paymentHash, cancellationToken);
+                var payment = await _btcpayService.GetLightningPayment(transaction.PaymentHash, cancellationToken);
                 
                 if (payment == null)
                 {
                     var isInflight = transaction.IsPending && transaction.CreatedAt > DateTimeOffset.Now - _inflightDelay;
                     if (!isInflight)
                     {
-                        _logger.LogWarning("Unable to resolve payment (Payment Hash = {PaymentHash}) for transaction {TransactionId}", paymentHash, transaction.TransactionId);
+                        _logger.LogWarning("Unable to resolve payment (Payment Hash = {PaymentHash}) for transaction {TransactionId}", transaction.PaymentHash, transaction.TransactionId);
                     }
                 }
                 else switch (payment.Status)
@@ -121,7 +119,7 @@ public class LightningInvoiceWatcher : BackgroundService
                         break;
                     }
                     case LightningPaymentStatus.Failed:
-                        _logger.LogWarning("Failed payment (Payment Hash = {PaymentHash}) for transaction {TransactionId} - invalidating transaction", paymentHash, transaction.TransactionId);
+                        _logger.LogWarning("Failed payment (Payment Hash = {PaymentHash}) for transaction {TransactionId} - invalidating transaction", transaction.PaymentHash, transaction.TransactionId);
                         await walletService.Invalidate(transaction);
                         break;
                     case LightningPaymentStatus.Unknown:

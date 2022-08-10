@@ -52,13 +52,24 @@
 
 @if (!string.IsNullOrEmpty(lndhubUrl))
 {
-    <h3 class="mt-5 mb-3">Connect BlueWallet</h3>
+    <h3 class="mt-5 mb-3">Connect LNDhub-compatible wallet</h3>
+    
+    <p>
+        With the QR code/account URL below, you can connect any wallet that is compatible with the LNDhub protocol.
+        This is supported by <a href="https://bluewallet.io/" target="_blank" rel="noreferrer noopener">BlueWallet</a>, 
+        <a href="https://zeusln.app/" target="_blank" rel="noreferrer noopener">Zeus</a> and 
+        <a href="https://getalby.com/" target="_blank" rel="noreferrer noopener">Alby</a>.
+    </p>
+    <p>These credentials allow unrestricted access to your LNbank wallet. Treat it as confidential information.</p>
 
-    <div class="qrcode">
-        @await Component.InvokeAsync("QRCode", new { data = lndhubUrl })
+    <div id="LNbank-LNDhubQR" class="collapse">
+        <div class="qrcode">
+            @await Component.InvokeAsync("QRCode", new { data = lndhubUrl })
+        </div>
     </div>
 
-    <div class="mt-4">
-        <button class="btn btn-secondary me-2 mb-2" type="button" data-clipboard="@lndhubUrl" id="LNbank-CopyLndhubUrl">Copy account URL</button>
+    <div class="mt-4 d-grid d-sm-flex gap-3">
+        <button class="btn btn-secondary" type="button" id="LNbank-ToggleLNDhubQR" data-bs-toggle="collapse" data-bs-target="#LNbank-LNDhubQR" aria-expanded="false" aria-controls="LNbank-LNDhubQR">Show QR code</button>
+        <button class="btn btn-secondary" type="button" id="LNbank-CopyLndhubUrl" data-clipboard="@lndhubUrl">Copy account URL</button>
     </div>
 }

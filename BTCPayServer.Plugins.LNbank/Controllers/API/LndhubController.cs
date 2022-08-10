@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BTCPayServer.Lightning;
 using BTCPayServer.Lightning.LNDhub.Models;
 using BTCPayServer.Plugins.LNbank.Authentication;
 using BTCPayServer.Plugins.LNbank.Data.Lndhub;
@@ -83,11 +84,12 @@ public class LndhubController : ControllerBase
     public async Task<IActionResult> GetInfo()
     {
         var info = await _btcpayService.GetLightningNodeInfo();
-        var result = new NodeInfoData
+        var result = new InfoData
         {
             Uris = info.NodeURIs.Select(uri => uri.ToString()),
             IdentityPubkey = info.NodeURIs.First().NodeId.ToString(),
-            BlockHeight = info.BlockHeight
+            BlockHeight = info.BlockHeight,
+            Alias = $"LNbank: {Wallet.Name}"
         };
         return Ok(result);
     }
@@ -156,6 +158,22 @@ public class LndhubController : ControllerBase
         catch (Exception ex)
         {
             return Ok(new ErrorResponse(4, ex.Message));
+        }
+    }
+    
+    // https://github.com/getAlby/lightning-browser-extension/blob/f0b0ab9ad0b2dd6e60b864548fa39091ef81bbdc/src/extension/background-script/connectors/lndhub.ts#L249
+    [HttpGet("checkpayment/{paymentHash}")]
+    public async Task<IActionResult> CheckPayment(string paymentHash)
+    {
+        var result = new CheckPaymentResponse { Paid = false };
+        try
+        {
+            result.Paid = await _walletService.IsPaid(paymentHash);
+            return Ok(result);
+        }
+        catch (Exception)
+        {
+            return NotFound(result);
         }
     }
     
@@ -232,7 +250,7 @@ public class LndhubController : ControllerBase
         
         return new InvoiceData
         {
-            Id = bolt11.PaymentHash,
+            Id = bolt11.Hash,
             Description = t.Description,
             AddIndex = t.CreatedAt.ToUnixTimeSeconds().ToString(), // fake it
             PaymentHash = bolt11.PaymentHash?.ToString(),
