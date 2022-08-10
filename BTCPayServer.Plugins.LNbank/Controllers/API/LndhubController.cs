@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using BTCPayServer.Lightning;
 using BTCPayServer.Lightning.LNDhub.Models;
 using BTCPayServer.Plugins.LNbank.Authentication;
 using BTCPayServer.Plugins.LNbank.Data.Lndhub;
@@ -16,7 +15,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using NBitcoin;
 using AuthRequest = BTCPayServer.Plugins.LNbank.Data.Lndhub.AuthRequest;
-using AuthResponse = BTCPayServer.Plugins.LNbank.Data.Lndhub.AuthResponse;
+using PaymentResponse = BTCPayServer.Plugins.LNbank.Data.Lndhub.PaymentResponse;
+using PaymentRoute = BTCPayServer.Plugins.LNbank.Data.Lndhub.PaymentRoute;
+using PaymentData = BTCPayServer.Plugins.LNbank.Data.Lndhub.PaymentData;
 using Transaction = BTCPayServer.Plugins.LNbank.Data.Models.Transaction;
 
 namespace BTCPayServer.Plugins.LNbank.Controllers.API;
@@ -66,13 +67,13 @@ public class LndhubController : ControllerBase
                 if (wallet is { AccessLevel: AccessLevel.Admin })
                 {
                     var accessKey = wallet.AccessKeys.First(a => a.Key == req.Password);
-                    result = new AuthResponse(accessKey.Key);
+                    result = new AuthResponse { AccessToken = accessKey.Key, RefreshToken = accessKey.Key };
                 }
                 break;
             
             // fake this case as we don't do OAuth
             case "refresh_token":
-                result = new AuthResponse(req.RefreshToken);
+                result = new AuthResponse { AccessToken = req.RefreshToken, RefreshToken = req.RefreshToken };
                 break;
         }
         
@@ -204,7 +205,7 @@ public class LndhubController : ControllerBase
         try
         {
             var transaction = await _walletService.Send(wallet, request.PaymentRequest);
-            var result = ToTransactionData(transaction);
+            var result = ToPaymentResponse(transaction);
         
             return Ok(result);
         }
@@ -243,6 +244,51 @@ public class LndhubController : ControllerBase
         };
     }
 
+    private PaymentResponse ToPaymentResponse(Transaction t)
+    {
+        var bolt11 = _walletService.ParsePaymentRequest(t.PaymentRequest);
+        var error = t.Status switch
+        {
+            Transaction.StatusExpired => "Invoice expired",
+            Transaction.StatusInvalid => "Invalid payment",
+            Transaction.StatusCancelled => "Invoice cancelled",
+            _ => "" // needs to be an empty string for compatibility across wallets
+        };
+        
+        return new PaymentResponse
+        {
+            PaymentError = error,
+            PaymentRequest = t.PaymentRequest,
+            PaymentPreimage = bolt11.PaymentSecret,
+            PaymentHash = bolt11.PaymentHash,
+            Decoded = ToPaymentData(t),
+            PaymentRoute = new PaymentRoute
+            {
+                Amount = t.AmountSettled.Abs(),
+                Fee = t.RoutingFee
+            }
+        };
+    }
+    
+    private PaymentData ToPaymentData(Transaction t)
+    {
+        var bolt11 = _walletService.ParsePaymentRequest(t.PaymentRequest);
+        var expireTime = TimeSpan.FromSeconds((t.ExpiresAt - t.CreatedAt).TotalSeconds);
+        var amount = t.AmountSettled.Abs();
+        
+        return new PaymentData
+        {
+            PaymentPreimage = bolt11.PaymentSecret,
+            Destination = bolt11.GetPayeePubKey().ToString(),
+            PaymentHash = bolt11.PaymentHash,
+            Amount = amount,
+            Description = t.Description,
+            DescriptionHash = bolt11.DescriptionHash?.ToString(),
+            ExpireTime = expireTime,
+            Timestamp = t.CreatedAt
+        };
+    }
+    
     private InvoiceData ToInvoiceData(Transaction t)
     {
         var bolt11 = _walletService.ParsePaymentRequest(t.PaymentRequest);
