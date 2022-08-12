@@ -71,8 +71,7 @@ public class LightningController : ControllerBase
     {
         if (Wallet == null) return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
 
-        var paymentRequest = req.PaymentRequest;
-        var bolt11 = _walletService.ParsePaymentRequest(paymentRequest);
+        var bolt11 = await _walletService.GetBolt11(req.PaymentRequest);
         var isZeroAmount = bolt11.MinimumAmount == LightMoney.Zero;
         var amount = isZeroAmount ? req.Amount : null;
         if (isZeroAmount && amount == null)
@@ -85,7 +84,7 @@ public class LightningController : ControllerBase
         {
             // load wallet including transactions to do the balance check
             var wallet = await GetWalletWithTransactions(Wallet.WalletId);
-            var transaction = await _walletService.Send(wallet, bolt11, paymentRequest, bolt11.ShortDescription, amount);
+            var transaction = await _walletService.Send(wallet, bolt11, bolt11.ShortDescription, amount);
             var details = transaction.IsSettled
                 ? new PayDetails { TotalAmount = transaction.Amount, FeeAmount = transaction.RoutingFee }
                 : null;

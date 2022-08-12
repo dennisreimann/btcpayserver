@@ -79,7 +79,6 @@ public class LnurlController : ControllerBase
             Transaction transaction = await _walletService.Receive(wallet, amount.Value, comment, descriptionHash);
             
             var paymentRequest = transaction.PaymentRequest;
-            var bolt11 = _walletService.ParsePaymentRequest(paymentRequest);
             if (_walletService.ValidateDescriptionHash(paymentRequest, meta))
             {
                 return Ok(new LNURLPayRequest.LNURLPayRequestCallbackResponse

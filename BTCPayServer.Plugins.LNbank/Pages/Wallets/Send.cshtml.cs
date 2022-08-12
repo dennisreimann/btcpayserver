@@ -21,15 +21,18 @@ namespace BTCPayServer.Plugins.LNbank.Pages.Wallets;
 public class SendModel : BasePageModel
 {
     private readonly ILogger _logger;
-    
+
     public Wallet Wallet { get; set; }
-    
     public BOLT11PaymentRequest Bolt11 { get; set; }
     
     [BindProperty]
-    [DisplayName("Payment Request")]
+    [DisplayName("Payment Request, LNURL or Lightning Address")]
     [Required]
-    public string PaymentRequest { get; set; }
+    public string Destination { get; set; }
+    
+    [BindProperty]
+    [DisplayName("BOLT11 Payment Request")]
+    public string PaymentRequest { get; set; } // this is set from the parsed Destination
     
     [BindProperty]
     [DisplayName("Amount in sats")]
@@ -66,9 +69,11 @@ public class SendModel : BasePageModel
 
         try
         {
-            PaymentRequest = PaymentRequest.Trim();
-            Bolt11 = WalletService.ParsePaymentRequest(PaymentRequest);
+            Destination = Destination.Trim();
+            Bolt11 = await WalletService.GetBolt11(Destination);
+            PaymentRequest = Bolt11.ToString();
             Description = Bolt11.ShortDescription;
+            
             await WalletService.ValidatePaymentRequest(PaymentRequest);
         }
         catch (Exception exception)
@@ -84,15 +89,20 @@ public class SendModel : BasePageModel
     {
         Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
-        if (!ModelState.IsValid) return Page();
 
-        PaymentRequest = PaymentRequest.Trim();
-        Bolt11 = WalletService.ParsePaymentRequest(PaymentRequest);
+        if (string.IsNullOrEmpty(PaymentRequest))
+        {
+            ModelState.AddModelError(nameof(PaymentRequest), "A valid BOLT11 Payment Request is required");
+        }
+        
+        if (!ModelState.IsValid) return Page();
+        
+        Bolt11 = await WalletService.GetBolt11(PaymentRequest);
 
         try
         {
-            var explicitAmount = Bolt11.MinimumAmount == LightMoney.Zero ? LightMoney.Satoshis(ExplicitAmount) : null;
-            var transaction = await WalletService.Send(Wallet, Bolt11, PaymentRequest, Description, explicitAmount);
+            var explicitAmount = Bolt11?.MinimumAmount == LightMoney.Zero ? LightMoney.Satoshis(ExplicitAmount) : null;
+            var transaction = await WalletService.Send(Wallet, Bolt11, Description, explicitAmount);
             TempData[WellKnownTempData.SuccessMessage] = transaction.IsPending
                 ? "Payment successfully sent, awaiting settlement."
                 : "Payment successfully sent and settled.";

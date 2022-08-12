@@ -18,6 +18,7 @@ public class WalletService
     private readonly ILogger _logger;
     private readonly Network _network;
     private readonly BTCPayService _btcpayService;
+    private readonly LNURLService _lnurlService;
     private readonly WalletRepository _walletRepository;
     private readonly IHubContext<TransactionHub> _transactionHub;
     private readonly LNbankPluginDbContextFactory _dbContextFactory;
@@ -30,13 +31,15 @@ public class WalletService
         BTCPayService btcpayService,
         BTCPayNetworkProvider btcPayNetworkProvider,
         LNbankPluginDbContextFactory dbContextFactory,
-        WalletRepository walletRepository)
+        WalletRepository walletRepository,
+        LNURLService lnurlService)
     {
         _logger = logger;
         _btcpayService = btcpayService;
         _transactionHub = transactionHub;
         _walletRepository = walletRepository;
         _dbContextFactory = dbContextFactory;
+        _lnurlService = lnurlService;
         _network = btcPayNetworkProvider.GetNetwork<BTCPayNetwork>(BTCPayService.CryptoCode).NBitcoinNetwork;
     }
     
@@ -80,7 +83,7 @@ public class WalletService
         return entry.Entity;
     }
 
-    public async Task<Transaction> Send(Wallet wallet, BOLT11PaymentRequest bolt11, string paymentRequest, string description, LightMoney explicitAmount = null, float maxFeePercent = 3, CancellationToken cancellationToken = default)
+    public async Task<Transaction> Send(Wallet wallet, BOLT11PaymentRequest bolt11, string description, LightMoney explicitAmount = null, float maxFeePercent = 3, CancellationToken cancellationToken = default)
     {
         if (bolt11.ExpiryDate <= DateTimeOffset.UtcNow)
         {
@@ -95,6 +98,7 @@ public class WalletService
         }
 
         // check if the invoice exists already
+        var paymentRequest = bolt11.ToString();
         var receivingTransaction = await ValidatePaymentRequest(paymentRequest);
         var isInternal = !string.IsNullOrEmpty(receivingTransaction?.InvoiceId);
 
@@ -244,6 +248,18 @@ public class WalletService
     public BOLT11PaymentRequest ParsePaymentRequest(string payReq)
     {
         return BOLT11PaymentRequest.Parse(payReq.Trim(), _network);
+    }
+
+    public async Task<BOLT11PaymentRequest> GetBolt11(string destination)
+    {
+        try
+        {
+            return ParsePaymentRequest(destination);
+        }
+        catch (Exception)
+        {
+            return await _lnurlService.GetBolt11(destination, _network);
+        }
     }
 
     public async Task<bool> Cancel(string invoiceId)
