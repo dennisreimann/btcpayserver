@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BTCPayServer.Client;
 using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Exceptions;
@@ -18,6 +19,7 @@ public class WalletService
     private readonly ILogger _logger;
     private readonly Network _network;
     private readonly BTCPayService _btcpayService;
+    private readonly LNURLService _lnurlService;
     private readonly WalletRepository _walletRepository;
     private readonly IHubContext<TransactionHub> _transactionHub;
     private readonly LNbankPluginDbContextFactory _dbContextFactory;
@@ -30,13 +32,15 @@ public class WalletService
         BTCPayService btcpayService,
         BTCPayNetworkProvider btcPayNetworkProvider,
         LNbankPluginDbContextFactory dbContextFactory,
-        WalletRepository walletRepository)
+        WalletRepository walletRepository,
+        LNURLService lnurlService)
     {
         _logger = logger;
         _btcpayService = btcpayService;
         _transactionHub = transactionHub;
         _walletRepository = walletRepository;
         _dbContextFactory = dbContextFactory;
+        _lnurlService = lnurlService;
         _network = btcPayNetworkProvider.GetNetwork<BTCPayNetwork>(BTCPayService.CryptoCode).NBitcoinNetwork;
     }
     
@@ -80,7 +84,7 @@ public class WalletService
         return entry.Entity;
     }
 
-    public async Task<Transaction> Send(Wallet wallet, BOLT11PaymentRequest bolt11, string paymentRequest, string description, LightMoney explicitAmount = null, float maxFeePercent = 3, CancellationToken cancellationToken = default)
+    public async Task<Transaction> Send(Wallet wallet, BOLT11PaymentRequest bolt11, string description, LightMoney explicitAmount = null, float maxFeePercent = 3, CancellationToken cancellationToken = default)
     {
         if (bolt11.ExpiryDate <= DateTimeOffset.UtcNow)
         {
@@ -95,6 +99,7 @@ public class WalletService
         }
 
         // check if the invoice exists already
+        var paymentRequest = bolt11.ToString();
         var receivingTransaction = await ValidatePaymentRequest(paymentRequest);
         var isInternal = !string.IsNullOrEmpty(receivingTransaction?.InvoiceId);
 
@@ -181,13 +186,13 @@ public class WalletService
         sendingTransaction.ExplicitStatus = Transaction.StatusPending;
         var sendingEntry = await dbContext.Transactions.AddAsync(sendingTransaction, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        
+
         try
         {
             // Pay the invoice - cancel after timeout, potentially caused by hold invoices
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(SendTimeout);
-            
+
             // Pass explicit amount only for zero amount invoices, because the implementations might throw an exception otherwise
             var bolt11 = ParsePaymentRequest(sendingTransaction.PaymentRequest);
             var request = new LightningInvoicePayRequest
@@ -197,7 +202,7 @@ public class WalletService
                 Amount = bolt11.MinimumAmount == LightMoney.Zero ? amount : null
             };
             var result = await _btcpayService.PayLightningInvoice(request, cts.Token);
-            
+
             // Check result
             if (result.TotalAmount == null)
             {
@@ -209,6 +214,21 @@ public class WalletService
             var originalAmount = result.TotalAmount - result.FeeAmount;
 
             await Settle(sendingEntry.Entity, originalAmount, settledAmount, result.FeeAmount, DateTimeOffset.UtcNow);
+        }
+        catch (GreenfieldAPIException ex)
+        {
+            switch (ex.APIError.Code)
+            {
+                case "could-not-find-route":
+                case "generic-error":
+                    // Remove preliminary transaction entry, payment could not be sent
+                    dbContext.Transactions.Remove(sendingTransaction);
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    break;
+            }
+            
+            // Rethrow to inform about the error up in the stack
+            throw;
         }
         catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
         {
@@ -244,6 +264,18 @@ public class WalletService
     public BOLT11PaymentRequest ParsePaymentRequest(string payReq)
     {
         return BOLT11PaymentRequest.Parse(payReq.Trim(), _network);
+    }
+
+    public async Task<BOLT11PaymentRequest> GetBolt11(string destination)
+    {
+        try
+        {
+            return ParsePaymentRequest(destination);
+        }
+        catch (Exception)
+        {
+            return await _lnurlService.GetBolt11(destination, _network);
+        }
     }
 
     public async Task<bool> Cancel(string invoiceId)

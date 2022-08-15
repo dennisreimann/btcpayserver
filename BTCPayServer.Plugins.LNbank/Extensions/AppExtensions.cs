@@ -12,6 +12,7 @@ public static class AppExtensions
         services.AddHostedService<LNbankPluginMigrationRunner>();
         services.AddHostedService<LightningInvoiceWatcher>();
         services.AddSingleton<BTCPayService>();
+        services.AddSingleton<LNURLService>();
         services.AddSingleton<WalletService>();
         services.AddSingleton<WalletRepository>();
         services.AddSingleton<ISwaggerProvider, LNbankSwaggerProvider>();
