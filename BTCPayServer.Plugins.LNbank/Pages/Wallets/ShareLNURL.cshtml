@@ -5,7 +5,7 @@
 @{
     Layout = "_LayoutSimple";
     ViewData.SetActivePage(LNbankNavPages.Share, $"{Model.Wallet.Name} LNURL", Model.Wallet.WalletId);
-    var endpoint = new Uri($"{Request.Scheme}://{Request.Host}{Request.PathBase.ToUriComponent()}/api/v1/lnbank/lnurl/{Model.Wallet.WalletId}");
+    var endpoint = new Uri($"{Request.Scheme}://{Request.Host}{Request.PathBase.ToUriComponent()}/api/v1/lnbank/lnurl/{Model.Wallet.WalletId}/pay");
     var lnurl = LNURL.EncodeUri(endpoint, "payRequest", true);
 }
 

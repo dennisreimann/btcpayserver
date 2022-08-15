@@ -31,8 +31,8 @@ public class LnurlController : ControllerBase
         _walletRepository = walletRepository;
     }
     
-    [HttpGet("{walletId}")]
-    public async Task<IActionResult> GetLnurl(string walletId)
+    [HttpGet("{walletId}/pay")]
+    public async Task<IActionResult> LnurlPay(string walletId)
     {
         var wallet = await _walletRepository.GetWallet(new WalletsQuery { WalletId = new []{ walletId } });
         if (wallet == null)
@@ -47,8 +47,8 @@ public class LnurlController : ControllerBase
         return Ok(payRequest);
     }
 
-    [HttpGet("{walletId}/pay")]
-    public async Task<IActionResult> LnurlPay(string walletId,
+    [HttpGet("{walletId}/pay-callback")]
+    public async Task<IActionResult> LnurlPayCallback(string walletId,
         [FromQuery] long? amount = null, string comment = null)
     {
         var wallet = await _walletRepository.GetWallet(new WalletsQuery { WalletId = new[] { walletId } });
@@ -105,7 +105,7 @@ public class LnurlController : ControllerBase
     private LNURLPayRequest GetPayRequest(string walletId, string metadata) => new() 
     {
         Tag = "payRequest",
-        Callback = new Uri($"{Request.Scheme}://{Request.Host.ToUriComponent()}{Request.PathBase.ToUriComponent()}/api/v1/lnbank/lnurl/{walletId}/pay"),
+        Callback = new Uri($"{Request.Scheme}://{Request.Host.ToUriComponent()}{Request.PathBase.ToUriComponent()}/api/v1/lnbank/lnurl/{walletId}/pay-callback"),
         MinSendable = _minSendable,
         MaxSendable = _maxSendable,
         CommentAllowed = _commentLength,
