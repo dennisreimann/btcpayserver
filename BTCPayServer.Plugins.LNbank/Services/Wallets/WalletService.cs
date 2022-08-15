@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BTCPayServer.Client;
 using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Exceptions;
@@ -185,13 +186,13 @@ public class WalletService
         sendingTransaction.ExplicitStatus = Transaction.StatusPending;
         var sendingEntry = await dbContext.Transactions.AddAsync(sendingTransaction, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        
+
         try
         {
             // Pay the invoice - cancel after timeout, potentially caused by hold invoices
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(SendTimeout);
-            
+
             // Pass explicit amount only for zero amount invoices, because the implementations might throw an exception otherwise
             var bolt11 = ParsePaymentRequest(sendingTransaction.PaymentRequest);
             var request = new LightningInvoicePayRequest
@@ -201,7 +202,7 @@ public class WalletService
                 Amount = bolt11.MinimumAmount == LightMoney.Zero ? amount : null
             };
             var result = await _btcpayService.PayLightningInvoice(request, cts.Token);
-            
+
             // Check result
             if (result.TotalAmount == null)
             {
@@ -213,6 +214,21 @@ public class WalletService
             var originalAmount = result.TotalAmount - result.FeeAmount;
 
             await Settle(sendingEntry.Entity, originalAmount, settledAmount, result.FeeAmount, DateTimeOffset.UtcNow);
+        }
+        catch (GreenfieldAPIException ex)
+        {
+            switch (ex.APIError.Code)
+            {
+                case "could-not-find-route":
+                case "generic-error":
+                    // Remove preliminary transaction entry, payment could not be sent
+                    dbContext.Transactions.Remove(sendingTransaction);
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    break;
+            }
+            
+            // Rethrow to inform about the error up in the stack
+            throw;
         }
         catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
         {
