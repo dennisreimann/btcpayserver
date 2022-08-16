@@ -20,7 +20,7 @@
 <partial name="_Nav" model="Model.Wallet"/>
 
 <div class="row">
-    <div class="col-xxl-constrain col-xl-8">
+    <div class="col-xxl-constrain">
         <p>Give other registered BTCPay Server users access to your wallet.</p>
 
         @if (!ViewContext.ModelState.IsValid)
@@ -38,7 +38,7 @@
                     <select asp-for="AccessKey.Level" asp-items="@accessLevelOptions" class="form-select"></select>
                 </div>
                 <div>
-                    <button type="submit" role="button" class="btn btn-primary">Add User</button>
+                    <button type="submit" role="button" class="btn btn-primary" id="LNbank-CreateAccessKey">Create Access Key</button>
                 </div>
             </div>
         </form>

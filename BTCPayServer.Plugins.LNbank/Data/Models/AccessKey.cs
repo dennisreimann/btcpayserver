@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
@@ -38,21 +39,17 @@ public class AccessKey
     {
         builder
             .Entity<AccessKey>()
-            .HasIndex(o => o.WalletId);
+            .HasIndex(o => new { o.WalletId, o.UserId })
+            .IsUnique();
         
         builder
             .Entity<AccessKey>()
             .HasOne(o => o.Wallet)
             .WithMany(w => w.AccessKeys)
             .OnDelete(DeleteBehavior.Cascade);
-        
-        builder
-            .Entity<AccessKey>()
-            .HasIndex(o => o.UserId);
-        
+
         builder.Entity<AccessKey>()
             .Property(e => e.Level)
-            .HasConversion<string>()
-            .HasDefaultValue(AccessLevel.Admin);
+            .HasConversion<string>();
     }
 }

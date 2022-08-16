@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using BTCPayServer.Abstractions.Models;
 using BTCPayServer.Lightning;
+using BTCPayServer.Plugins.LNbank.Data.Models;
 using NBitcoin;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
@@ -119,7 +121,7 @@ namespace BTCPayServer.Tests
                 var invoice = await s.Server.CustomerLightningD.CreateInvoice(amount, memo, TimeSpan.FromHours(1));
                 
                 s.Driver.FindElement(By.Id("LNbank-WalletSend")).Click();
-                s.Driver.FindElement(By.Id("PaymentRequest")).SendKeys(invoice.BOLT11);
+                s.Driver.FindElement(By.Id("Destination")).SendKeys(invoice.BOLT11);
                 s.Driver.FindElement(By.Id("LNbank-Decode")).Click();
                 
                 // Confirm
@@ -147,6 +149,102 @@ namespace BTCPayServer.Tests
                 Assert.Contains($"{amountSettled.ToUnit(LightMoneyUnit.Satoshi)} sats", settledEl.Text);
                 Assert.Contains($"{balance.ToUnit(LightMoneyUnit.Satoshi)} sats", s.Driver.FindElement(By.Id("LNbank-WalletBalance")).Text);
             }
+        }
+        
+        [Fact(Timeout = TestTimeout)]
+        [Trait("Lightning", "Lightning")]
+        public async Task CanUseLNbankAccessKeys()
+        {
+            using var s = CreateSeleniumTester();
+            
+            s.Server.ActivateLightning(LightningConnectionType.CLightning);
+            await s.StartAsync();
+            
+            s.GoToRegister();
+            var user = s.RegisterNewUser();
+            
+            s.GoToRegister();
+            var admin = s.RegisterNewUser(true);
+            
+            // Create new wallet
+            s.Driver.FindElement(By.Id("Nav-LNbank")).Click();
+            var walletName = "AccessKeys" + RandomUtils.GetUInt64();
+            s.Driver.FindElement(By.Id("Wallet_Name")).SendKeys(walletName);
+            s.Driver.FindElement(By.Id("LNbank-Create")).Click();
+            Assert.Contains("Wallet successfully created.", s.FindAlertMessage().Text);
+            
+            s.Driver.FindElement(By.Id("LNbank-WalletSettings")).Click();
+            var walletId = s.Driver.FindElement(By.Id("LNbank-WalletId")).Text;
+            var walletNavId = $"Nav-LNbank-Wallet-{walletId}";
+            
+            // Check if the user sees it
+            s.Logout();
+            s.LogIn(user);
+            s.Driver.AssertElementNotFound(By.Id(walletNavId));
+            
+            void SetAccessLevel(AccessLevel level)
+            {
+                s.Logout();
+                s.LogIn(admin);
+                s.Driver.FindElement(By.Id(walletNavId)).Click();
+                s.Driver.FindElement(By.Id("LNbank-WalletSettings")).Click();
+                s.Driver.FindElement(By.Id("SectionNav-WalletAccessKeys")).Click();
+                s.Driver.FindElement(By.Id("AccessKey_Email")).SendKeys(user);
+                var levelSelect = new SelectElement(s.Driver.FindElement(By.Id("AccessKey_Level")));
+                levelSelect.SelectByValue(level.ToString());
+                s.Driver.FindElement(By.Id("LNbank-CreateAccessKey")).Click();
+                Assert.Contains("Access key added successfully.", s.FindAlertMessage().Text);
+                
+                // Switch user
+                s.Logout();
+                s.LogIn(user);
+                s.Driver.FindElement(By.Id(walletNavId)).Click();
+            }
+            
+            // Add read-only access key for user
+            SetAccessLevel(AccessLevel.ReadOnly);
+            
+            s.Driver.AssertElementNotFound(By.Id("LNbank-WalletSend"));
+            s.Driver.AssertElementNotFound(By.Id("LNbank-WalletReceive"));
+            s.Driver.AssertElementNotFound(By.Id("LNbank-WalletSettings"));
+            
+            // Update access key for user: Invoice
+            SetAccessLevel(AccessLevel.Invoice);
+            
+            s.Driver.AssertElementNotFound(By.Id("LNbank-WalletSend"));
+            s.Driver.AssertElementNotFound(By.Id("LNbank-WalletSettings"));
+            
+            // Receive is allowed now
+            var description = "My invoice";
+            s.Driver.FindElement(By.Id("LNbank-WalletReceive")).Click();
+            s.Driver.FindElement(By.Id("Description")).SendKeys(description);
+            s.Driver.SetCheckbox(By.Id("AttachDescription"), true);
+            s.Driver.FindElement(By.Id("Amount")).Clear();
+            s.Driver.FindElement(By.Id("Amount")).SendKeys("21");
+            s.Driver.FindElement(By.Id("LNbank-CreateInvoice")).Click();
+            Assert.Contains(description, s.Driver.FindElement(By.Id("LNbank-TransactionDescription")).Text);
+            Assert.Contains("21 sats unpaid", s.Driver.FindElement(By.Id("LNbank-TransactionAmount")).Text);
+            var bolt11 = s.Driver.FindElement(By.Id("LNbank-CopyPaymentRequest")).GetAttribute("data-clipboard");
+            Assert.StartsWith("ln", bolt11);
+            
+            // Update access key for user: Send
+            SetAccessLevel(AccessLevel.Send);
+            
+            s.Driver.AssertElementNotFound(By.Id("LNbank-WalletSettings"));
+            
+            // Send is allowed now
+            s.Driver.FindElement(By.Id("LNbank-WalletSend")).Click();
+            s.Driver.FindElement(By.Id("Destination")).SendKeys(bolt11);
+            s.Driver.FindElement(By.Id("LNbank-Decode")).Click();
+            Assert.Contains(description, s.Driver.FindElement(By.Id("Description")).GetAttribute("value"));
+            Assert.Contains("21 sats", s.Driver.FindElement(By.Id("LNbank-Amount")).Text);
+            s.Driver.FindElement(By.Id("LNbank-Send")).Click();
+            Assert.Contains("Insufficient balance: 0 sats — tried to send 21 sats.", s.FindAlertMessage(StatusMessageModel.StatusSeverity.Error).Text);
+            
+            // Update access key for user: Send
+            SetAccessLevel(AccessLevel.Admin);
+            
+            s.Driver.FindElement(By.Id("LNbank-WalletSettings")).Click();
         }
     }
 }
