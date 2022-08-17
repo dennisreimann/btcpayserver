@@ -10,7 +10,7 @@ Users can create separate Lightning wallets and use them to send and receive Lig
 * "Uncle Jim" mode: Give access to your friends and family.
 * Use individual LNbank wallets for stores and separate the Lightning accounting.
 * Use LNbank wallets individually, without having them tied to a store.
-* Share access to LNbank wallets between multiple users with differenet access levels.
+* Share access to LNbank wallets between multiple users with different access levels.
 
 ## Technicalities
 
@@ -30,7 +30,7 @@ When using LNbank on a third-party instance whose owner you don't know, mitigate
 
 ## Features and Compatibility
 
-* Send to BOLT11 payment requests, as well as LNURL and Ligthning Address.
+* Send to BOLT11 payment requests, as well as LNURL and Lightning Address.
 * LNbank offers a LNDhub-compatible API, wallets are usable with BlueWallet, Zeus and Alby.
 * Use the Greenfield API to create and manage LNbank wallets.
 
