@@ -17,7 +17,7 @@ using Newtonsoft.Json;
 
 namespace BTCPayServer.Plugins.LNbank.Controllers;
 
-[Route("/plugins/lnbank/export")]
+[Route("~/plugins/lnbank/[controller]")]
 public class ExportController : Controller
 {
     private readonly WalletRepository _walletRepository;
