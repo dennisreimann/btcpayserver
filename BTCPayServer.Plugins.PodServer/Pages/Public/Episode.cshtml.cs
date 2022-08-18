@@ -8,12 +8,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace BTCPayServer.Plugins.PodServer.Pages.Public;
 
 [AllowAnonymous]
-public class EpisodeModel : BasePageModel
+public class PublicEpisodeModel : BasePageModel
 {
     public Podcast Podcast { get; set; }
     public Episode Episode { get; set; }
 
-    public EpisodeModel(UserManager<ApplicationUser> userManager,
+    public PublicEpisodeModel(UserManager<ApplicationUser> userManager,
         PodcastService podcastService) : base(userManager, podcastService) {}
 
     public async Task<IActionResult> OnGetAsync(string episodeId)

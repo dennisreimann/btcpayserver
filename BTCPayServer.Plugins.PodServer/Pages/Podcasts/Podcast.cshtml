@@ -2,16 +2,16 @@
 @using System.Globalization
 @using BTCPayServer.Abstractions.Contracts
 @model BTCPayServer.Plugins.PodServer.Pages.Podcasts.PodcastModel
-@inject IFileService _fileService
+@inject IFileService FileService
 
 @{
     ViewData.SetActivePage(PodServerNavPages.Podcast, Model.Podcast.Title, Model.Podcast.PodcastId);
 }
 
 <div class="sticky-header-setup"></div>
-<div class="sticky-header d-sm-flex align-items-center justify-content-between">
+<div class="sticky-header d-flex flex-wrap align-items-center justify-content-between gap-3">
     <h2 class="mb-0">@ViewData["Title"]</h2>
-    <div class="d-flex gap-3 mt-3 mt-sm-0">
+    <div class="d-flex gap-3">
         <a asp-page="/Episodes/Create" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary" role="button" id="CreateEpisode">
             Create an episode
         </a>
@@ -23,16 +23,15 @@
 
 <partial name="_StatusMessage" />
 
-
 <div class="d-lg-flex gap-3">
     @if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
     {
-        <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+        <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
     }
     <div class="description">
         @Html.Raw(Model.Podcast.Description)
         
-        <a asp-page="/Public/Podcast" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-sm btn-secondary mt-3" role="button">Public Page</a>
+        <a asp-page="/Public/Podcast" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-sm btn-secondary" role="button">Public Page</a>
     </div>
 </div>
 
@@ -69,7 +68,7 @@
                     <td class="text-end">
                         @if (episode.IsPublished)
                         {
-                            <a asp-page="/Episodes/Public" asp-route-episodeId="@episode.EpisodeId" class="podcast-view" target="episode_@episode.EpisodeId">Public Page</a>
+                            <a asp-page="/Public/Episode" asp-route-episodeId="@episode.EpisodeId" class="podcast-view" target="episode_@episode.EpisodeId">Public Page</a>
                             <span> - </span>
                         }
                         <a asp-page="/Episodes/Edit" asp-route-podcastId="@episode.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode-edit">Edit</a>

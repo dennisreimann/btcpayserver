@@ -32,5 +32,10 @@ public class Enclosure
     
     internal static void OnModelCreating(ModelBuilder builder)
     {
+        builder
+            .Entity<Enclosure>()
+            .HasOne(e => e.Episode)
+            .WithMany(s => s.Enclosures)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

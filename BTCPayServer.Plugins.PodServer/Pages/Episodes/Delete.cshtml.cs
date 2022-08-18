@@ -52,7 +52,7 @@ public class DeleteModel : BasePageModel
         if (Episode == null) return NotFound();
 
         await PodcastService.RemoveEpisode(Episode);
-        TempData[WellKnownTempData.SuccessMessage] = "Episode removed.";
+        TempData[WellKnownTempData.SuccessMessage] = "Episode successfully deleted.";
 
         return RedirectToPage("/Podcasts/Podcast", new { podcastId = Podcast.PodcastId });
     }

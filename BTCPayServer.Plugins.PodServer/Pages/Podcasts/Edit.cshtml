@@ -1,5 +1,7 @@
 @page "/plugins/podserver/podcasts/{podcastId}/edit"
 @using BTCPayServer.Abstractions.Contracts
+@using BTCPayServer.Abstractions.Models
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model BTCPayServer.Plugins.PodServer.Pages.Podcasts.EditModel
 @inject IFileService _fileService
 
@@ -19,11 +21,11 @@
 <form method="post" enctype="multipart/form-data">
     <div class="sticky-header-setup"></div>
     <div class="sticky-header mb-l">
-        <div class="d-sm-flex align-items-center justify-content-between mb-2 mb-lg-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2 mb-lg-4">
             <h2 class="mb-0">
                 <a asp-page="./Podcast" asp-route-podcastId="@Model.Podcast.PodcastId" class="unobtrusive-link">@ViewData["Title"]</a>
             </h2>
-            <button type="submit" class="btn btn-primary mt-3 mt-sm-0" id="Save">Save</button>
+            <button type="submit" class="btn btn-primary" id="Save">Save</button>
         </div>
         <partial name="_PodcastSettingsNav" model="Model.Podcast.PodcastId"/>
     </div>
@@ -92,5 +94,7 @@
 
 <h3 class="mt-5 mb-4">Additional Actions</h3>
 <div class="d-flex gap-3">
-    <a id="DeletePodcast" class="btn btn-outline-danger" asp-page="./Delete" asp-route-podcastId="@Model.Podcast.PodcastId">Delete this podcast</a>
+    <a id="DeletePodcast" class="btn btn-outline-danger" asp-page="./Delete" asp-route-podcastId="@Model.Podcast.PodcastId" data-bs-toggle="modal" data-bs-target="#ConfirmModal" data-description="The podcast <strong>@Model.Podcast.Title</strong> will be deleted." data-confirm-input="DELETE">Delete this podcast</a>
 </div>
+
+<partial name="_Confirm" model="@(new ConfirmModel("Delete podcast", $"The podcast \"{Model.Podcast.Title}\" will be deleted. Are you sure?", "Delete"))" />

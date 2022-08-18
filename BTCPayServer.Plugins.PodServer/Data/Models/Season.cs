@@ -38,11 +38,5 @@ public class Season
             .HasOne(e => e.Podcast)
             .WithMany(p => p.Seasons)
             .OnDelete(DeleteBehavior.Cascade);
-            
-        builder
-            .Entity<Season>()
-            .HasOne(o => o.Podcast)
-            .WithMany(w => w.Seasons)
-            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -41,7 +41,7 @@ public class DeleteModel : BasePageModel
         if (Podcast == null) return NotFound();
 
         await PodcastService.RemovePodcast(Podcast);
-        TempData[WellKnownTempData.SuccessMessage] = "Podcast removed.";
+        TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully deleted.";
 
         return RedirectToPage("./Index");
     }

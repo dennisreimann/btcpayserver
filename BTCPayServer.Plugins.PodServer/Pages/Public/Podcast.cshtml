@@ -1,7 +1,7 @@
 @page "/plugins/podserver/podcast/{podcastId}"
 @using System.Globalization
 @using BTCPayServer.Abstractions.Contracts
-@model PodcastModel
+@model PublicPodcastModel
 @inject IFileService _fileService
 
 @{
@@ -9,11 +9,19 @@
     ViewData.SetActivePage(PodServerNavPages.Public, Model.Podcast.Title, Model.Podcast.PodcastId);
 }
 
+@section PageHeadContent {
+    <partial name="_LayoutPodServerHead" />
+}
+
+@section PageFootContent {
+    <partial name="_LayoutPodServerFoot" />
+}
+
 <div class="sticky-header-setup"></div>
-<div class="sticky-header d-sm-flex align-items-center justify-content-between">
+<div class="sticky-header d-flex flex-wrap align-items-center justify-content-between gap-3">
     <h1 class="mb-0">@ViewData["Title"]</h1>
-    <div class="d-flex gap-3 mt-3 mt-sm-0">
-        <a asp-page="/Public/Podcast" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0" role="button" id="Feed" target="feed_@Model.Podcast.PodcastId">Feed</a>
+    <div class="d-flex gap-3">
+        <a asp-controller="Feed" asp-action="" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0" role="button" id="Feed" target="feed_@Model.Podcast.PodcastId">Feed</a>
     </div>
 </div>
 

@@ -36,6 +36,17 @@ public class EditModel : BasePageModel
         if (Episode == null) return NotFound();
 
         SeasonItems = await GetSeasonItems(Episode.PodcastId);
+
+        if (Episode.Number == null)
+        {
+            var episodes = await PodcastService.GetEpisodes(new EpisodesQuery
+            {
+                PodcastId = podcastId
+            });
+            var highestNumber = episodes.MaxBy(e => e.Number)?.Number;
+            Episode.Number = highestNumber + 1;
+        }
+        
         return Page();
     }
 
@@ -89,9 +100,10 @@ public class EditModel : BasePageModel
                 var storedFile = await _fileService.AddFile(EnclosureFile, UserId);
                 var enclosure = new Enclosure
                 {
+                    EpisodeId = Episode.EpisodeId,
                     FileId = storedFile.Id,
                     Type = EnclosureFile.ContentType,
-                    Length = EnclosureFile.Length,
+                    Length = EnclosureFile.Length
                 };
                 Episode.Enclosures.Add(enclosure);
             }
@@ -101,7 +113,7 @@ public class EditModel : BasePageModel
             }
         }
 
-        if (!await TryUpdateModelAsync(
+        if (await TryUpdateModelAsync(
             Episode, 
             "episode",
             e => e.Title,
@@ -112,17 +124,17 @@ public class EditModel : BasePageModel
             e => e.PublishedAt,
             e => e.Enclosures))
         {
-            return Page();
+            Episode.LastUpdatedAt = DateTimeOffset.UtcNow; 
+            await PodcastService.AddOrUpdateEpisode(Episode);
+            if (TempData[WellKnownTempData.ErrorMessage] is null)
+            {
+                TempData[WellKnownTempData.SuccessMessage] = "Episode successfully updated.";
+            }
+        
+            return RedirectToPage("./Episode", new { podcastId = Episode.PodcastId, episodeId = Episode.EpisodeId });
         }
         
-        Episode.LastUpdatedAt = DateTimeOffset.UtcNow; 
-        await PodcastService.AddOrUpdateEpisode(Episode);
-        if (TempData[WellKnownTempData.ErrorMessage] is null)
-        {
-            TempData[WellKnownTempData.SuccessMessage] = "Episode successfully updated.";
-        }
-        
-        return RedirectToPage("./Episode", new { podcastId = Episode.PodcastId, episodeId = Episode.EpisodeId });
+        return Page();
     }
 
     private async Task<IEnumerable<SelectListItem>> GetSeasonItems(string podcastId)

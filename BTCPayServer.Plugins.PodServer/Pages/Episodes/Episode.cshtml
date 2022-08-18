@@ -2,6 +2,7 @@
 @using BTCPayServer.Abstractions.Contracts
 @using BTCPayServer.Plugins.PodServer.Data.Models
 @using Microsoft.AspNetCore.Mvc.TagHelpers
+@using System.Globalization
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.EpisodeModel
 @inject IFileService FileService
 
@@ -12,9 +13,9 @@
 }
 
 <div class="sticky-header-setup"></div>
-<div class="sticky-header d-sm-flex align-items-center justify-content-between">
+<div class="sticky-header d-flex flex-wrap align-items-center justify-content-between gap-3">
     <h2 class="mb-0">@ViewData["Title"]</h2>
-    <div class="d-flex gap-3 mt-3 mt-sm-0">
+    <div class="d-flex gap-3">
         <a asp-page="./Edit" asp-route-podcastId="@Model.Episode.PodcastId" asp-route-episodeId="@Model.Episode.EpisodeId" class="btn btn-primary order-sm-1" role="button" id="EditEpisode">
             Edit
         </a>
@@ -31,5 +32,55 @@
 {
     <partial name="PodServerPlayer" model="@player"/>
 }
+else if (!string.IsNullOrEmpty(Model.Episode.ImageFileId))
+{
+    <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Episode.ImageFileId))" alt="@Model.Episode.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+}
 
 @Html.Raw(Model.Episode.Description)
+
+<dl class="row">
+    <dt class="col-sm-3 col-xl-2">
+        @Html.DisplayNameFor(model => model.Episode.PublishedAt)
+    </dt>
+    <dd class="col-sm-9 col-xl-10">
+        @if (Model.Episode.PublishedAt.HasValue)
+        {
+            <time datetime="@Model.Episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
+                @Model.Episode.PublishedAt?.ToTimeAgo()
+            </time>
+        }
+        else
+        {
+            <span>No publish data set yet</span>   
+        }
+    </dd>
+    <dt class="col-sm-3 col-xl-2">
+        @Html.DisplayNameFor(model => model.Episode.LastUpdatedAt)
+    </dt>
+    <dd class="col-sm-9 col-xl-10">
+        <time datetime="@Model.Episode.LastUpdatedAt.ToString("o", CultureInfo.InvariantCulture)">
+            @Model.Episode.LastUpdatedAt.ToTimeAgo()
+        </time>
+    </dd>
+    <dt class="col-sm-3 col-xl-2">
+        @Html.DisplayNameFor(model => model.Episode.Number)
+    </dt>
+    <dd class="col-sm-9 col-xl-10">
+        @(Model.Episode.Number != null ? Model.Episode.Number : "None")
+    </dd>
+    @if (Model.Episode.Season != null)
+    {
+        <dt class="col-sm-3 col-xl-2">
+            @Html.DisplayNameFor(model => model.Episode.Season)
+        </dt>
+        <dd class="col-sm-9 col-xl-10">
+            @Model.Episode.Season.Number
+            @if (!string.IsNullOrEmpty(Model.Episode.Season.Name))
+            {
+                <span>—</span>
+                @Model.Episode.Season.Name
+            }
+        </dd>
+    }
+</dl>

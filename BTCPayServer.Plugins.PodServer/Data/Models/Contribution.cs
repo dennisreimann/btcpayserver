@@ -42,5 +42,17 @@ public class Contribution
             .HasOne(e => e.Podcast)
             .WithMany(p => p.Contributions)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        builder
+            .Entity<Contribution>()
+            .HasOne(e => e.Episode)
+            .WithMany(s => s.Contributions)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        builder
+            .Entity<Contribution>()
+            .HasOne(e => e.Person)
+            .WithMany(s => s.Contributions)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

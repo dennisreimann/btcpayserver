@@ -18,7 +18,7 @@
 <div class="player player--single mb-5">
     @if (imageUrl != null)
     {
-        <a class="player__coverlink" asp-page="/Episodes/Public" asp-route-episodeId="@Model.Episode.EpisodeId">
+        <a class="player__coverlink" asp-page="/Public/Episodes" asp-route-episodeId="@Model.Episode.EpisodeId">
             <img class="player__cover" data-amplitude-song-info="cover_art_url" data-amplitude-main-song-info="true" src="@imageUrl" alt="@Model.Episode.Title">
         </a>
     }
