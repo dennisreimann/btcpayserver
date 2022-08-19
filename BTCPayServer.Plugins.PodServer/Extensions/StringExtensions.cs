@@ -5,7 +5,7 @@ namespace BTCPayServer.Plugins.PodServer.Extensions;
 
 public static class StringExtensions
 {
-    public static string GenerateSlug(this string phrase)
+    public static string Slugify(this string phrase)
     {
         string str = phrase.ToLower();
         // invalid chars

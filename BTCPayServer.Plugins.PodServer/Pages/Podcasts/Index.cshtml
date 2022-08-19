@@ -39,9 +39,9 @@
                     </a>
                 </td>
                 <td class="text-end">
-                    <a asp-page="/Public/Podcast" asp-route-podcastId="@podcast.PodcastId" class="podcast-view" target="podcast_@podcast.PodcastId">Public Page</a>
+                    <a asp-page="/Public/Podcast" asp-route-podcastSlug="@podcast.Slug" class="podcast-view" target="_blank">Public Page</a>
                     <span> - </span>
-                    <a asp-page="./Edit" asp-route-podcastId="@podcast.PodcastId" class="podcast-edit">Settings</a>
+                    <a asp-page="./Edit" asp-route-podcastId="@podcast.PodcastId" class="podcast-edit">Edit</a>
                 </td>
             </tr>
         }

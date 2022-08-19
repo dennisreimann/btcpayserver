@@ -1,4 +1,4 @@
-@page "/plugins/podserver/episode/{episodeId}"
+@page "/plugins/podserver/podcast/{podcastSlug}/{episodeSlug}"
 @using BTCPayServer.Plugins.PodServer.Data.Models
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @using BTCPayServer.Abstractions.Contracts
@@ -47,7 +47,8 @@
 <div class="sticky-header d-flex flex-wrap align-items-center justify-content-between gap-3">
     <h1 class="mb-0">@Model.Episode.Title</h1>
     <div class="d-flex gap-3">
-        <a asp-page="/Public/Podcast" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-secondary mt-3 mt-sm-0">@Model.Podcast.Title</a>
+        <a asp-page="/Public/Podcast" asp-route-podcastSlug="@Model.Podcast.Slug" class="btn btn-primary mt-3 mt-sm-0">@Model.Podcast.Title</a>
+        <a asp-controller="Feed" asp-action="Feed" asp-route-podcastSlug="@Model.Podcast.Slug" class="btn btn-secondary" role="button" id="Feed">Subscribe</a>
     </div>
 </div>
 

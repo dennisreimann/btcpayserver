@@ -25,6 +25,9 @@ public class Podcast
     // Properties
     [Required]
     public string Title { get; set; }
+
+    [DisplayName("Link ID")]
+    public string Slug { get; set; }
     
     [Required]
     public string Description { get; set; }
@@ -48,5 +51,9 @@ public class Podcast
     
     internal static void OnModelCreating(ModelBuilder builder)
     {
+        builder
+            .Entity<Podcast>()
+            .HasIndex(p => p.Slug)
+            .IsUnique();
     }
 }

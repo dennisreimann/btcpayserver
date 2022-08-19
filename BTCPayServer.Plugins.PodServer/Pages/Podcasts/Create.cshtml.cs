@@ -2,11 +2,13 @@ using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client;
 using BTCPayServer.Data;
 using BTCPayServer.Plugins.PodServer.Data.Models;
+using BTCPayServer.Plugins.PodServer.Extensions;
 using BTCPayServer.Plugins.PodServer.Services.Imports;
 using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace BTCPayServer.Plugins.PodServer.Pages.Podcasts;
 
@@ -31,7 +33,7 @@ public class CreateModel : BasePageModel
 
         Podcast = new Podcast();
 
-        if (!await TryUpdateModelAsync(
+        if (await TryUpdateModelAsync(
             Podcast, 
             "podcast",
             p => p.Title,
@@ -40,14 +42,16 @@ public class CreateModel : BasePageModel
             p => p.Language,
             p => p.Category))
         {
-            return Page();
+            Podcast.Slug = Podcast.Title.Slugify();
+                
+            await PodcastService.AddOrUpdatePodcast(Podcast);
+            await PodcastService.AddEditor(new Editor(UserId, Podcast.PodcastId, EditorRole.Admin));
+        
+            TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully created.";
+            return RedirectToPage("./Index", new { podcastId = Podcast.PodcastId });
         }
 
-        await PodcastService.AddOrUpdatePodcast(Podcast);
-        await PodcastService.AddEditor(new Editor(UserId, Podcast.PodcastId, EditorRole.Admin));
-        
-        TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully created.";
-        return RedirectToPage("./Index", new { podcastId = Podcast.PodcastId });
+        return Page();
     }
     
     public async Task<IActionResult> OnPostImportAsync([FromForm] IFormFile rssFile, [FromServices] FeedImporter importer)

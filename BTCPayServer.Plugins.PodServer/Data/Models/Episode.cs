@@ -14,6 +14,9 @@ public class Episode
     [Required]
     public string Title { get; set; }
     
+    [DisplayName("Link ID")]
+    public string Slug { get; set; }
+    
     [Required]
     public string Description { get; set; }
     
@@ -64,5 +67,10 @@ public class Episode
             .HasOne(e => e.Season)
             .WithMany(s => s.Episodes)
             .OnDelete(DeleteBehavior.SetNull);
+        
+        builder
+            .Entity<Episode>()
+            .HasIndex(e => new { e.PodcastId, e.Slug })
+            .IsUnique();
     }
 }

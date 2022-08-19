@@ -25,10 +25,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
-            UserId = UserId,
-            PodcastId = podcastId
-        });
+        Podcast = await GetPodcast(podcastId);
         if (Podcast == null) return NotFound();
         
         return Page();
@@ -36,10 +33,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
-            UserId = UserId,
-            PodcastId = podcastId
-        });
+        Podcast = await GetPodcast(podcastId);
         if (Podcast == null) return NotFound();
         
         if (!ModelState.IsValid) return Page();
@@ -74,6 +68,7 @@ public class EditModel : BasePageModel
                 p => p.Owner,
                 p => p.Email,
                 p => p.Url,
+                p => p.Slug,
                 p => p.ImageFileId))
         {
             return Page();
@@ -86,5 +81,13 @@ public class EditModel : BasePageModel
         }
         
         return RedirectToPage("./Podcast", new { podcastId = Podcast.PodcastId });
+    }
+
+    private async Task<Podcast> GetPodcast(string podcastId)
+    {
+        return await PodcastService.GetPodcast(new PodcastsQuery {
+            UserId = UserId,
+            PodcastId = podcastId
+        });
     }
 }

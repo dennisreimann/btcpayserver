@@ -28,11 +28,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId, string episodeId)
     {
-        Episode = await PodcastService.GetEpisode(new EpisodesQuery
-        {
-            PodcastId = podcastId,
-            EpisodeId = episodeId,
-        });
+        Episode = await GetEpisode(podcastId, episodeId);
         if (Episode == null) return NotFound();
 
         SeasonItems = await GetSeasonItems(Episode.PodcastId);
@@ -52,11 +48,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId, string episodeId)
     {
-        Episode = await PodcastService.GetEpisode(new EpisodesQuery
-        {
-            PodcastId = podcastId,
-            EpisodeId = episodeId
-        });
+        Episode = await GetEpisode(podcastId, episodeId);
         if (Episode == null) return NotFound();
         
         SeasonItems = await GetSeasonItems(Episode.PodcastId);
@@ -135,6 +127,16 @@ public class EditModel : BasePageModel
         }
         
         return Page();
+    }
+
+    private async Task<Episode> GetEpisode(string podcastId, string episodeId)
+    {
+        return await PodcastService.GetEpisode(new EpisodesQuery
+        {
+            PodcastId = podcastId,
+            EpisodeId = episodeId,
+            IncludeEnclosures = true
+        });
     }
 
     private async Task<IEnumerable<SelectListItem>> GetSeasonItems(string podcastId)

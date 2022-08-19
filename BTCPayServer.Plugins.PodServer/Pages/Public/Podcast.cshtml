@@ -1,12 +1,15 @@
-@page "/plugins/podserver/podcast/{podcastId}"
-@using System.Globalization
+@page "/plugins/podserver/podcast/{podcastSlug}"
 @using BTCPayServer.Abstractions.Contracts
+@using BTCPayServer.Abstractions.Services
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using System.Globalization
 @model PublicPodcastModel
 @inject IFileService _fileService
 
 @{
     Layout = "_LayoutSimple";
     ViewData.SetActivePage(PodServerNavPages.Public, Model.Podcast.Title, Model.Podcast.PodcastId);
+    var imageUrl = string.IsNullOrEmpty(Model.Podcast.ImageFileId) ? null : await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId);
 }
 
 @section PageHeadContent {
@@ -21,13 +24,13 @@
 <div class="sticky-header d-flex flex-wrap align-items-center justify-content-between gap-3">
     <h1 class="mb-0">@ViewData["Title"]</h1>
     <div class="d-flex gap-3">
-        <a asp-controller="Feed" asp-action="" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0" role="button" id="Feed" target="feed_@Model.Podcast.PodcastId">Feed</a>
+        <a asp-controller="Feed" asp-action="Feed" asp-route-podcastSlug="@Model.Podcast.Slug" class="btn btn-secondary" role="button" id="Feed">Subscribe</a>
     </div>
 </div>
 
-@if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
+@if (imageUrl != null)
 {
-    <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+    <img src="@imageUrl" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
 }
 
 @Html.Raw(Model.Podcast.Description)

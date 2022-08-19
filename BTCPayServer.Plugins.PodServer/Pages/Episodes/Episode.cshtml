@@ -21,7 +21,7 @@
         </a>
         @if (Model.Episode.IsPublished)
         {
-            <a class="btn btn-secondary" asp-page="/Public/Episode" asp-route-episodeId="@Model.Episode.EpisodeId" id="ViewEpisode" target="episode_@Model.Episode.EpisodeId">View</a>
+            <a class="btn btn-secondary" asp-page="/Public/Episode" asp-route-podcastSlug="@Model.Podcast.Slug" asp-route-episodeSlug="@Model.Episode.Slug" id="ViewEpisode" target="_blank">Public Page</a>
         }
     </div>
 </div>

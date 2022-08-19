@@ -12,6 +12,7 @@ namespace BTCPayServer.Plugins.PodServer.Pages.Episodes;
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
 public class EpisodeModel : BasePageModel
 {
+    public Podcast Podcast { get; set; }
     public Episode Episode { get; set; }
 
     public EpisodeModel(UserManager<ApplicationUser> userManager,
@@ -19,6 +20,13 @@ public class EpisodeModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId, string episodeId)
     {
+        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+            UserId = UserId,
+            PodcastId = podcastId,
+            IncludeEpisodes = true
+        });
+        if (Podcast == null) return NotFound();
+        
         Episode = await PodcastService.GetEpisode(new EpisodesQuery {
             PodcastId = podcastId,
             EpisodeId = episodeId,

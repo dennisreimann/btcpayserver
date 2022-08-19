@@ -30,10 +30,10 @@
     }
     <div class="description">
         @Html.Raw(Model.Podcast.Description)
-        
-        <a asp-page="/Public/Podcast" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-sm btn-secondary" role="button">Public Page</a>
     </div>
 </div>
+        
+<a asp-page="/Public/Podcast" asp-route-podcastSlug="@Model.Podcast.Slug" class="btn btn-secondary" role="button" target="_blank">Public Page</a>
 
 @if (Model.Episodes.Any())
 {
@@ -68,7 +68,7 @@
                     <td class="text-end">
                         @if (episode.IsPublished)
                         {
-                            <a asp-page="/Public/Episode" asp-route-episodeId="@episode.EpisodeId" class="podcast-view" target="episode_@episode.EpisodeId">Public Page</a>
+                            <a asp-page="/Public/Episode" asp-route-podcastSlug="@Model.Podcast.Slug" asp-route-episodeSlug="@episode.Slug" class="podcast-view" target="_blank">Public Page</a>
                             <span> - </span>
                         }
                         <a asp-page="/Episodes/Edit" asp-route-podcastId="@episode.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode-edit">Edit</a>

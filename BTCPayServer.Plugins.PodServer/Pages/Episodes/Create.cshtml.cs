@@ -2,6 +2,7 @@ using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client;
 using BTCPayServer.Data;
 using BTCPayServer.Plugins.PodServer.Data.Models;
+using BTCPayServer.Plugins.PodServer.Extensions;
 using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -33,25 +34,24 @@ public class CreateModel : BasePageModel
         
         if (!ModelState.IsValid) return Page();
 
-        Episode = new Episode
-        {
-            PodcastId = Podcast.PodcastId
-        };
+        Episode = new Episode { PodcastId = Podcast.PodcastId };
 
-        if (!await TryUpdateModelAsync(
+        if (await TryUpdateModelAsync(
             Episode, 
             "episode",
             e => e.PodcastId,
             e => e.Title,
             e => e.Description))
         {
-            return Page();
+            Episode.Slug = Episode.Title.Slugify();
+            
+            Episode.LastUpdatedAt = DateTimeOffset.UtcNow;
+            await PodcastService.AddOrUpdateEpisode(Episode);
+        
+            TempData[WellKnownTempData.SuccessMessage] = "Episode successfully created.";
+            return RedirectToPage("./Edit", new { podcastId = Podcast.PodcastId, episodeId = Episode.EpisodeId });
         }
         
-        Episode.LastUpdatedAt = DateTimeOffset.UtcNow;
-        await PodcastService.AddOrUpdateEpisode(Episode);
-        
-        TempData[WellKnownTempData.SuccessMessage] = "Episode successfully created.";
-        return RedirectToPage("./Edit", new { podcastId = Podcast.PodcastId, episodeId = Episode.EpisodeId });
+        return Page();
     }
 }

@@ -19,26 +19,28 @@ public class FeedController : Controller
     // https://hamedfathi.me/a-professional-asp.net-core-rss/
     [ResponseCache(Duration = 1200)]
     [Produces("application/rss+xml")]
-    [HttpGet("/plugins/podserver/podcast/{podcastId}/feed")]
-    public async Task<IActionResult> Feed(string podcastId)
+    [HttpGet("/plugins/podserver/podcast/{podcastSlug}/feed")]
+    public async Task<IActionResult> Feed(string podcastSlug)
     {
         var podcast = await _podcastService.GetPodcast(new PodcastsQuery {
-            PodcastId = podcastId
+            Slug = podcastSlug
         });
         if (podcast == null) return NotFound();
 
         var episodes = (await _podcastService.GetEpisodes(new EpisodesQuery
         {
-            PodcastId = podcastId, 
+            PodcastId = podcast.PodcastId, 
             OnlyPublished = true
         })).ToList();
 
         var lastUpdated = episodes.FirstOrDefault()?.LastUpdatedAt ?? DateTimeOffset.Now;
+        var podcastUrl = string.IsNullOrEmpty(podcast.Url) ? Url.PageLink("/Public/Podcast", null, new { podcastSlug = podcast.Slug }) : podcast.Url;
+        var podcastUri = string.IsNullOrEmpty(podcastUrl) ? null : new Uri(podcastUrl);
         
         // https://docs.microsoft.com/en-us/dotnet/api/system.servicemodel.syndication.syndicationfeed
-        var feed = new SyndicationFeed(podcast.Title, podcast.Description, new Uri(podcast.Url), podcast.PodcastId, lastUpdated)
+        var feed = new SyndicationFeed(podcast.Title, podcast.Description, podcastUri, podcast.PodcastId, lastUpdated)
         {
-            Copyright = new TextSyndicationContent($"{DateTime.Now.Year} Hamed Fathi"),
+            Copyright = new TextSyndicationContent($"{DateTime.Now.Year} {podcast.Owner}"),
             Items = (from episode in episodes 
                 let episodeUrl = Url.PageLink("Episode", null, new { episodeId = episode.EpisodeId }, HttpContext.Request.Scheme) 
                 let title = episode.Title 

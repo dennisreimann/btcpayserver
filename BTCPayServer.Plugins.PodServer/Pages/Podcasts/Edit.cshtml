@@ -66,6 +66,11 @@
 
             <h3 class="mt-5 mb-3">Additional information</h3>
             <div class="form-group">
+                <label asp-for="Podcast.Slug" class="form-label" data-required></label>
+                <input asp-for="Podcast.Slug" class="form-control">
+                <span asp-validation-for="Podcast.Slug" class="text-danger"></span>
+            </div>
+            <div class="form-group">
                 <label asp-for="Podcast.Owner" class="form-label"></label>
                 <input asp-for="Podcast.Owner" class="form-control">
                 <span asp-validation-for="Podcast.Owner" class="text-danger"></span>

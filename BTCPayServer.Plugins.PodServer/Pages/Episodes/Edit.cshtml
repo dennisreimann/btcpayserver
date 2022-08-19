@@ -24,11 +24,14 @@
 
 <form method="post" enctype="multipart/form-data">
     <div class="sticky-header-setup"></div>
-    <div class="sticky-header d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <h2 class="mb-0">@ViewData["Title"]</h2>
-        <div class="d-flex gap-3">
-            <button type="submit" class="btn btn-primary" id="Save">Save</button>   
+    <div class="sticky-header mb-l">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2 mb-lg-4">
+            <h2 class="mb-0">@ViewData["Title"]</h2>
+            <div class="d-flex gap-3">
+                <button type="submit" class="btn btn-primary" id="Save">Save</button>
+            </div>
         </div>
+        <partial name="_EpisodeSettingsNav" model="(Model.Episode.PodcastId, Model.Episode.EpisodeId)"/>
     </div>
     
     <partial name="_StatusMessage" />
@@ -74,6 +77,11 @@
             }
             
             <h3 class="mt-5 mb-3">Additional information</h3>
+            <div class="form-group">
+                <label asp-for="Episode.Slug" class="form-label" data-required></label>
+                <input asp-for="Episode.Slug" class="form-control">
+                <span asp-validation-for="Episode.Slug" class="text-danger"></span>
+            </div>
             <div class="row g-3">
                 <div class="col col-auto">
                     <div class="form-group">

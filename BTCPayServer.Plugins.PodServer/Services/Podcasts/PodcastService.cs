@@ -40,15 +40,20 @@ public class PodcastService
 
     private IQueryable<Podcast> FilterPodcasts(IQueryable<Podcast> queryable, PodcastsQuery query)
     {
-        if (query.UserId != null)
+        if (!string.IsNullOrEmpty(query.UserId))
         {
             queryable = queryable.Include(podcast => podcast.Editors)
                 .Where(p => p.Editors.SingleOrDefault(e => e.UserId == query.UserId) != null);
         }
 
-        if (query.PodcastId != null)
+        if (!string.IsNullOrEmpty(query.PodcastId))
         {
             queryable = queryable.Where(p => p.PodcastId == query.PodcastId);
+        }
+
+        if (!string.IsNullOrEmpty(query.Slug))
+        {
+            queryable = queryable.Where(p => p.Slug == query.Slug);
         }
     
         if (query.IncludeEpisodes)
@@ -123,7 +128,7 @@ public class PodcastService
 
     private IQueryable<Episode> FilterEpisodes(IQueryable<Episode> queryable, EpisodesQuery query)
     {
-        if (query.PodcastId != null)
+        if (!string.IsNullOrEmpty(query.PodcastId))
         {
             query.IncludePodcast = true;
 
@@ -143,6 +148,11 @@ public class PodcastService
         if (!string.IsNullOrEmpty(query.EpisodeId))
         {
             queryable = queryable.Where(e => e.EpisodeId == query.EpisodeId);
+        }
+        
+        if (!string.IsNullOrEmpty(query.Slug))
+        {
+            queryable = queryable.Where(e => e.Slug == query.Slug);
         }
         
         if (!string.IsNullOrEmpty(query.SeasonId))
