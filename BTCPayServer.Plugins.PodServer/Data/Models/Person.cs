@@ -25,15 +25,22 @@ public class Person
     public string Url { get; set; }
     
     public string ImageFileId { get; set; }
-    
-    public ValueRecipient ValueRecipient { get; set; }
+
+    public ValueRecipient ValueRecipient { get; set; } = new ();
     
     internal static void OnModelCreating(ModelBuilder builder)
     {
         builder
             .Entity<Person>()
-            .HasOne(e => e.Podcast)
+            .HasOne(p => p.Podcast)
             .WithMany(p => p.People)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Person>()
+            .OwnsOne(p => p.ValueRecipient,
+                vr =>
+                    vr.Property(e => e.Type)
+                        .HasConversion<string>());
+
     }
 }

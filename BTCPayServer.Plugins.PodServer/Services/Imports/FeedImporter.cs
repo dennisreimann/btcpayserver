@@ -276,7 +276,7 @@ public class FeedImporter
             PodcastId = podcastId,
             ValueRecipient = new ValueRecipient
             {
-                Type = elem.GetAttribute("type"),
+                Type = Enum.Parse<ValueRecipientType>(elem.GetAttribute("type")),
                 Address = elem.GetAttribute("address"),
                 CustomKey = elem.GetAttribute("customKey"),
                 CustomValue = elem.GetAttribute("customValue")

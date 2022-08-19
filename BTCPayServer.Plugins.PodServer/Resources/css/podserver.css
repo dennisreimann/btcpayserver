@@ -1,4 +1,5 @@
 ﻿.player {
+    --podserver-accent: #f7931a;
     display: flex;
     border-radius: var(--btcpay-space-m);
     overflow: hidden;
@@ -19,7 +20,7 @@
 }
 .player__progress {
     display: block;
-    background-color: var(--btcpay-secondary);
+    background-color: var(--btcpay-body-bg-medium);
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
@@ -28,6 +29,16 @@
     cursor: pointer;
     border: none;
 }
+.player ::-ms-fill {
+    background-color: var(--podserver-accent);
+}
+.player ::-moz-progress-bar {
+    background-color: var(--podserver-accent);
+}
+.player ::-webkit-progress-value {
+    background-color: var(--podserver-accent);
+}
+
 .player__time, .player__links {
     display: flex;
     justify-content: space-between;
@@ -73,6 +84,10 @@
     flex: 1;
     text-align: left;
 }
+.player__info a,
+.player__info a:hover {
+    color: var(--podserver-accent);
+}
 .player__album {
     color: var(--btcpay-body-text-muted);
 }
@@ -86,6 +101,9 @@
     color: var(--btcpay-body-text-muted);
     font-size: var(--btcpay-font-size-s);
 }
+.player__download:hover {
+    color: var(--podserver-accent);
+}
 .player__download svg {
     width: .75rem;
     height: .75rem;
@@ -94,7 +112,7 @@
 
 @media not all and (hover: none) {
     .player__button__icon--play:hover, .player__button__icon--pause:hover {
-        color: var(--btcpay-primary-accent);
+        color: var(--podserver-accent);
     }
     .player__info a:hover .player__album {
         color: inherit;
@@ -108,11 +126,11 @@
     }
 
     .player__coverlink {
-        width: 100%;
+        flex: 0 0 100%;
     }
 }
 @media screen and (min-width: 600px) {
     .player__coverlink {
-        width: 33.3%;
+        flex: 0 0 40%;
     }
 }

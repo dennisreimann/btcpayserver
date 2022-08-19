@@ -8,6 +8,7 @@ using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.StaticFiles;
 
 namespace BTCPayServer.Plugins.PodServer.Pages.People;
@@ -27,10 +28,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId, string personId)
     {
-        Person = await PodcastService.GetPerson(new PeopleQuery {
-            PodcastId = podcastId,
-            PersonId = personId,
-        });
+        Person = await GetPerson(podcastId, personId);
         if (Person == null) return NotFound();
         
         return Page();
@@ -38,11 +36,7 @@ public class EditModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId, string personId)
     {
-        Person = await PodcastService.GetPerson(new PeopleQuery
-        {
-            PodcastId = podcastId, 
-            PersonId = personId
-        });
+        Person = await GetPerson(podcastId, personId);
         if (Person == null) return NotFound();
 
         if (!ModelState.IsValid) return Page();
@@ -66,21 +60,30 @@ public class EditModel : BasePageModel
             }
         }
         
-        if (!await TryUpdateModelAsync(Person,
+        if (await TryUpdateModelAsync(Person,
                 "person",
             p => p.Name,
             p => p.Url,
-            e => e.ImageFileId))
+            p => p.ImageFileId,
+                p => p.ValueRecipient))
         {
-            return Page();
+            await PodcastService.AddOrUpdatePerson(Person);
+            if (TempData[WellKnownTempData.ErrorMessage] is null)
+            {
+                TempData[WellKnownTempData.SuccessMessage] = "Person successfully updated.";
+            }
+        
+            return RedirectToPage("./Index", new { podcastId = Person.PodcastId });
         }
         
-        await PodcastService.AddOrUpdatePerson(Person);
-        if (TempData[WellKnownTempData.ErrorMessage] is null)
-        {
-            TempData[WellKnownTempData.SuccessMessage] = "Person successfully updated.";
-        }
-        
-        return RedirectToPage("./Index", new { podcastId = Person.PodcastId });
+        return Page();
+    }
+    
+    private async Task<Person> GetPerson(string podcastId, string personId)
+    {
+        return await PodcastService.GetPerson(new PeopleQuery {
+            PodcastId = podcastId,
+            PersonId = personId
+        });
     }
 }

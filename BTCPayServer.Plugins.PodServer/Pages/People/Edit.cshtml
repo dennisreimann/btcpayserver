@@ -1,7 +1,9 @@
 @page "/plugins/podserver/podcasts/{podcastId}/people/{personId}/edit"
 @using BTCPayServer.Abstractions.Contracts
+@using BTCPayServer.Plugins.PodServer.Data.Models
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model BTCPayServer.Plugins.PodServer.Pages.People.EditModel
-@inject IFileService _fileService
+@inject IFileService FileService
 
 @{
     ViewData.SetActivePage(PodServerNavPages.People, $"Edit {Model.Person.Name}", Model.Person.PodcastId);
@@ -45,8 +47,43 @@
             </div>
             @if (!string.IsNullOrEmpty(Model.Person.ImageFileId))
             {
-                <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Person.ImageFileId))" alt="@Model.Person.Name" style="max-width: 200px;max-height: 200px;" class="d-block mt-3"/>
+                <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Person.ImageFileId))" alt="@Model.Person.Name" style="max-width: 200px;max-height: 200px;" class="d-block mt-3"/>
             }
+            
+            <h3 class="mt-5 mb-3">Value information</h3>
+            
+            <div id="ValueTypeTablist" class="nav btcpay-pills align-items-center justify-content-start mt-4 mb-3" role="tablist">
+                <input asp-for="Person.ValueRecipient.Type" value="@ValueRecipientType.Node" type="radio" id="ValueRecipientType-@ValueRecipientType.Node" data-bs-toggle="pill" data-bs-target="#ValueRecipientNode" role="tab" aria-controls="ValueRecipientNode" aria-selected="@(Model.Person.ValueRecipient.Type == ValueRecipientType.Node ? "true" : "false")">
+                <label asp-for="Person.ValueRecipient.Type" for="@($"ValueRecipientType-{ValueRecipientType.Node}")">Own node</label>
+                
+                <input asp-for="Person.ValueRecipient.Type" value="@ValueRecipientType.LNbank" type="radio" id="ValueRecipientType-@ValueRecipientType.LNbank" data-bs-toggle="pill" data-bs-target="#ValueRecipientLNbank" role="tab" aria-controls="ValueRecipientLNbank" aria-selected="@(Model.Person.ValueRecipient.Type == ValueRecipientType.LNbank ? "true" : "false")">
+                <label asp-for="Person.ValueRecipient.Type" for="@($"ValueRecipientType-{ValueRecipientType.LNbank}")">LNbank wallet</label>
+        
+                <vc:ui-extension-point location="ln-payment-method-setup-tabhead" model="@Model"/>
+            </div>
+            <div id="ValueRecipientTypeTabs" class="tab-content text-start">
+                <div id="ValueRecipientNode" class="pt-3 tab-pane fade @(Model.Person.ValueRecipient.Type == ValueRecipientType.Node ? "show active" : "")" role="tabpanel" aria-labelledby="ValueRecipientType-@ValueRecipientType.Node">
+                    <div class="form-group mb-0">
+                        <label asp-for="Person.ValueRecipient.Address" class="form-label" data-required></label>
+                        <input asp-for="Person.ValueRecipient.Address" class="form-control">
+                        <span asp-validation-for="Person.ValueRecipient.Address" class="text-danger"></span>
+                    </div>
+                </div>
+                <div id="ValueRecipientLNbank" class="pt-3 tab-pane fade @(Model.Person.ValueRecipient.Type == ValueRecipientType.LNbank ? "show active" : "")" role="tabpanel" aria-labelledby="ValueRecipientType-@ValueRecipientType.LNbank">
+                    <div class="form-group mb-0">
+                        <label asp-for="Person.ValueRecipient.CustomValue" class="form-label" data-required>LNbank Wallet ID</label>
+                        <input asp-for="Person.ValueRecipient.CustomValue" class="form-control">
+                        <span asp-validation-for="Person.ValueRecipient.CustomValue" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+                const canUseLNbank = document.getElementById("Nav-LNbank") != null;
+                if (!canUseLNbank) {
+                    document.getElementById("ValueRecipientType-LNbank").setAttribute("disabled", true);
+                }
+            </script>
         </div>
     </div>
 </form>

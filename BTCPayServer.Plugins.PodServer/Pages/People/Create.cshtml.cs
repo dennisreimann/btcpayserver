@@ -45,17 +45,17 @@ public class CreateModel : BasePageModel
             PodcastId = Podcast.PodcastId
         };
 
-        if (!await TryUpdateModelAsync(
+        if (await TryUpdateModelAsync(
             Person, 
             "person",
             p => p.Name))
         {
-            return Page();
+            await PodcastService.AddOrUpdatePerson(Person);
+        
+            TempData[WellKnownTempData.SuccessMessage] = "Person successfully created.";
+            return RedirectToPage("./Edit", new { podcastId = Podcast.PodcastId, personId = Person.PersonId });
         }
         
-        await PodcastService.AddOrUpdatePerson(Person);
-        
-        TempData[WellKnownTempData.SuccessMessage] = "Person successfully created.";
-        return RedirectToPage("./Edit", new { podcastId = Podcast.PodcastId, personId = Person.PersonId });
+        return Page();
     }
 }

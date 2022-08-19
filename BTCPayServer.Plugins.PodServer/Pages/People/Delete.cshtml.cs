@@ -19,10 +19,7 @@ public class DeleteModel : BasePageModel
 
     public async Task<IActionResult> OnGet(string podcastId, string personId)
     {
-        Person = await PodcastService.GetPerson(new PeopleQuery {
-            PodcastId = podcastId,
-            PersonId = personId
-        });
+        Person = await GetPerson(podcastId, personId);
         if (Person == null) return NotFound();
 
         return Page();
@@ -30,16 +27,21 @@ public class DeleteModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId, string personId)
     {
-        Person = await PodcastService.GetPerson(new PeopleQuery {
+        Person = await GetPerson(podcastId, personId);
+        if (Person == null) return NotFound();
+
+        await PodcastService.RemovePerson(Person);
+        TempData[WellKnownTempData.SuccessMessage] = "Person successfully removed.";
+
+        return RedirectToPage("./Index", new { podcastId = Person.PodcastId });
+    }
+
+    private async Task<Person> GetPerson(string podcastId, string personId)
+    {
+        return await PodcastService.GetPerson(new PeopleQuery {
             PodcastId = podcastId,
             PersonId = personId,
             IncludeContributions = true
         });
-        if (Person == null) return NotFound();
-
-        await PodcastService.RemovePerson(Person);
-        TempData[WellKnownTempData.SuccessMessage] = "Person removed.";
-
-        return RedirectToPage("./Index", new { podcastId = Person.PodcastId });
     }
 }

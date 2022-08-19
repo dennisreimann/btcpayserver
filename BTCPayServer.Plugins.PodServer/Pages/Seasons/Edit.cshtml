@@ -1,7 +1,5 @@
 @page "/plugins/podserver/podcasts/{podcastId}/seasons/edit/{seasonId?}"
-@using BTCPayServer.Abstractions.Contracts
 @model BTCPayServer.Plugins.PodServer.Pages.Seasons.EditModel
-@inject IFileService _fileService
 
 @{
     var isCreate = Model.Season.SeasonId == null;
@@ -32,7 +30,7 @@
             }
             <div class="form-group">
                 <label asp-for="Season.Number" class="form-label" data-required></label>
-                <input asp-for="Season.Number" class="form-control" min="1" step="1" required style="width:8rem" />
+                <input asp-for="Season.Number" class="form-control" min="1" step="1" required autofocus style="width:8rem" />
                 <span asp-validation-for="Season.Number" class="text-danger"></span>
             </div>
             <div class="form-group">
