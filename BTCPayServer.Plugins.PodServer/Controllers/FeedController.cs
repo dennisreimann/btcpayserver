@@ -42,7 +42,7 @@ public class FeedController : Controller
         {
             Copyright = new TextSyndicationContent($"{DateTime.Now.Year} {podcast.Owner}"),
             Items = (from episode in episodes 
-                let episodeUrl = Url.PageLink("Episode", null, new { episodeId = episode.EpisodeId }, HttpContext.Request.Scheme) 
+                let episodeUrl = Url.PageLink("/Public/Episode", null, new { podcastSlug = podcast.Slug, episodeSlug = episode.Slug }, HttpContext.Request.Scheme) 
                 let title = episode.Title 
                 let description = episode.Description 
                 select new SyndicationItem(title, description, new Uri(episodeUrl), episode.EpisodeId, episode.LastUpdatedAt)).ToList()

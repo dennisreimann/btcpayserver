@@ -1,5 +1,8 @@
-﻿.player {
+﻿:root {
     --podserver-accent: #f7931a;
+}
+
+.player {
     display: flex;
     border-radius: var(--btcpay-space-m);
     overflow: hidden;
@@ -132,5 +135,59 @@
 @media screen and (min-width: 600px) {
     .player__coverlink {
         flex: 0 0 40%;
+    }
+}
+
+.episodes {
+    display: grid;
+    grid-gap: var(--btcpay-space-l);
+}
+
+.episode-item {
+    display: flex;
+    border-radius: var(--btcpay-space-s);
+    background-color: var(--btcpay-bg-tile);
+    transition-property: background-color;
+    transition-duration: var(--btcpay-transition-duration-fast);
+}
+
+.episode-item a,
+.episode-item a:hover {
+    color: var(--podserver-accent);
+}
+
+.episode-coverlink,
+.episode-coverlink img {
+    display: block;
+    border-radius: var(--btcpay-space-s);
+}
+
+.episode-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    color: var(--btcpay-body-text-muted);
+}
+
+.episode-content {
+    flex: 1;
+    padding: var(--btcpay-space-m) var(--btcpay-space-l);
+}
+
+@media screen and (max-width: 599px) {
+    .episodes {
+        grid-template-columns: 1fr;
+    }
+    .episode-coverlink img {
+        width: 20vw;
+    }
+}
+@media screen and (min-width: 600px) {
+    .episodes {
+        grid-template-columns: 1fr 1fr;
+    }
+    .episode-coverlink img {
+        width: 10vw;
+        max-width: 10rem;
     }
 }

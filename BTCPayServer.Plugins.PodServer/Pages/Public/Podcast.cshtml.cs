@@ -11,7 +11,8 @@ namespace BTCPayServer.Plugins.PodServer.Pages.Public;
 public class PublicPodcastModel : BasePageModel
 {
     public Podcast Podcast { get; set; }
-    public IEnumerable<Episode> Episodes { get; set; }
+    public Episode LatestEpisode { get; set; }
+    public IEnumerable<Episode> MoreEpisodes { get; set; }
 
     public PublicPodcastModel(UserManager<ApplicationUser> userManager,
         PodcastService podcastService) : base(userManager, podcastService) {}
@@ -23,11 +24,17 @@ public class PublicPodcastModel : BasePageModel
         });
         if (Podcast == null) return NotFound();
 
-        Episodes = await PodcastService.GetEpisodes(new EpisodesQuery
+        var episodes = (await PodcastService.GetEpisodes(new EpisodesQuery
         {
             PodcastId = Podcast.PodcastId, 
             OnlyPublished = true
-        });
+        })).ToList();
+        
+        if (episodes.Any())
+        {
+            LatestEpisode = episodes.First();
+            MoreEpisodes = episodes.Skip(1);
+        }
 
         return Page();
     }

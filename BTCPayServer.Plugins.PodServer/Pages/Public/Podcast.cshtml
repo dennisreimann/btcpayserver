@@ -1,15 +1,15 @@
 @page "/plugins/podserver/podcast/{podcastSlug}"
 @using BTCPayServer.Abstractions.Contracts
-@using BTCPayServer.Abstractions.Services
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @using System.Globalization
+@using BTCPayServer.Plugins.PodServer.Data.Models
 @model PublicPodcastModel
-@inject IFileService _fileService
+@inject IFileService FileService
 
 @{
     Layout = "_LayoutSimple";
     ViewData.SetActivePage(PodServerNavPages.Public, Model.Podcast.Title, Model.Podcast.PodcastId);
-    var imageUrl = string.IsNullOrEmpty(Model.Podcast.ImageFileId) ? null : await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId);
+    var imageUrl = string.IsNullOrEmpty(Model.Podcast.ImageFileId) ? null : await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId);
 }
 
 @section PageHeadContent {
@@ -35,37 +35,42 @@
 
 @Html.Raw(Model.Podcast.Description)
 
-@if (Model.Episodes.Any())
+@if (Model.LatestEpisode != null)
 {
-    <div class="table-responsive-md">
-        <table class="table table-hover">
-            <thead>
-            <tr>
-                <th>Date</th>
-                <th>Title</th>
-            </tr>
-            </thead>
-            <tbody id="PodcastEpisodes">
-            @foreach (var episode in Model.Episodes)
-            {
-                <tr id="Episode-@episode.EpisodeId">
-                    <td>
-                        <a asp-page="/Episode/Edit" asp-route-episode="@episode.EpisodeId" class="episode-edit">
-                            <time datetime="@episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
-                                @episode.PublishedAt?.ToTimeAgo()
-                            </time>
-                        </a>
-                    </td>
-                    <td>
-                        <span class="episode-title">@episode.Title</span>
-                    </td>
-                </tr>
-            }
-            </tbody>
-        </table>
-    </div>
+    var player = new Player(Model.LatestEpisode, FileService);
+    <h2 class="mt-5">Latest Episode</h2>
+    <partial name="PodServerPlayer" model="@player"/>
 }
 else
 {
     <p id="PodcastEpisodes" class="text-secondary">There are no episodes yet.</p>
+}
+
+@if (Model.MoreEpisodes.Any())
+{
+    <h2 class="mt-5 mb-4">More Episodes</h2>
+    <div class="episodes">
+        @foreach (var episode in Model.MoreEpisodes)
+        {
+            var coverUrl = string.IsNullOrEmpty(episode.ImageFileId) ? imageUrl : await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), episode.ImageFileId);
+            <article id="Episode-@episode.EpisodeId" class="episode-item">
+                @if (coverUrl != null)
+                {
+                    <a asp-page="/Public/Episode" asp-route-podcastSlug="@Model.Podcast.Slug" asp-route-episodeSlug="@episode.Slug" class="episode-coverlink">
+                        <img src="@coverUrl" alt="@episode.Title" />
+                    </a>
+                }
+                <div class="episode-content">
+                    <h3 class="episode-title">
+                        <a asp-page="/Public/Episode" asp-route-podcastSlug="@Model.Podcast.Slug" asp-route-episodeSlug="@episode.Slug" class="episode-link">@episode.Title</a>
+                    </h3>
+                    <div class="episode-meta">
+                        <time class="episode-published" datetime="@episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
+                            @episode.PublishedAt?.ToTimeAgo()
+                        </time>
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
 }
