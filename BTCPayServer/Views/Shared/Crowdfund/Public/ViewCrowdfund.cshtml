@@ -1,7 +1,5 @@
-@model BTCPayServer.Models.AppViewModels.ViewCrowdfundViewModel
-@inject ISettingsRepository SettingsRepository
-@using BTCPayServer.Abstractions.Contracts
-@using BTCPayServer.Models.AppViewModels
+@model BTCPayServer.Plugins.Crowdfund.Models.ViewCrowdfundViewModel
+@using BTCPayServer.Plugins.Crowdfund.Models
 @inject BTCPayServer.Services.ThemeSettings Theme
 @{
     ViewData["Title"] = Model.Title;
@@ -254,7 +252,7 @@
             </div>
             <div class="col-md-4 col-sm-12">
                 <partial
-                    name="/Views/UIAppsPublic/Crowdfund/ContributeForm.cshtml"
+                    name="Crowdfund/Public/ContributeForm"
                     model="@(new ContributeToCrowdfund { ViewCrowdfundViewModel = Model, RedirectToCheckout = true })">
                 </partial>
             </div>

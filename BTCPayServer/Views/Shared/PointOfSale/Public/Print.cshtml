@@ -1,10 +1,10 @@
-@using BTCPayServer.Models.AppViewModels
 @using BTCPayServer.Payments.Lightning
+@using BTCPayServer.Plugins.PointOfSale.Models
 @using BTCPayServer.Services.Stores
 @using LNURL
 @inject BTCPayNetworkProvider BTCPayNetworkProvider
 @inject StoreRepository StoreRepository
-@model BTCPayServer.Models.AppViewModels.ViewPointOfSaleViewModel
+@model BTCPayServer.Plugins.PointOfSale.Models.ViewPointOfSaleViewModel
 
 <style>
     /* This hides unwanted metadata such as url, date, etc from appearing on a printed page. */
@@ -19,7 +19,7 @@
 
 @{
     var store = await StoreRepository.FindStore(Model.StoreId);
-    Layout = "_LayoutPos";
+    Layout = "PointOfSale/Public/_LayoutPos";
     Context.Request.Query.TryGetValue("cryptocode", out var cryptoCodeValues);
     var cryptoCode = cryptoCodeValues.FirstOrDefault() ?? "BTC";
     var supported = store.GetSupportedPaymentMethods(BTCPayNetworkProvider).OfType<LNURLPaySupportedPaymentMethod>().OrderBy(method => method.CryptoCode == cryptoCode).FirstOrDefault();
