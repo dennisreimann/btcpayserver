@@ -17,4 +17,9 @@ public static class StringExtensions
         str = Regex.Replace(str, @"\s", "-"); // hyphens
         return str;
     }
+
+    public static string StripHtml(this string str)
+    {
+        return Regex.Replace(str, "<.*?>", string.Empty);
+    }
 }
