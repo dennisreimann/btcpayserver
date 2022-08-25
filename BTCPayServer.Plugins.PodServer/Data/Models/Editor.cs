@@ -2,6 +2,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayServer.Plugins.PodServer.Data.Models;
 
+public enum EditorRole
+{
+    Admin,
+    Editor
+}
+
 public class Editor
 {
     public Editor(string userId, string podcastId, EditorRole role)

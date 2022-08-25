@@ -1,5 +1,8 @@
 ﻿@page "/plugins/podserver/podcasts/{podcastId}/people"
+@using BTCPayServer.Abstractions.Contracts
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model BTCPayServer.Plugins.PodServer.Pages.People.IndexModel
+@inject IFileService FileService
 
 @{
     ViewData.SetActivePage(PodServerNavPages.People, Model.Podcast.Title, Model.Podcast.PodcastId);
@@ -18,31 +21,34 @@
 
 @if (Model.People.Any())
 {
-    <div class="row">
-        <div class="col">
-            <table id="PodcastPeople" class="table table-hover">
-                <thead>
-                <tr>
-                    <th>Name</th>
-                    <th class="text-end">Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var person in Model.People)
-                {
-                    <tr>
-                        <td>
-                            @person.Name
-                        </td>
-                        <td class="text-end">
-                            <a asp-page="./Edit" asp-route-podcastId="@person.PodcastId" asp-route-personId="@person.PersonId" class="podcast-edit">Edit</a>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <table id="PodcastPeople" class="table table-hover">
+        <thead>
+        <tr>
+            <th class="w-100px">Image</th>
+            <th>Name</th>
+            <th>Value Recipient</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var person in Model.People)
+        {
+            <tr>
+                <td>
+                    @if (person.ImageFileId != null)
+                    {
+                        <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), person.ImageFileId))" alt="@person.Name" style="max-width:50px;max-height:50px;"/>
+                    }
+                </td>
+                <td>
+                    <a asp-page="./Edit" asp-route-podcastId="@person.PodcastId" asp-route-personId="@person.PersonId" class="podcast-edit">@person.Name</a>
+                </td>
+                <td>
+                    @(person.ValueRecipient?.Type.ToString() ?? "None")
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
 }
 else
 {

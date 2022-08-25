@@ -7,5 +7,6 @@ public enum PodServerNavPages
     Episodes,
     Seasons,
     People,
+    Contributions,
     Public
 }

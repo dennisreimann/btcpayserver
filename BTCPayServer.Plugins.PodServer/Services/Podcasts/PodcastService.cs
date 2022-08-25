@@ -370,10 +370,16 @@ public class PodcastService
 
     private IQueryable<Contribution> FilterContributions(IQueryable<Contribution> queryable, ContributionsQuery query)
     {
+        if (query.ContributionId != null)
+        {
+            queryable = queryable.Where(c => c.ContributionId == query.ContributionId);
+        }
+        
         if (query.PodcastId != null)
         {
             queryable = queryable.Where(c => c.PodcastId == query.PodcastId);
         }
+        
         if (query.PodcastOnly)
         {
             queryable = queryable.Where(c => c.EpisodeId == null);
