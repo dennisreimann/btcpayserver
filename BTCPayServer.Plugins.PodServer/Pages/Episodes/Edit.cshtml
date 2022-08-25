@@ -4,7 +4,7 @@
 @using BTCPayServer.Abstractions.Models
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @model BTCPayServer.Plugins.PodServer.Pages.Episodes.EditModel
-@inject IFileService _fileService
+@inject IFileService FileService
 
 @{
     ViewData.SetActivePage(PodServerNavPages.Podcast, Model.Episode.Title, Model.Episode.PodcastId);
@@ -72,7 +72,7 @@
             @foreach(var enclosure in Model.Episode.Enclosures)
             {
                 <div class="mt-3">
-                    @(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), enclosure.FileId))
+                    @(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), enclosure.FileId))
                 </div>
             }
             
@@ -104,13 +104,14 @@
                 }
             </div>
             <div class="form-group">
-                <label for="ImageFile" class="form-label">Cover Image</label>
-                <input id="ImageFile" name="ImageFile" type="file" class="form-control">
+                <span class="form-label">Cover Image</span>
+                @if (!string.IsNullOrEmpty(Model.Episode.ImageFileId))
+                {
+                    <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Episode.ImageFileId))" alt="@Model.Episode.Title" class="d-block my-3 w-150px"/>
+                }
+                <label for="ImageFile" class="btn btn-secondary w-150px">@(string.IsNullOrEmpty(Model.Episode.ImageFileId) ? "Upload" : "Update")</label>
+                <input id="ImageFile" name="ImageFile" type="file" class="form-control d-none">
             </div>
-            @if (!string.IsNullOrEmpty(Model.Episode.ImageFileId))
-            {
-                <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Episode.ImageFileId))" alt="@Model.Episode.Title" style="max-width: 200px;max-height: 200px;" class="d-block mt-3"/>
-            }
         </div>
     </div>
 </form>

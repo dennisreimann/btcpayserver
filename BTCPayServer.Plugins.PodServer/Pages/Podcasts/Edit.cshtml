@@ -3,7 +3,7 @@
 @using BTCPayServer.Abstractions.Models
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @model BTCPayServer.Plugins.PodServer.Pages.Podcasts.EditModel
-@inject IFileService _fileService
+@inject IFileService FileService
 
 @{
     ViewData.SetActivePage(PodServerNavPages.Podcast, Model.Podcast.Title, Model.Podcast.PodcastId);
@@ -86,13 +86,14 @@
                 <span asp-validation-for="Podcast.Url" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label for="ImageFile" class="form-label">Cover Image</label>
-                <input id="ImageFile" name="ImageFile" type="file" class="form-control">
+                <span class="form-label">Cover Image</span>
+                @if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
+                {
+                    <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" class="d-block my-3 w-150px"/>
+                }
+                <label for="ImageFile" class="btn btn-secondary w-150px">@(string.IsNullOrEmpty(Model.Podcast.ImageFileId) ? "Upload" : "Update")</label>
+                <input id="ImageFile" name="ImageFile" type="file" class="form-control d-none">
             </div>
-            @if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
-            {
-                <img src="@(await _fileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mt-3"/>
-            }
         </div>
     </div>
 </form>

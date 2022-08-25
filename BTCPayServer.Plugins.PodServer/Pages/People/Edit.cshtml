@@ -42,13 +42,14 @@
                 <span asp-validation-for="Person.Url" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label for="ImageFile" class="form-label">Image</label>
-                <input id="ImageFile" name="ImageFile" type="file" class="form-control">
+                <span class="form-label">Image</span>
+                @if (!string.IsNullOrEmpty(Model.Person.ImageFileId))
+                {
+                    <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Person.ImageFileId))" alt="@Model.Person.Name" class="d-block my-3 w-150px"/>
+                }
+                <label for="ImageFile" class="btn btn-secondary w-150px">@(string.IsNullOrEmpty(Model.Person.ImageFileId) ? "Upload" : "Update")</label>
+                <input id="ImageFile" name="ImageFile" type="file" class="form-control d-none">
             </div>
-            @if (!string.IsNullOrEmpty(Model.Person.ImageFileId))
-            {
-                <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Person.ImageFileId))" alt="@Model.Person.Name" style="max-width: 200px;max-height: 200px;" class="d-block mt-3"/>
-            }
             
             <h3 class="mt-5 mb-3">Value information</h3>
             
