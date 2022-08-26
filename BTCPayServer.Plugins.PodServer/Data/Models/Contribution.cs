@@ -11,13 +11,6 @@ public class Contribution
     [DisplayName("Contribution ID")]
     public string ContributionId { get; set; }
     
-    // Properties
-    public string Role { get; set; }
-    
-    [Required]
-    [Range(1, int.MaxValue)]
-    public int Split { get; set; }
-    
     // Relations
     [Required]
     public string PodcastId { get; set; }
@@ -30,12 +23,20 @@ public class Contribution
     public string EpisodeId { get; set; }
     public Episode Episode { get; set; }
     
+    // Properties
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int Split { get; set; }
+    
+    public string Role { get; set; }
+
     internal static void OnModelCreating(ModelBuilder builder)
     {
         builder
             .Entity<Contribution>()
-            .HasIndex("PodcastId", "EpisodeId", "PersonId")
-            .IsUnique();
+            .HasIndex(c => new { c.PodcastId, c.EpisodeId, c.PersonId })
+            .IsUnique()
+            .HasFilter(null);
     
         builder
             .Entity<Contribution>()

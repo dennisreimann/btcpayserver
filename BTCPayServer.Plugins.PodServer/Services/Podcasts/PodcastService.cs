@@ -258,12 +258,13 @@ public class PodcastService
         
         if (!string.IsNullOrEmpty(query.Name))
         {
-            queryable = queryable.Where(p => p.Name.ToLower() == query.Name.ToLower());
+            queryable = queryable.Where(p => string.Equals(p.Name, query.Name, StringComparison.InvariantCultureIgnoreCase));
         }
 
         if (query.IncludeContributions)
         {
-            queryable = queryable.Include(p => p.Contributions);
+            queryable = queryable
+                .Include(p => p.Contributions.Where(c => c.EpisodeId == null));
         }
 
         return queryable;
@@ -370,11 +371,6 @@ public class PodcastService
 
     private IQueryable<Contribution> FilterContributions(IQueryable<Contribution> queryable, ContributionsQuery query)
     {
-        if (query.ContributionId != null)
-        {
-            queryable = queryable.Where(c => c.ContributionId == query.ContributionId);
-        }
-        
         if (query.PodcastId != null)
         {
             queryable = queryable.Where(c => c.PodcastId == query.PodcastId);

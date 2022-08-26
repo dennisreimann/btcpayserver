@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 {
     [DbContext(typeof(PodServerPluginDbContext))]
-    [Migration("20220426115739_Initial")]
+    [Migration("20220826172551_Initial")]
     partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -20,7 +20,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("BTCPayServer.Plugins.PodServer")
-                .HasAnnotation("ProductVersion", "6.0.1")
+                .HasAnnotation("ProductVersion", "6.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -145,15 +145,19 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.Property<string>("SeasonId")
                         .HasColumnType("text");
 
+                    b.Property<string>("Slug")
+                        .HasColumnType("text");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("EpisodeId");
 
-                    b.HasIndex("PodcastId");
-
                     b.HasIndex("SeasonId");
+
+                    b.HasIndex("PodcastId", "Slug")
+                        .IsUnique();
 
                     b.ToTable("Episodes", "BTCPayServer.Plugins.PodServer");
                 });
@@ -250,6 +254,9 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.Property<string>("Owner")
                         .HasColumnType("text");
 
+                    b.Property<string>("Slug")
+                        .HasColumnType("text");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text");
@@ -258,6 +265,9 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("PodcastId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
 
                     b.ToTable("Podcasts", "BTCPayServer.Plugins.PodServer");
                 });
@@ -291,7 +301,8 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 {
                     b.HasOne("BTCPayServer.Plugins.PodServer.Data.Models.Episode", "Episode")
                         .WithMany("Contributions")
-                        .HasForeignKey("EpisodeId");
+                        .HasForeignKey("EpisodeId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("BTCPayServer.Plugins.PodServer.Data.Models.Person", "Person")
                         .WithMany("Contributions")
@@ -377,7 +388,6 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                                 .HasColumnType("text");
 
                             b1.Property<string>("Address")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.Property<string>("CustomKey")

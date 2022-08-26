@@ -48,7 +48,7 @@ public class CreateModel : BasePageModel
             await PodcastService.AddEditor(new Editor(UserId, Podcast.PodcastId, EditorRole.Admin));
         
             TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully created.";
-            return RedirectToPage("./Index", new { podcastId = Podcast.PodcastId });
+            return RedirectToPage("./Podcast", new { podcastId = Podcast.PodcastId });
         }
 
         return Page();

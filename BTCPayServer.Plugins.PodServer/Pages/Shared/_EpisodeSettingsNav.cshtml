@@ -2,9 +2,8 @@
 
 <nav id="SectionNav">
     <div class="nav">
-        <a id="SectionNav-@PodServerNavPages.Episodes.ToString()" class="nav-link @ViewData.IsActivePage(PodServerNavPages.Episodes)" asp-page="/Episodes/Edit" asp-route-podcastId="@Model.PodcastId">Episode</a>
-        <a id="SectionNav-@PodServerNavPages.People.ToString()" class="nav-link @ViewData.IsActivePage(PodServerNavPages.People)" asp-page="/People/Index" asp-route-podcastId="@Model.PodcastId">People</a>
-        <a id="SectionNav-@PodServerNavPages.Seasons.ToString()" class="nav-link @ViewData.IsActivePage(PodServerNavPages.Seasons)" asp-page="/Seasons/Index" asp-route-podcastId="@Model.PodcastId">Seasons</a>
+        <a id="SectionNav-@PodServerNavPages.Episodes.ToString()" class="nav-link @ViewData.IsActivePage(PodServerNavPages.Episodes)" asp-page="/Episodes/Edit" asp-route-podcastId="@Model.PodcastId" asp-route-episodeId="@Model.EpisodeId">Episode</a>
+        <a id="SectionNav-@PodServerNavPages.Contributions.ToString()" class="nav-link @ViewData.IsActivePage(PodServerNavPages.Contributions)" asp-page="/Contributions/Index" asp-route-podcastId="@Model.PodcastId" asp-route-episodeId="@Model.EpisodeId">Contributions</a>
     </div>
 </nav>
 

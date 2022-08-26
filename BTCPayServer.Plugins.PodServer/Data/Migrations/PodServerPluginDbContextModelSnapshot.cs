@@ -386,7 +386,6 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                                 .HasColumnType("text");
 
                             b1.Property<string>("Address")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.Property<string>("CustomKey")

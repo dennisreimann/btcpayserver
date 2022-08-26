@@ -13,22 +13,37 @@ namespace BTCPayServer.Plugins.PodServer.Pages.Contributions;
 public class IndexModel : BasePageModel
 {
     public Podcast Podcast { get; set; }
+    public Episode Episode { get; set; }
     public IEnumerable<Contribution> Contributions { get; set; }
     public bool HasPeople { get; set; }
 
     public IndexModel(UserManager<ApplicationUser> userManager,
         PodcastService podcastService) : base(userManager, podcastService) {}
 
-    public async Task<IActionResult> OnGet(string podcastId)
+    public async Task<IActionResult> OnGet(string podcastId, string episodeId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
-            UserId = UserId,
-            PodcastId = podcastId,
-            IncludePeople = true,
-            IncludeContributions = true
-        });
-        
-        Contributions = Podcast.Contributions.OrderByDescending(c => c.Person.Name);
+        if (string.IsNullOrEmpty(episodeId))
+        {
+            Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+                UserId = UserId,
+                PodcastId = podcastId,
+                IncludePeople = true,
+                IncludeContributions = true
+            });
+            Contributions = Podcast.Contributions.OrderByDescending(c => c.Person.Name);
+        }
+        else
+        {
+            Episode = await PodcastService.GetEpisode(new EpisodesQuery {
+                PodcastId = podcastId,
+                EpisodeId = episodeId,
+                IncludePodcast = true,
+                IncludeContributions = true
+            });
+            Podcast = Episode.Podcast;
+            Contributions = Episode.Contributions.OrderByDescending(c => c.Person.Name);
+        }
+
         HasPeople = Podcast.People.Any();
         
         return Page();

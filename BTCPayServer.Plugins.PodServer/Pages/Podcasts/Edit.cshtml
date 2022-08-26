@@ -86,7 +86,7 @@
                 <span asp-validation-for="Podcast.Url" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <span class="form-label">Cover Image</span>
+                <div class="form-label">Cover Image</div>
                 @if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
                 {
                     <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" class="d-block my-3 w-150px"/>

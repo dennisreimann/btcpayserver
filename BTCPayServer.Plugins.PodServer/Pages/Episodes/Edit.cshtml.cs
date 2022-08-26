@@ -39,7 +39,7 @@ public class EditModel : BasePageModel
             {
                 PodcastId = podcastId
             });
-            var highestNumber = episodes.MaxBy(e => e.Number)?.Number;
+            var highestNumber = episodes.MaxBy(e => e.Number)?.Number ?? 0;
             Episode.Number = highestNumber + 1;
         }
         

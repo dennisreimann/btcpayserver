@@ -128,7 +128,7 @@ public class FeedImporter
                         log += $"channel/podcast:value/podcast:valueRecipient -> {(isNew ? "Added" : "Existed")}: Person '{person.Name}'\n";
                         
                         var contribution = await GetContributionByValueRecipientTag(elem, podcast.PodcastId, null, person.PersonId);
-                        var isNewC = string.IsNullOrEmpty(contribution.ContributionId);
+                        var isNewC = string.IsNullOrEmpty(contribution.PersonId);
                         if (isNewC) await _podcastService.AddOrUpdateContribution(contribution);
                         log += $"channel/podcast:value/podcast:valueRecipient -> {(isNewC ? "Added" : "Existed")}: Contribution by '{person.Name}' with split '{contribution.Split}'\n";
                     }
@@ -178,7 +178,7 @@ public class FeedImporter
                                 log += $"channel/item({episode.ImportGuid})/podcast:value/podcast:valueRecipient -> {(isNewP ? "Added" : "Existed")}: Person '{person.Name}'\n";
                         
                                 var contribution = await GetContributionByValueRecipientTag(el, podcast.PodcastId, episode.EpisodeId, person.PersonId);
-                                var isNewC = string.IsNullOrEmpty(contribution.ContributionId);
+                                var isNewC = string.IsNullOrEmpty(contribution.PersonId);
                                 if (isNewC) await _podcastService.AddOrUpdateContribution(contribution);
                                 log += $"channel/item({episode.ImportGuid})/podcast:value/podcast:valueRecipient -> {(isNewC ? "Added" : "Existed")}: Contribution by '{person.Name}' with split '{contribution.Split}'\n";
                             }

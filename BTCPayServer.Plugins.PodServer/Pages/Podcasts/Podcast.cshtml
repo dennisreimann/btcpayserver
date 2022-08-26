@@ -26,14 +26,14 @@
 <div class="d-lg-flex gap-3">
     @if (!string.IsNullOrEmpty(Model.Podcast.ImageFileId))
     {
-        <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3"/>
+        <img src="@(await FileService.GetFileUrl(Request.GetAbsoluteRootUri(), Model.Podcast.ImageFileId))" alt="@Model.Podcast.Title" style="max-width: 200px;max-height: 200px;" class="d-block mb-3 w-150px"/>
     }
     <div class="description">
         @Html.Raw(Model.Podcast.Description)
     </div>
 </div>
         
-<a asp-page="/Public/Podcast" asp-route-podcastSlug="@Model.Podcast.Slug" class="btn btn-secondary" role="button" target="_blank">Public Page</a>
+<a asp-page="/Public/Podcast" asp-route-podcastSlug="@Model.Podcast.Slug" class="btn btn-secondary mb-4" role="button" target="_blank">Public Page</a>
 
 @if (Model.Episodes.Any())
 {

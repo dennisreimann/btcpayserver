@@ -17,30 +17,31 @@ public class DeleteModel : BasePageModel
     public DeleteModel(UserManager<ApplicationUser> userManager,
         PodcastService podcastService) : base(userManager, podcastService) {}
 
-    public async Task<IActionResult> OnGet(string podcastId, string contributionId)
+    public async Task<IActionResult> OnGet(string podcastId, string personId, string episodeId)
     {
-        Contribution = await GetContribution(podcastId, contributionId);
+        Contribution = await GetContribution(podcastId, personId, episodeId);
         if (Contribution == null) return NotFound();
 
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync(string podcastId, string contributionId)
+    public async Task<IActionResult> OnPostAsync(string podcastId, string personId, string episodeId)
     {
-        Contribution = await GetContribution(podcastId, contributionId);
+        Contribution = await GetContribution(podcastId, personId, episodeId);
         if (Contribution == null) return NotFound();
 
         await PodcastService.RemoveContribution(Contribution);
-        TempData[WellKnownTempData.SuccessMessage] = "Contribution removed.";
+        TempData[WellKnownTempData.SuccessMessage] = "Contribution successfully removed.";
 
-        return RedirectToPage("./Index", new { podcastId = Contribution.PodcastId });
+        return RedirectToPage("./Index", new { podcastId = Contribution.PodcastId, episodeId = Contribution.EpisodeId });
     }
 
-    private async Task<Contribution> GetContribution(string podcastId, string contributionId)
+    private async Task<Contribution> GetContribution(string podcastId, string personId, string episodeId)
     {
         return await PodcastService.GetContribution(new ContributionsQuery {
             PodcastId = podcastId,
-            ContributionId = contributionId
+            PersonId = personId,
+            EpisodeId = episodeId
         });
     }
 }

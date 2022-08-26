@@ -1,6 +1,5 @@
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Abstractions.Contracts;
-using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Client;
 using BTCPayServer.Data;
 using BTCPayServer.Plugins.PodServer.Data.Models;
@@ -8,8 +7,6 @@ using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.StaticFiles;
 
 namespace BTCPayServer.Plugins.PodServer.Pages.Contributions;
 
@@ -17,15 +14,18 @@ namespace BTCPayServer.Plugins.PodServer.Pages.Contributions;
 public class EditModel : BasePageModel
 {
     public Podcast Podcast { get; set; }
+    public Episode Episode { get; set; }
     public Contribution Contribution { get; set; }
 
     public EditModel(UserManager<ApplicationUser> userManager,
         PodcastService podcastService, IFileService fileService) : base(userManager, podcastService) {}
 
-    public async Task<IActionResult> OnGet(string podcastId, string contributionId)
+    public async Task<IActionResult> OnGet(string podcastId, string personId, [FromQuery] string episodeId)
     {
-        Podcast = await GetPodcast(podcastId);
+        await InitModel(podcastId, personId, episodeId);
+        
         if (Podcast == null) return NotFound();
+        if (Contribution == null) return NotFound();
 
         if (!Podcast.People.Any())
         {
@@ -33,39 +33,19 @@ public class EditModel : BasePageModel
             return RedirectToPage("/Person/Create", new { podcastId = Podcast.PodcastId });
         }
         
-        if (contributionId == null)
-        {
-            Contribution = new Contribution
-            {
-                PodcastId = podcastId
-            };
-        }
-        else
-        {
-            Contribution = await GetContribution(podcastId, contributionId);
-            if (Contribution == null) return NotFound();
-        }
-        
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync(string podcastId, string contributionId)
+    public async Task<IActionResult> OnPostAsync(string podcastId, string personId, [FromQuery] string episodeId)
     {
-        Podcast = await GetPodcast(podcastId);
-        if (Podcast == null) return NotFound();
+        await InitModel(podcastId, personId, episodeId);
         
-        var isNew = contributionId == null;
-        if (isNew)
-        {
-            Contribution = new Contribution { PodcastId = podcastId };
-        }
-        else
-        {
-            Contribution = await GetContribution(podcastId, contributionId);
-            if (Contribution == null) return NotFound();
-        }
+        if (Podcast == null) return NotFound();
+        if (Contribution == null) return NotFound();
 
         if (!ModelState.IsValid) return Page();
+
+        var isNew = personId == null;
         
         if (await TryUpdateModelAsync(Contribution, 
                 "contribution",
@@ -79,27 +59,42 @@ public class EditModel : BasePageModel
                 TempData[WellKnownTempData.SuccessMessage] = $"Contribution successfully {(isNew ? "created" : "updated")}.";
             }
         
-            return RedirectToPage("./Index", new { podcastId = Contribution.PodcastId });
+            return RedirectToPage("./Index", new { podcastId = Contribution.PodcastId, episodeId = Contribution.EpisodeId });
         }
         
         return Page();
     }
 
-    private async Task<Podcast> GetPodcast(string podcastId)
+    private async Task InitModel(string podcastId, string personId, string episodeId)
     {
-        return await PodcastService.GetPodcast(new PodcastsQuery {
-            UserId = UserId,
-            PodcastId = podcastId,
-            IncludePeople = true,
-            IncludeContributions = true
-        });
-    }
+        if (string.IsNullOrEmpty(episodeId))
+        {
+            Podcast = await PodcastService.GetPodcast(new PodcastsQuery
+            {
+                UserId = UserId,
+                PodcastId = podcastId,
+                IncludePeople = true,
+                IncludeContributions = true
+            });
 
-    private async Task<Contribution> GetContribution(string podcastId, string contributionId)
-    {
-        return await PodcastService.GetContribution(new ContributionsQuery {
-            PodcastId = podcastId,
-            ContributionId = contributionId,
-        });
+            Contribution = personId == null
+                ? new Contribution { PodcastId = podcastId }
+                : Podcast.Contributions.FirstOrDefault(c => c.PersonId == personId);
+        }
+        else
+        {
+            Episode = await PodcastService.GetEpisode(new EpisodesQuery
+            {
+                PodcastId = podcastId,
+                EpisodeId = episodeId,
+                IncludePodcast = true,
+                IncludeContributions = true
+            });
+            Podcast = Episode.Podcast;
+
+            Contribution = personId == null
+                ? new Contribution { PodcastId = podcastId, EpisodeId = episodeId }
+                : Episode.Contributions.FirstOrDefault(c => c.PersonId == personId);
+        }
     }
 }

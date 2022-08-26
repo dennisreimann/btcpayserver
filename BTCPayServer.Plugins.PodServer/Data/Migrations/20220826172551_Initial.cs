@@ -19,6 +19,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 {
                     PodcastId = table.Column<string>(type: "text", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
+                    Slug = table.Column<string>(type: "text", nullable: true),
                     Description = table.Column<string>(type: "text", nullable: false),
                     Medium = table.Column<string>(type: "text", nullable: false),
                     Language = table.Column<string>(type: "text", nullable: false),
@@ -135,6 +136,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 {
                     EpisodeId = table.Column<string>(type: "text", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
+                    Slug = table.Column<string>(type: "text", nullable: true),
                     Description = table.Column<string>(type: "text", nullable: false),
                     PublishedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     LastUpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -169,11 +171,11 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 columns: table => new
                 {
                     ContributionId = table.Column<string>(type: "text", nullable: false),
-                    Role = table.Column<string>(type: "text", nullable: true),
-                    Split = table.Column<int>(type: "integer", nullable: false),
                     PodcastId = table.Column<string>(type: "text", nullable: false),
                     PersonId = table.Column<string>(type: "text", nullable: false),
-                    EpisodeId = table.Column<string>(type: "text", nullable: true)
+                    EpisodeId = table.Column<string>(type: "text", nullable: true),
+                    Split = table.Column<int>(type: "integer", nullable: false),
+                    Role = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -183,7 +185,8 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         column: x => x.EpisodeId,
                         principalSchema: "BTCPayServer.Plugins.PodServer",
                         principalTable: "Episodes",
-                        principalColumn: "EpisodeId");
+                        principalColumn: "EpisodeId",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Contributions_People_PersonId",
                         column: x => x.PersonId,
@@ -257,10 +260,11 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 column: "EpisodeId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Episodes_PodcastId",
+                name: "IX_Episodes_PodcastId_Slug",
                 schema: "BTCPayServer.Plugins.PodServer",
                 table: "Episodes",
-                column: "PodcastId");
+                columns: new[] { "PodcastId", "Slug" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Episodes_SeasonId",
@@ -279,6 +283,13 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 schema: "BTCPayServer.Plugins.PodServer",
                 table: "People",
                 column: "PodcastId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Podcasts_Slug",
+                schema: "BTCPayServer.Plugins.PodServer",
+                table: "Podcasts",
+                column: "Slug",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Seasons_PodcastId_Number",
