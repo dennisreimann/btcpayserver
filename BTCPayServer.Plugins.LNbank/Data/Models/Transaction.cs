@@ -20,13 +20,20 @@ public class Transaction
     public LightMoney AmountSettled { get; set; }
     public LightMoney RoutingFee { get; set; }
     public string Description { get; set; }
+    
     [DisplayName("Payment Request")]
     [Required]
     public string PaymentRequest { get; set; }
+    
+    [DisplayName("Payment Hash")]
+    public string PaymentHash { get; set; }
+    
     [DisplayName("Creation date")]
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    
     [DisplayName("Expiry")]
     public DateTimeOffset ExpiresAt { get; set; }
+    
     [DisplayName("Payment date")]
     public DateTimeOffset? PaidAt { get; set; }
     public Wallet Wallet { get; set; }
@@ -76,14 +83,12 @@ public class Transaction
     }
 
     public bool IsSettled => Status == StatusSettled;
-    public bool IsPaid => Status == StatusPaid;
-    public bool IsUnpaid => Status != StatusPaid;
+    public bool IsPaid => Status == StatusPaid || IsSettled;
+    public bool IsUnpaid => !IsPaid;
     public bool IsExpired => Status == StatusExpired;
     public bool IsPending  => Status == StatusPending;
     public bool IsCancelled  => Status == StatusCancelled;
     public bool IsInvalid  => Status == StatusInvalid;
-    public bool IsOverpaid => (IsPaid || IsSettled) && AmountSettled > Amount;
-    public bool IsPaidPartially => (IsPaid || IsSettled) && AmountSettled < Amount;
 
     public DateTimeOffset Date => PaidAt ?? CreatedAt;
 
@@ -129,6 +134,14 @@ public class Transaction
         builder
             .Entity<Transaction>()
             .HasIndex(o => o.WalletId);
+        
+        builder
+            .Entity<Transaction>()
+            .HasIndex(o => o.PaymentRequest);
+        
+        builder
+            .Entity<Transaction>()
+            .HasIndex(o => o.PaymentHash);
         
         builder
             .Entity<Transaction>()

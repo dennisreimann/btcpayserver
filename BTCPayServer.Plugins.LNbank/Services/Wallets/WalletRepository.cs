@@ -79,7 +79,9 @@ public class WalletRepository
     {
         await using var dbContext = _dbContextFactory.CreateContext();
         var wallet = await FilterWallets(dbContext.Wallets.AsQueryable(), query).FirstOrDefaultAsync();
-        if (wallet != null && query.UserId != null)
+        if (wallet == null) return null;
+        
+        if (query.UserId != null)
         {
             var key = wallet.AccessKeys.FirstOrDefault(ak => query.UserId.Contains(ak.UserId));
             if (key != null)
@@ -89,6 +91,14 @@ public class WalletRepository
             else if (query.UserId.Contains(wallet.UserId))
             {
                 wallet.AccessLevel = AccessLevel.Admin;
+            }
+        }
+        else if (query.AccessKey != null)
+        {
+            var key = wallet.AccessKeys.FirstOrDefault(ak => query.AccessKey.Contains(ak.Key));
+            if (key != null)
+            {
+                wallet.AccessLevel = key.Level;
             }
         }
         return wallet;
@@ -214,6 +224,11 @@ public class WalletRepository
         if (query.PaymentRequest != null)
         {
             queryable = queryable.Where(t => t.PaymentRequest == query.PaymentRequest);
+        }
+
+        if (query.PaymentHash != null)
+        {
+            queryable = queryable.Where(t => t.PaymentHash == query.PaymentHash);
         }
 
         return queryable.FirstOrDefault();
