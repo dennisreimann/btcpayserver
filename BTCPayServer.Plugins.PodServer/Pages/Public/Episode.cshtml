@@ -43,57 +43,59 @@
     <partial name="_LayoutPodServerFoot" />
 }
 
-<div class="sticky-header-setup"></div>
-<div class="sticky-header d-flex flex-wrap align-items-center justify-content-between gap-3">
-    <h1 class="mb-0">@Model.Episode.Title</h1>
-    <div class="d-flex gap-3">
-        <a asp-page="/Public/Podcast" asp-route-podcastSlug="@Model.Podcast.Slug" class="btn btn-primary mt-3 mt-sm-0">@Model.Podcast.Title</a>
-        <a asp-controller="Feed" asp-action="Feed" asp-route-podcastSlug="@Model.Podcast.Slug" class="btn btn-secondary" role="button" id="Feed">Subscribe</a>
+<main class="podserver-public">
+    <div class="sticky-header-setup"></div>
+    <div class="sticky-header d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <h1 class="mb-0">@Model.Episode.Title</h1>
+        <div class="d-flex gap-3">
+            <a asp-page="/Public/Podcast" asp-route-podcastSlug="@Model.Podcast.Slug" class="btn btn-secondary">@Model.Podcast.Title</a>
+            <a asp-controller="Feed" asp-action="Feed" asp-route-podcastSlug="@Model.Podcast.Slug" class="btn btn-secondary" role="button" id="Feed">Subscribe</a>
+        </div>
     </div>
-</div>
-
-@if (enclosure != null)
-{
-    <partial name="PodServerPlayer" model="@player"/>
-}
-
-@Html.Raw(Model.Episode.Description)
-
-<dl class="row">
-    <dt class="col-sm-3 col-xl-2">
-        @Html.DisplayNameFor(model => model.Episode.PublishedAt)
-    </dt>
-    <dd class="col-sm-9 col-xl-10">
-        <time datetime="@Model.Episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
-            @Model.Episode.PublishedAt?.ToTimeAgo()
-        </time>
-    </dd>
-    <dt class="col-sm-3 col-xl-2">
-        @Html.DisplayNameFor(model => model.Episode.LastUpdatedAt)
-    </dt>
-    <dd class="col-sm-9 col-xl-10">
-        <time datetime="@Model.Episode.LastUpdatedAt.ToString("o", CultureInfo.InvariantCulture)">
-            @Model.Episode.LastUpdatedAt.ToTimeAgo()
-        </time>
-    </dd>
-    <dt class="col-sm-3 col-xl-2">
-        @Html.DisplayNameFor(model => model.Episode.Number)
-    </dt>
-    <dd class="col-sm-9 col-xl-10">
-        @(Model.Episode.Number != null ? Model.Episode.Number : "None")
-    </dd>
-    @if (Model.Episode.Season != null)
+    
+    @if (enclosure != null)
     {
+        <partial name="PodServerPlayer" model="@player"/>
+    }
+    
+    @Html.Raw(Model.Episode.Description)
+    
+    <dl class="row">
         <dt class="col-sm-3 col-xl-2">
-            @Html.DisplayNameFor(model => model.Episode.Season)
+            @Html.DisplayNameFor(model => model.Episode.PublishedAt)
         </dt>
         <dd class="col-sm-9 col-xl-10">
-            @Model.Episode.Season.Number
-            @if (!string.IsNullOrEmpty(Model.Episode.Season.Name))
-            {
-                <span>—</span>
-                @Model.Episode.Season.Name
-            }
+            <time datetime="@Model.Episode.PublishedAt?.ToString("o", CultureInfo.InvariantCulture)">
+                @Model.Episode.PublishedAt?.ToTimeAgo()
+            </time>
         </dd>
-    }
-</dl>
+        <dt class="col-sm-3 col-xl-2">
+            @Html.DisplayNameFor(model => model.Episode.LastUpdatedAt)
+        </dt>
+        <dd class="col-sm-9 col-xl-10">
+            <time datetime="@Model.Episode.LastUpdatedAt.ToString("o", CultureInfo.InvariantCulture)">
+                @Model.Episode.LastUpdatedAt.ToTimeAgo()
+            </time>
+        </dd>
+        <dt class="col-sm-3 col-xl-2">
+            @Html.DisplayNameFor(model => model.Episode.Number)
+        </dt>
+        <dd class="col-sm-9 col-xl-10">
+            @(Model.Episode.Number != null ? Model.Episode.Number : "None")
+        </dd>
+        @if (Model.Episode.Season != null)
+        {
+            <dt class="col-sm-3 col-xl-2">
+                @Html.DisplayNameFor(model => model.Episode.Season)
+            </dt>
+            <dd class="col-sm-9 col-xl-10">
+                @Model.Episode.Season.Number
+                @if (!string.IsNullOrEmpty(Model.Episode.Season.Name))
+                {
+                    <span>—</span>
+                    @Model.Episode.Season.Name
+                }
+            </dd>
+        }
+    </dl>
+</main>
