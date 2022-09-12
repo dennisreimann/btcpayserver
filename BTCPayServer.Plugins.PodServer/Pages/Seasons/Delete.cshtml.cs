@@ -37,7 +37,7 @@ public class DeleteModel : BasePageModel
         if (Season == null) return NotFound();
 
         await PodcastService.RemoveSeason(Season);
-        TempData[WellKnownTempData.SuccessMessage] = "Season removed.";
+        TempData[WellKnownTempData.SuccessMessage] = "Season successfully deleted.";
 
         return RedirectToPage("./Index", new { podcastId = Season.PodcastId });
     }

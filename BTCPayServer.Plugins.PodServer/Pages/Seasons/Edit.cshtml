@@ -1,4 +1,6 @@
 @page "/plugins/podserver/podcasts/{podcastId}/seasons/edit/{seasonId?}"
+@using BTCPayServer.Abstractions.Models
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model BTCPayServer.Plugins.PodServer.Pages.Seasons.EditModel
 
 @{
@@ -46,8 +48,10 @@
 {
     <h3 class="mt-5 mb-4">Additional Actions</h3>
     <div class="d-flex gap-3">
-        <a id="DeleteSeason" class="btn btn-outline-danger" asp-page="./Delete" asp-route-podcastId="@Model.Season.PodcastId" asp-route-seasonId="@Model.Season.SeasonId">Remove this season</a>
+        <a id="DeleteSeason" class="btn btn-outline-danger" asp-page="./Delete" asp-route-podcastId="@Model.Season.PodcastId" asp-route-seasonId="@Model.Season.SeasonId" data-bs-toggle="modal" data-bs-target="#ConfirmModal" data-description="The season <strong>@Model.Season.Name</strong> will be deleted." data-confirm-input="DELETE">Delete this season</a>
     </div>
+    
+    <partial name="_Confirm" model="@(new ConfirmModel("Delete season", $"The season \"{Model.Season.Name}\" will be deleted. Are you sure?", "Delete"))" />
 }
 
 

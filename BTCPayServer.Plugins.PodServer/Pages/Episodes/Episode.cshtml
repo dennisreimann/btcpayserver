@@ -7,23 +7,21 @@
 @inject IFileService FileService
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.Episodes, Model.Episode.Title, Model.Episode.PodcastId);
+    ViewData.SetActivePage(PodServerNavPages.Episode, Model.Episode.Title, Model.Episode.PodcastId);
     var enclosure = Model.Episode.MainEnclosure;
     var player = new Player(Model.Episode, FileService);
 }
 
 <div class="sticky-header-setup"></div>
-<div class="sticky-header d-flex flex-wrap align-items-center justify-content-between gap-3">
-    <h2 class="mb-0">@ViewData["Title"]</h2>
-    <div class="d-flex gap-3">
-        <a asp-page="./Edit" asp-route-podcastId="@Model.Episode.PodcastId" asp-route-episodeId="@Model.Episode.EpisodeId" class="btn btn-primary order-sm-1" role="button" id="EditEpisode">
-            Edit
-        </a>
+<div class="sticky-header mb-l">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2 mb-lg-4">
+        <h2 class="mb-0">@ViewData["Title"]</h2>
         @if (Model.Episode.IsPublished)
         {
             <a class="btn btn-secondary" asp-page="/Public/Episode" asp-route-podcastSlug="@Model.Podcast.Slug" asp-route-episodeSlug="@Model.Episode.Slug" id="ViewEpisode" target="_blank">Public Page</a>
         }
     </div>
+    <partial name="_EpisodeSettingsNav" model="(Model.Episode.PodcastId, Model.Episode.EpisodeId)"/>
 </div>
 
 <partial name="_StatusMessage" />

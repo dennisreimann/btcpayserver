@@ -128,6 +128,11 @@ public class PodcastService
 
     private IQueryable<Episode> FilterEpisodes(IQueryable<Episode> queryable, EpisodesQuery query)
     {
+        if (query.IncludePeople)
+        {
+            query.IncludePodcast = true;
+        }
+        
         if (!string.IsNullOrEmpty(query.PodcastId))
         {
             query.IncludePodcast = true;
@@ -142,7 +147,9 @@ public class PodcastService
         
         if (query.IncludePodcast)
         {
-            queryable = queryable.Include(e => e.Podcast);
+            queryable = query.IncludePeople
+                ? queryable.Include(e => e.Podcast).ThenInclude(p => p.People)
+                : queryable.Include(e => e.Podcast);
         }
         
         if (!string.IsNullOrEmpty(query.EpisodeId))
@@ -389,6 +396,11 @@ public class PodcastService
         if (query.PersonId != null)
         {
             queryable = queryable.Where(c => c.PersonId == query.PersonId);
+        }
+
+        if (query.IncludePerson)
+        {
+            queryable = queryable.Include(c => c.Person);
         }
 
         return queryable;

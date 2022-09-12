@@ -16,7 +16,7 @@ else
         <h2 class="mb-0">@ViewData["Title"]</h2>
         @if (Model.HasPeople)
         {
-            <a asp-page="./Edit" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0" role="button" id="AddContribution">Add a contribution</a>
+            <a asp-page="./Edit" asp-route-podcastId="@Model.Podcast.PodcastId" asp-route-episodeId="@Model.Episode?.EpisodeId" class="btn btn-primary mt-3 mt-sm-0" role="button" id="AddContribution">Add a contribution</a>
         }
     </div>
     @if (Model.Episode == null)
@@ -31,33 +31,31 @@ else
 
 <partial name="_StatusMessage" />
 
+<h3 class="mb-3">Contributions</h3>
+
 @if (Model.Contributions.Any())
 {
-    <div class="row">
-        <div class="col">
-            <table id="PodcastContributions" class="table table-hover">
-                <thead>
-                <tr>
-                    <th>Person</th>
-                    <th>Role</th>
-                    <th>Split</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var contribution in Model.Contributions)
-                {
-                    <tr>
-                        <td>
-                            <a asp-page="./Edit" asp-route-podcastId="@contribution.PodcastId" asp-route-personId="@contribution.PersonId" class="contribution-edit">@contribution.Person.Name</a>
-                        </td>
-                        <td>@contribution.Role</td>
-                        <td>@contribution.Split</td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <table id="PodcastContributions" class="table table-hover">
+        <thead>
+        <tr>
+            <th>Person</th>
+            <th>Role</th>
+            <th>Split</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var contribution in Model.Contributions)
+        {
+            <tr>
+                <td>
+                    <a asp-page="./Edit" asp-route-podcastId="@contribution.PodcastId" asp-route-personId="@contribution.PersonId" asp-route-episodeId="@contribution.EpisodeId" class="contribution-edit">@contribution.Person.Name</a>
+                </td>
+                <td>@contribution.Role</td>
+                <td>@contribution.Split</td>
+            </tr>
+        }
+        </tbody>
+    </table>
 }
 else if (Model.HasPeople)
 {

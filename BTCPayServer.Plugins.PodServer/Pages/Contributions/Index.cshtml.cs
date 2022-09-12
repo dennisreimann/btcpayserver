@@ -37,6 +37,7 @@ public class IndexModel : BasePageModel
             Episode = await PodcastService.GetEpisode(new EpisodesQuery {
                 PodcastId = podcastId,
                 EpisodeId = episodeId,
+                IncludePeople = true,
                 IncludePodcast = true,
                 IncludeContributions = true
             });

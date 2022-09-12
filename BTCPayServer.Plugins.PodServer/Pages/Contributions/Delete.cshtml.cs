@@ -41,7 +41,8 @@ public class DeleteModel : BasePageModel
         return await PodcastService.GetContribution(new ContributionsQuery {
             PodcastId = podcastId,
             PersonId = personId,
-            EpisodeId = episodeId
+            EpisodeId = episodeId,
+            IncludePerson = true
         });
     }
 }

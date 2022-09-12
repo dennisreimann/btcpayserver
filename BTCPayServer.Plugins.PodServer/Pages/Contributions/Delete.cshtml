@@ -10,12 +10,19 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between mt-1 mb-2 mb-lg-4">
         <h2 class="mb-0">@ViewData["Title"]</h2>
     </div>
-    <partial name="_PodcastSettingsNav" model="Model.Contribution.PodcastId" />
+    @if (string.IsNullOrEmpty(Model.Contribution.EpisodeId))
+    {
+        <partial name="_PodcastSettingsNav" model="Model.Contribution.PodcastId"/>
+    }
+    else
+    {
+        <partial name="_EpisodeSettingsNav" model="(Model.Contribution.PodcastId, Model.Contribution.EpisodeId)"/>
+    }
 </div>
 
 <partial name="_StatusMessage" />
 
-<p>Are you sure you want to remove this season from this podcast?</p>
+<p>Are you sure you want to remove this constribution?</p>
 
 <form method="post">
     <input type="submit" value="Delete" class="btn btn-danger" id="Delete" />

@@ -87,7 +87,7 @@ public class EditModel : BasePageModel
             {
                 PodcastId = podcastId,
                 EpisodeId = episodeId,
-                IncludePodcast = true,
+                IncludePeople = true,
                 IncludeContributions = true
             });
             Podcast = Episode.Podcast;

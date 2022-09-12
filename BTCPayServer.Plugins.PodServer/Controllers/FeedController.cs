@@ -1,11 +1,8 @@
-using System.ServiceModel.Syndication;
 using System.Text;
 using System.Xml;
-using System.Xml.Linq;
 using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Plugins.PodServer.Data.Models;
-using BTCPayServer.Plugins.PodServer.Extensions;
 using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Mvc;
 
@@ -94,13 +91,15 @@ public class FeedController : Controller
             : podcast.Url;
 
         await xml.WriteElementStringAsync(null, "title", null, podcast.Title);
-        await xml.WriteElementStringAsync(null, "description", null, podcast.Description.StripHtml());
-        await xml.WriteElementStringAsync("itunes", "summary", null, podcast.Description.StripHtml());
         await xml.WriteElementStringAsync(null, "generator", null, "PodServer (BTCPay Server Plugin)");
         await xml.WriteElementStringAsync(null, "language", null, podcast.Language);
         await xml.WriteElementStringAsync(null, "lastBuildDate", null, lastUpdated.ToString("R"));
         await xml.WriteElementStringAsync("podcast", "guid", null, podcast.PodcastId);
         await xml.WriteElementStringAsync("podcast", "medium", null, podcast.Medium);
+        
+        xml.WriteStartElement("description");
+        await xml.WriteCDataAsync(podcast.Description);
+        await xml.WriteEndElementAsync();
 
         if (!string.IsNullOrEmpty(podcast.Owner))
         {
@@ -141,54 +140,8 @@ public class FeedController : Controller
             await xml.WriteEndElementAsync();
         }
 
-        // People
-        foreach (var person in podcast.People)
-        {
-            var avatarUrl = string.IsNullOrEmpty(person.ImageFileId)
-                ? null
-                : await _fileService.GetFileUrl(rootUri, person.ImageFileId);
-
-            await xml.WriteStartElementAsync("podcast", "person", null);
-            if (!string.IsNullOrEmpty(person.Url))
-            {
-                xml.WriteAttributeString("href", person.Url);
-            }
-
-            if (!string.IsNullOrEmpty(avatarUrl))
-            {
-                xml.WriteAttributeString("img", avatarUrl);
-            }
-
-            xml.WriteValue(person.Name);
-            await xml.WriteEndElementAsync();
-        }
-
-        // Value
-        if (podcast.Contributions.Any())
-        {
-            await xml.WriteStartElementAsync("podcast", "value", null);
-            xml.WriteAttributeString("type", "lightning");
-            xml.WriteAttributeString("method", "keysend");
-
-            foreach (var contrib in podcast.Contributions)
-            {
-                var person = contrib.Person;
-                var type = person.ValueRecipient.Type.ToString();
-                var address = person.ValueRecipient.Address;
-                var split = contrib.Split.ToString();
-                var name = string.IsNullOrEmpty(contrib.Role) ? person.Name : $"{person.Name} ({contrib.Role})";
-
-                await xml.WriteStartElementAsync("podcast", "valueRecipient", null);
-                xml.WriteAttributeString("name", name);
-                xml.WriteAttributeString("type", type);
-                xml.WriteAttributeString("address", address);
-                xml.WriteAttributeString("split", split);
-
-                await xml.WriteEndElementAsync();
-            }
-
-            await xml.WriteEndElementAsync();
-        }
+        // Value and people
+        await AddContributionsToXml(podcast.Contributions, podcast.People, rootUri, xml);
     }
 
     private async Task AddEpisodeToXml(Podcast podcast, Episode episode, Uri rootUri, XmlWriter xml)
@@ -204,8 +157,11 @@ public class FeedController : Controller
         xml.WriteStartElement("item");
 
         await xml.WriteElementStringAsync(null, "title", null, episode.Title);
-        await xml.WriteElementStringAsync(null, "description", null, episode.Description.StripHtml());
         await xml.WriteElementStringAsync(null, "pubDate", null, episode.LastUpdatedAt.ToString("R"));
+        
+        xml.WriteStartElement("description");
+        await xml.WriteCDataAsync(episode.Description);
+        await xml.WriteEndElementAsync();
 
         await xml.WriteStartElementAsync(null, "enclosure", null);
         xml.WriteAttributeString("url", enclosureUrl);
@@ -236,37 +192,59 @@ public class FeedController : Controller
         xml.WriteValue(episode.EpisodeId);
         await xml.WriteEndElementAsync();
 
-        // Value
-        if (episode.Contributions.Any())
+        // Value and People
+        await AddContributionsToXml(episode.Contributions, podcast.People, rootUri, xml);
+
+        // Season
+        if (episode.Season != null)
         {
-            await xml.WriteStartElementAsync("podcast", "value", null);
-            xml.WriteAttributeString("type", "lightning");
-            xml.WriteAttributeString("method", "keysend");
-
-            foreach (var contrib in episode.Contributions)
+            await xml.WriteStartElementAsync("podcast", "season", null);
+            if (!string.IsNullOrEmpty(episode.Season.Name))
             {
-                var person = contrib.Person;
-                var type = person.ValueRecipient.Type.ToString();
-                var address = person.ValueRecipient.Address;
-                var split = contrib.Split.ToString();
-                var name = string.IsNullOrEmpty(contrib.Role) ? person.Name : $"{person.Name} ({contrib.Role})";
-
-                await xml.WriteStartElementAsync("podcast", "valueRecipient", null);
-                xml.WriteAttributeString("name", name);
-                xml.WriteAttributeString("type", type);
-                xml.WriteAttributeString("address", address);
-                xml.WriteAttributeString("split", split);
-
-                await xml.WriteEndElementAsync();
+                xml.WriteAttributeString("name", episode.Season.Name);
             }
+
+            xml.WriteValue(episode.Season.Number);
+            await xml.WriteEndElementAsync();
+        }
+
+        await xml.WriteEndElementAsync();
+    }
+    
+    private async Task AddContributionsToXml(IEnumerable<Contribution> contributions, IEnumerable<Person> people, Uri rootUri, XmlWriter xml)
+    {
+        if (!contributions.Any()) return;
+    
+        // Value
+        await xml.WriteStartElementAsync("podcast", "value", null);
+        xml.WriteAttributeString("type", "lightning");
+        xml.WriteAttributeString("method", "keysend");
+
+        foreach (var contrib in contributions)
+        {
+            var person = contrib.Person ?? people.FirstOrDefault(p => p.PersonId == contrib.PersonId);
+            if (person.ValueRecipient?.Type == null) continue;
+
+            var type = person.ValueRecipient.Type.ToString();
+            var address = person.ValueRecipient.Address;
+            var split = contrib.Split.ToString();
+            var name = string.IsNullOrEmpty(contrib.Role) ? person.Name : $"{person.Name} ({contrib.Role})";
+
+            await xml.WriteStartElementAsync("podcast", "valueRecipient", null);
+            xml.WriteAttributeString("name", name);
+            xml.WriteAttributeString("type", type);
+            xml.WriteAttributeString("address", address);
+            xml.WriteAttributeString("split", split);
 
             await xml.WriteEndElementAsync();
         }
 
-        // Person
-        foreach (var contrib in episode.Contributions)
+        await xml.WriteEndElementAsync();
+
+        // People
+        foreach (var contrib in contributions)
         {
-            var person = contrib.Person;
+            var person = contrib.Person ?? people.FirstOrDefault(p => p.PersonId == contrib.PersonId);
             var avatarUrl = string.IsNullOrEmpty(person.ImageFileId)
                 ? null
                 : await _fileService.GetFileUrl(rootUri, person.ImageFileId);
@@ -290,20 +268,5 @@ public class FeedController : Controller
             xml.WriteValue(person.Name);
             await xml.WriteEndElementAsync();
         }
-
-        // Season
-        if (episode.Season != null)
-        {
-            await xml.WriteStartElementAsync("podcast", "season", null);
-            if (!string.IsNullOrEmpty(episode.Season.Name))
-            {
-                xml.WriteAttributeString("name", episode.Season.Name);
-            }
-
-            xml.WriteValue(episode.Season.Number);
-            await xml.WriteEndElementAsync();
-        }
-
-        await xml.WriteEndElementAsync();
     }
 }

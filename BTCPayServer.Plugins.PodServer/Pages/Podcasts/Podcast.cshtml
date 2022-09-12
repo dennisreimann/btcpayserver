@@ -9,16 +9,14 @@
 }
 
 <div class="sticky-header-setup"></div>
-<div class="sticky-header d-flex flex-wrap align-items-center justify-content-between gap-3">
-    <h2 class="mb-0">@ViewData["Title"]</h2>
-    <div class="d-flex gap-3">
+<div class="sticky-header mb-l">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2 mb-lg-4">
+        <h2 class="mb-0">@ViewData["Title"]</h2>
         <a asp-page="/Episodes/Create" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary" role="button" id="CreateEpisode">
             Create an episode
         </a>
-        <a class="btn btn-secondary" asp-page="./Edit" asp-route-podcastId="@Model.Podcast.PodcastId" id="EditPodcast">
-            @await Component.InvokeAsync("Icon", new { symbol = "settings" })
-        </a>
     </div>
+    <partial name="_PodcastSettingsNav" model="Model.Podcast.PodcastId"/>
 </div>
 
 <partial name="_StatusMessage" />

@@ -6,7 +6,7 @@
 @inject IFileService FileService
 
 @{
-    ViewData.SetActivePage(PodServerNavPages.Podcast, Model.Podcast.Title, Model.Podcast.PodcastId);
+    ViewData.SetActivePage(PodServerNavPages.EditPodcast, Model.Podcast.Title, Model.Podcast.PodcastId);
 }
 
 @section PodServerHead {
@@ -31,6 +31,8 @@
     </div>
     
     <partial name="_StatusMessage"/>
+    
+    <h3 class="mb-3">@Model.Podcast.Medium Settings</h3>
     
     <div class="row">
         <div class="col-xl-10 col-xxl-constrain">

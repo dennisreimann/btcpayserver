@@ -16,37 +16,35 @@
 
 <partial name="_StatusMessage" />
 
+<h3 class="mb-3">Seasons</h3>
+
 @if (Model.Seasons.Any())
 {
-    <div class="row">
-        <div class="col">
-            <table id="PodcastSeasons" class="table table-hover">
-                <thead>
-                <tr>
-                    <th>Number</th>
-                    <th>Name</th>
-                    <th class="text-end">Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var season in Model.Seasons)
-                {
-                    <tr>
-                        <td>
-                            @season.Number
-                        </td>
-                        <td>
-                            @season.Name
-                        </td>
-                        <td class="text-end">
-                            <a asp-page="./Edit" asp-route-podcastId="@season.PodcastId" asp-route-seasonId="@season.SeasonId" class="podcast-edit">Edit</a>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <table id="PodcastSeasons" class="table table-hover">
+        <thead>
+        <tr>
+            <th>Number</th>
+            <th>Name</th>
+            <th class="text-end">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var season in Model.Seasons)
+        {
+            <tr>
+                <td>
+                    @season.Number
+                </td>
+                <td>
+                    @season.Name
+                </td>
+                <td class="text-end">
+                    <a asp-page="./Edit" asp-route-podcastId="@season.PodcastId" asp-route-seasonId="@season.SeasonId" class="podcast-edit">Edit</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
 }
 else
 {
