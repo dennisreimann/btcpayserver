@@ -61,6 +61,7 @@ public class FeedController : Controller
         await xml.WriteAttributeStringAsync("xmlns", "itunes", null, "http://www.itunes.com/dtds/podcast-1.0.dtd");
         await xml.WriteAttributeStringAsync("xmlns", "content", null, "http://purl.org/rss/1.0/modules/content/");
         await xml.WriteAttributeStringAsync("xmlns", "podcast", null, "https://podcastindex.org/namespace/1.0");
+        await xml.WriteAttributeStringAsync("xmlns", "atom", null, "http://www.w3.org/2005/Atom");
         xml.WriteStartElement("channel");
         
         // Podcast
@@ -89,27 +90,36 @@ public class FeedController : Controller
         var podcastUrl = string.IsNullOrEmpty(podcast.Url)
             ? Url.PageLink("/Public/Podcast", null, new { podcastSlug = podcast.Slug })
             : podcast.Url;
-
-        await xml.WriteElementStringAsync(null, "title", null, podcast.Title);
+        
+        xml.WriteStartElement("title");
+        await xml.WriteCDataAsync(podcast.Title);
+        await xml.WriteEndElementAsync();
+        
+        xml.WriteStartElement("description");
+        await xml.WriteCDataAsync(podcast.Description);
+        await xml.WriteEndElementAsync();
+        
         await xml.WriteElementStringAsync(null, "generator", null, "PodServer (BTCPay Server Plugin)");
         await xml.WriteElementStringAsync(null, "language", null, podcast.Language);
         await xml.WriteElementStringAsync(null, "lastBuildDate", null, lastUpdated.ToString("R"));
         await xml.WriteElementStringAsync("podcast", "guid", null, podcast.PodcastId);
         await xml.WriteElementStringAsync("podcast", "medium", null, podcast.Medium);
         
-        xml.WriteStartElement("description");
-        await xml.WriteCDataAsync(podcast.Description);
+        await xml.WriteStartElementAsync("atom", "link", null);
+        xml.WriteAttributeString("rel", "self");
+        xml.WriteAttributeString("type", "application/rss+xml");
+        xml.WriteAttributeString("href", Url.ActionLink("Feed", "Feed", new { podcastSlug = podcast.Slug }));
         await xml.WriteEndElementAsync();
 
         if (!string.IsNullOrEmpty(podcast.Owner))
         {
-            await xml.WriteElementStringAsync(null, "copyright", null, $"&#xA9; {DateTime.Now.Year}, {podcast.Owner}");
+            await xml.WriteElementStringAsync(null, "copyright", null, $"{DateTime.Now.Year}, {podcast.Owner}");
             await xml.WriteElementStringAsync("itunes", "author", null, podcast.Owner);
             await xml.WriteStartElementAsync("itunes", "owner", null);
             await xml.WriteElementStringAsync("itunes", "name", null, podcast.Owner);
             if (!string.IsNullOrEmpty(podcast.Email))
             {
-                await xml.WriteElementStringAsync("itunes", "name", null, podcast.Email);
+                await xml.WriteElementStringAsync("itunes", "email", null, podcast.Email);
             }
 
             await xml.WriteEndElementAsync();
@@ -156,8 +166,11 @@ public class FeedController : Controller
 
         xml.WriteStartElement("item");
 
-        await xml.WriteElementStringAsync(null, "title", null, episode.Title);
         await xml.WriteElementStringAsync(null, "pubDate", null, episode.LastUpdatedAt.ToString("R"));
+        
+        xml.WriteStartElement("title");
+        await xml.WriteCDataAsync(episode.Title);
+        await xml.WriteEndElementAsync();
         
         xml.WriteStartElement("description");
         await xml.WriteCDataAsync(episode.Description);
@@ -182,7 +195,7 @@ public class FeedController : Controller
             await xml.WriteEndElementAsync();
         }
 
-        if (episode.Number.HasValue)
+        if (episode.Number is > 0)
         {
             await xml.WriteElementStringAsync("podcast", "episode", null, episode.Number.ToString());
         }
@@ -213,8 +226,6 @@ public class FeedController : Controller
     
     private async Task AddContributionsToXml(IEnumerable<Contribution> contributions, IEnumerable<Person> people, Uri rootUri, XmlWriter xml)
     {
-        if (!contributions.Any()) return;
-    
         // Value
         await xml.WriteStartElementAsync("podcast", "value", null);
         xml.WriteAttributeString("type", "lightning");
@@ -235,9 +246,16 @@ public class FeedController : Controller
             xml.WriteAttributeString("type", type);
             xml.WriteAttributeString("address", address);
             xml.WriteAttributeString("split", split);
-
             await xml.WriteEndElementAsync();
         }
+        
+        // PodServer - TODO: Make the split configurable
+        await xml.WriteStartElementAsync("podcast", "valueRecipient", null);
+        xml.WriteAttributeString("name", "PodServer");
+        xml.WriteAttributeString("type", ValueRecipientType.Node.ToString());
+        xml.WriteAttributeString("address", "0364b672df6939e97f63b25c97c12ac59a77a7d1b14383c6a479e1da1e6d29f4c4");
+        xml.WriteAttributeString("split", "1");
+        await xml.WriteEndElementAsync();
 
         await xml.WriteEndElementAsync();
 
