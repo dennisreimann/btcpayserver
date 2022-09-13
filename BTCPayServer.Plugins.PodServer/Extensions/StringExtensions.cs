@@ -15,6 +15,8 @@ public static class StringExtensions
         // cut and trim
         str = str[..(str.Length <= 45 ? str.Length : 45)].Trim();
         str = Regex.Replace(str, @"\s", "-"); // hyphens
+        // convert multiple hyphens into one hyphen
+        str = Regex.Replace(str, @"-+", "-");
         return str;
     }
 

@@ -1,31 +1,21 @@
 using BTCPayServer.Abstractions.Contracts;
-using BTCPayServer.Abstractions.Extensions;
-using BTCPayServer.Configuration;
 using BTCPayServer.Plugins.PodServer.Data.Models;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.Extensions.Options;
 
 namespace BTCPayServer.Plugins.PodServer.Services.Imports;
 
 public class ImportService
 {
     private readonly IFileService _fileService;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IOptions<DataDirectories> _dataDirectories;
     private readonly PodServerPluginDbContextFactory _dbContextFactory;
 
     public ImportService(
         IFileService fileService,
-        IHttpClientFactory httpClientFactory,
-        IOptions<DataDirectories> dataDirectories,
         PodServerPluginDbContextFactory dbContextFactory)
     {
         _fileService = fileService;
-        _dbContextFactory = dbContextFactory;
-        _httpClientFactory = httpClientFactory;
-        _dataDirectories = dataDirectories;
         _dbContextFactory = dbContextFactory;
     }
     

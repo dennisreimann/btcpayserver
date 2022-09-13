@@ -1,6 +1,7 @@
 using System.Xml;
 using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Plugins.PodServer.Data.Models;
+using BTCPayServer.Plugins.PodServer.Extensions;
 using BTCPayServer.Plugins.PodServer.Services.Background;
 using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 
@@ -33,6 +34,7 @@ public class FeedImporter
         var description = channel["description"]?.InnerText;
         var url = channel["link"]?.InnerText;
         var language = channel["language"]?.InnerText;
+        var medium = channel["podcast:medium"]?.InnerText;
         var category = channel["itunes:category"]?.Attributes["text"]?.Value;
         var imageUrl = channel["image"]?["url"]?.InnerText;
         var owner = channel["itunes:owner"]?["itunes:name"]?.InnerText;
@@ -53,8 +55,14 @@ public class FeedImporter
             Category = category,
             Email = email,
             Owner = owner,
-            ImageFileId = imageFile?.Id
+            ImageFileId = imageFile?.Id,
+            Slug = title.Slugify()
         };
+
+        if (!string.IsNullOrEmpty(medium))
+        {
+            podcast.Medium = medium;
+        }
         
         // Create podcast and import job
         await _podcastService.AddOrUpdatePodcast(podcast);
@@ -128,7 +136,7 @@ public class FeedImporter
                         log += $"channel/podcast:value/podcast:valueRecipient -> {(isNew ? "Added" : "Existed")}: Person '{person.Name}'\n";
                         
                         var contribution = await GetContributionByValueRecipientTag(elem, podcast.PodcastId, null, person.PersonId);
-                        var isNewC = string.IsNullOrEmpty(contribution.PersonId);
+                        var isNewC = string.IsNullOrEmpty(contribution.ContributionId);
                         if (isNewC) await _podcastService.AddOrUpdateContribution(contribution);
                         log += $"channel/podcast:value/podcast:valueRecipient -> {(isNewC ? "Added" : "Existed")}: Contribution by '{person.Name}' with split '{contribution.Split}'\n";
                     }
@@ -178,7 +186,7 @@ public class FeedImporter
                                 log += $"channel/item({episode.ImportGuid})/podcast:value/podcast:valueRecipient -> {(isNewP ? "Added" : "Existed")}: Person '{person.Name}'\n";
                         
                                 var contribution = await GetContributionByValueRecipientTag(el, podcast.PodcastId, episode.EpisodeId, person.PersonId);
-                                var isNewC = string.IsNullOrEmpty(contribution.PersonId);
+                                var isNewC = string.IsNullOrEmpty(contribution.ContributionId);
                                 if (isNewC) await _podcastService.AddOrUpdateContribution(contribution);
                                 log += $"channel/item({episode.ImportGuid})/podcast:value/podcast:valueRecipient -> {(isNewC ? "Added" : "Existed")}: Contribution by '{person.Name}' with split '{contribution.Split}'\n";
                             }
@@ -276,7 +284,7 @@ public class FeedImporter
             PodcastId = podcastId,
             ValueRecipient = new ValueRecipient
             {
-                Type = Enum.Parse<ValueRecipientType>(elem.GetAttribute("type")),
+                Type = Enum.Parse<ValueRecipientType>(elem.GetAttribute("type"), true),
                 Address = elem.GetAttribute("address"),
                 CustomKey = elem.GetAttribute("customKey"),
                 CustomValue = elem.GetAttribute("customValue")
@@ -286,7 +294,8 @@ public class FeedImporter
     
     private async Task<Contribution> GetContributionByValueRecipientTag(XmlElement elem, string podcastId, string episodeId, string personId)
     {
-        var query = new ContributionsQuery { PodcastId = podcastId, EpisodeId = episodeId, PersonId = personId };
+        var query = new ContributionsQuery { PodcastId = podcastId, EpisodeId = episodeId, PersonId = personId, 
+            PodcastOnly = string.IsNullOrEmpty(episodeId)};
         return await _podcastService.GetContribution(query) ?? new Contribution
         {
             Split = int.Parse(elem.GetAttribute("split")),
@@ -296,7 +305,7 @@ public class FeedImporter
         };
     }
     
-    private async Task<Episode> GetEpisodeByItemTag(XmlElement item, string podcastId, string userId)
+    private async Task<Episode> GetEpisodeByItemTag(XmlNode item, string podcastId, string userId)
     {
         var guid = item["guid"]?.InnerText;
         var query = new EpisodesQuery { ImportGuid = guid, PodcastId = podcastId };
@@ -340,19 +349,27 @@ public class FeedImporter
         var pubDate = item["pubDate"]?.InnerText;
         var publishedAt = string.IsNullOrEmpty(pubDate) ? DateTimeOffset.Now : DateTimeOffset.Parse(pubDate);
 
+        var title = item["title"]?.InnerText;
+        var number = item["itunes:episode"]?.InnerText;
+        
         episode = new Episode
         {
             PodcastId = podcastId,
-            Title = item["title"]?.InnerText, 
+            Title = title,
+            Slug = title.Slugify(), 
             Description = item["description"]?.InnerText,
             LastUpdatedAt = DateTimeOffset.UtcNow,
-            Number = int.Parse(item["itunes:episode"]?.InnerText ?? "0"),
             PublishedAt = publishedAt,
             ImportGuid = guid,
             ImageFileId = imageFile?.Id,
             SeasonId = season?.SeasonId,
             Enclosures = new List<Enclosure> { enclosure }
         };
+
+        if (!string.IsNullOrEmpty(number))
+        {
+            episode.Number = int.Parse(number);
+        }
         
         return episode;
     }
