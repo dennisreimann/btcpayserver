@@ -71,9 +71,10 @@ public class CreateModel : BasePageModel
             TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully created. The feed is now being imported and the progress will be shown here.";
             return RedirectToPage("./Podcast", new { podcastId = Podcast.PodcastId });
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            TempData[WellKnownTempData.ErrorMessage] = $"Import failed: {exception.Message}";
+            TempData[WellKnownTempData.ErrorMessage] = $"Import failed: {ex.Message}" +
+                                                       (!string.IsNullOrEmpty(ex.InnerException?.Message) ? $" ({ex.InnerException.Message})" : "");
             return Page();
         }
     }

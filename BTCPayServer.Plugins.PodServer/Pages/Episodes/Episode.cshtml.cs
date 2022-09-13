@@ -31,6 +31,7 @@ public class EpisodeModel : BasePageModel
             PodcastId = podcastId,
             EpisodeId = episodeId,
             IncludePodcast = true,
+            IncludePeople = true,
             IncludeContributions = true,
             IncludeEnclosures = true,
             IncludeSeason = true

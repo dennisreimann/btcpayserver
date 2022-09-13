@@ -36,6 +36,27 @@ else if (!string.IsNullOrEmpty(Model.Episode.ImageFileId))
 }
 
 @Html.Raw(Model.Episode.Description)
+    
+<h3 class="mt-5 mb-3">Contributions</h3>
+
+@if (Model.Episode.Contributions.Any())
+{
+    <ul id="EpisodeContributions">
+        @foreach (var contribution in Model.Episode.Contributions)
+        {
+            <li>
+                <a asp-page="/Contributions/Edit" asp-route-podcastId="@contribution.PodcastId" asp-route-personId="@contribution.PersonId" asp-route-episodeId="@contribution.EpisodeId" class="contribution-edit">@contribution.Person.Name</a>
+                (@contribution.Split)
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p id="EpisodeContributions" class="text-secondary">There are no contributions yet.</p>
+}
+
+<h3 class="mt-5 mb-3">Meta</h3>
 
 <dl class="row">
     <dt class="col-sm-3 col-xl-2">
