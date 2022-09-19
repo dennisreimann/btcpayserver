@@ -8,15 +8,15 @@ namespace BTCPayServer.Plugins.PodServer.Pages;
 
 public abstract class BasePageModel : PageModel
 {
-    private readonly UserManager<ApplicationUser> _userManager;
+    protected readonly UserManager<ApplicationUser> UserManager;
     protected readonly PodcastService PodcastService;
-    protected string UserId => _userManager.GetUserId(User);
+    protected string UserId => UserManager.GetUserId(User);
         
     protected BasePageModel(
         UserManager<ApplicationUser> userManager,
         PodcastService podcastService)
     {
-        _userManager = userManager;
+        UserManager = userManager;
         PodcastService = podcastService;
     }
 }

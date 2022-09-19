@@ -10,4 +10,5 @@ public class PodcastsQuery
     public bool IncludePeople { get; set; }
     public bool IncludeImports { get; set; }
     public bool IncludeContributions { get; set; }
+    public bool IncludeEditors { get; set; }
 }

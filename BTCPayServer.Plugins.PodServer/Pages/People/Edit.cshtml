@@ -1,6 +1,7 @@
 @page "/plugins/podserver/podcasts/{podcastId}/people/{personId}/edit"
 @using BTCPayServer.Abstractions.Contracts
 @using BTCPayServer.Abstractions.Models
+@using BTCPayServer.Plugins.PodServer.Authentication
 @using BTCPayServer.Plugins.PodServer.Data.Models
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @model BTCPayServer.Plugins.PodServer.Pages.People.EditModel
@@ -97,9 +98,11 @@
     </div>
 </form>
 
-<h3 class="mt-5 mb-4">Additional Actions</h3>
-<div class="d-flex gap-3">
-    <a id="DeletePerson" class="btn btn-outline-danger" asp-page="./Delete" asp-route-podcastId="@Model.Person.PodcastId" asp-route-personId="@Model.Person.PersonId" data-bs-toggle="modal" data-bs-target="#ConfirmModal" data-description="The person <strong>@Model.Person.Name</strong> will be removed." data-confirm-input="REMOVE">Remove this person</a>
+<div permission="@PodServerPolicies.CanManagePodcast">
+    <h3 class="mt-5 mb-4">Additional Actions</h3>
+    <div class="d-flex gap-3">
+        <a id="DeletePerson" class="btn btn-outline-danger" asp-page="./Delete" asp-route-podcastId="@Model.Person.PodcastId" asp-route-personId="@Model.Person.PersonId" data-bs-toggle="modal" data-bs-target="#ConfirmModal" data-description="The person <strong>@Model.Person.Name</strong> will be removed." data-confirm-input="REMOVE">Remove this person</a>
+    </div>
 </div>
 
 <partial name="_Confirm" model="@(new ConfirmModel("Remove person", $"The person \"{Model.Person.Name}\" will be removed. Are you sure?", "Remove"))" />

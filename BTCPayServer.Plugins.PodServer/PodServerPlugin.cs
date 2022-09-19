@@ -3,6 +3,7 @@ using BTCPayServer.Abstractions.Models;
 using BTCPayServer.Abstractions.Services;
 using BTCPayServer.Plugins.PodServer.Data;
 using BTCPayServer.Plugins.PodServer.Extensions;
+using BTCPayServer.Plugins.PodServer.Hooks;
 using BTCPayServer.Plugins.PodServer.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,7 +32,11 @@ namespace BTCPayServer.Plugins.PodServer
                 var factory = provider.GetRequiredService<PodServerPluginDbContextFactory>();
                 factory.ConfigureBuilder(o);
             });
+
+            services.AddSingleton<IPluginHookFilter, AuthorizationRequirementHandler>();
+            
             services.AddAppServices();
+            services.AddAppAuthorization();
         }
 
         public override void Execute(IApplicationBuilder applicationBuilder, IServiceProvider applicationBuilderApplicationServices)

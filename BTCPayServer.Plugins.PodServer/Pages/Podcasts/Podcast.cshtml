@@ -1,6 +1,7 @@
 @page "/plugins/podserver/podcasts/{podcastId}"
 @using System.Globalization
 @using BTCPayServer.Abstractions.Contracts
+@using BTCPayServer.Plugins.PodServer.Authentication
 @model BTCPayServer.Plugins.PodServer.Pages.Podcasts.PodcastModel
 @inject IFileService FileService
 
@@ -12,7 +13,7 @@
 <div class="sticky-header mb-l">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2 mb-lg-4">
         <h2 class="mb-0">@ViewData["Title"]</h2>
-        <a asp-page="/Episodes/Create" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary" role="button" id="CreateEpisode">
+        <a asp-page="/Episodes/Create" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary" role="button" id="CreateEpisode" permission="@PodServerPolicies.CanManageEpisodes">
             Create an episode
         </a>
     </div>
@@ -67,9 +68,9 @@
                         @if (episode.IsPublished)
                         {
                             <a asp-page="/Public/Episode" asp-route-podcastSlug="@Model.Podcast.Slug" asp-route-episodeSlug="@episode.Slug" class="podcast-view" target="_blank">Public Page</a>
-                            <span> - </span>
+                            <span permission="@PodServerPolicies.CanManageEpisodes"> - </span>
                         }
-                        <a asp-page="/Episodes/Edit" asp-route-podcastId="@episode.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode-edit">Edit</a>
+                        <a asp-page="/Episodes/Edit" asp-route-podcastId="@episode.PodcastId" asp-route-episodeId="@episode.EpisodeId" class="episode-edit" permission="@PodServerPolicies.CanManageEpisodes">Edit</a>
                     </td>
                 </tr>
             }

@@ -24,6 +24,10 @@ public class Podcast
     
     // Properties
     [Required]
+    [DisplayName("User ID")]
+    public string OwnerId { get; set; }
+    
+    [Required]
     public string Title { get; set; }
 
     [DisplayName("Link ID")]
@@ -48,7 +52,10 @@ public class Podcast
     
     [DisplayName("Website URL")]
     public string Url { get; set; }
-    
+
+    [NotMapped]
+    public EditorRole Role { get; set; }
+
     internal static void OnModelCreating(ModelBuilder builder)
     {
         builder

@@ -8,7 +8,6 @@ using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace BTCPayServer.Plugins.PodServer.Pages.Podcasts;
 
@@ -31,7 +30,7 @@ public class CreateModel : BasePageModel
     {
         if (!ModelState.IsValid) return Page();
 
-        Podcast = new Podcast();
+        Podcast = new Podcast { OwnerId = UserId };
 
         if (await TryUpdateModelAsync(
             Podcast, 
@@ -45,7 +44,7 @@ public class CreateModel : BasePageModel
             Podcast.Slug = Podcast.Title.Slugify();
                 
             await PodcastService.AddOrUpdatePodcast(Podcast);
-            await PodcastService.AddEditor(new Editor(UserId, Podcast.PodcastId, EditorRole.Admin));
+            await PodcastService.AddOrUpdateEditor(Podcast.PodcastId, UserId, EditorRole.Admin);
         
             TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully created.";
             return RedirectToPage("./Podcast", new { podcastId = Podcast.PodcastId });

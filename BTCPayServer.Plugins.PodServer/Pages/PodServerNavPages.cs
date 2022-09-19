@@ -11,5 +11,6 @@ public enum PodServerNavPages
     Seasons,
     People,
     Contributions,
-    Public
+    Public,
+    Editors
 }

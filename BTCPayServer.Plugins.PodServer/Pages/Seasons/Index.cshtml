@@ -1,4 +1,6 @@
 ﻿@page "/plugins/podserver/podcasts/{podcastId}/seasons"
+@using BTCPayServer.Plugins.PodServer.Authentication
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model BTCPayServer.Plugins.PodServer.Pages.Seasons.IndexModel
 
 @{
@@ -9,7 +11,7 @@
 <div class="sticky-header mb-l">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2 mb-lg-4">
         <h2 class="mb-0">@ViewData["Title"]</h2>
-        <a asp-page="./Edit" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0" role="button" id="AddSeason">Add a season</a>
+        <a asp-page="./Edit" asp-route-podcastId="@Model.Podcast.PodcastId" class="btn btn-primary mt-3 mt-sm-0" role="button" id="AddSeason" permission="@PodServerPolicies.CanManageEpisodes">Add a season</a>
     </div>
     <partial name="_PodcastSettingsNav" model="Model.Podcast.PodcastId"/>
 </div>
@@ -25,7 +27,7 @@
         <tr>
             <th>Number</th>
             <th>Name</th>
-            <th class="text-end">Actions</th>
+            <th class="text-end" permission="@PodServerPolicies.CanManageEpisodes">Actions</th>
         </tr>
         </thead>
         <tbody>
@@ -38,7 +40,7 @@
                 <td>
                     @season.Name
                 </td>
-                <td class="text-end">
+                <td class="text-end" permission="@PodServerPolicies.CanManageEpisodes">
                     <a asp-page="./Edit" asp-route-podcastId="@season.PodcastId" asp-route-seasonId="@season.SeasonId" class="podcast-edit">Edit</a>
                 </td>
             </tr>

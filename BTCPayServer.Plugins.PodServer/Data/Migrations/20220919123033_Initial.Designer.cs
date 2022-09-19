@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BTCPayServer.Plugins.PodServer.Data.Migrations
 {
     [DbContext(typeof(PodServerPluginDbContext))]
-    [Migration("20220826172551_Initial")]
+    [Migration("20220919123033_Initial")]
     partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -252,6 +252,10 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Owner")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Slug")

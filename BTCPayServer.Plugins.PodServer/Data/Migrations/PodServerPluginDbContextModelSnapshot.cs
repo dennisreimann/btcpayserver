@@ -252,6 +252,10 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                     b.Property<string>("Owner")
                         .HasColumnType("text");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Slug")
                         .HasColumnType("text");
 

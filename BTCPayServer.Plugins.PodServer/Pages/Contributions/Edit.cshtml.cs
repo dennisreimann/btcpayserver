@@ -1,7 +1,7 @@
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Abstractions.Contracts;
-using BTCPayServer.Client;
 using BTCPayServer.Data;
+using BTCPayServer.Plugins.PodServer.Authentication;
 using BTCPayServer.Plugins.PodServer.Data.Models;
 using BTCPayServer.Plugins.PodServer.Services.Podcasts;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BTCPayServer.Plugins.PodServer.Pages.Contributions;
 
-[Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewProfile)]
+[Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = PodServerPolicies.CanManageEpisodes)]
 public class EditModel : BasePageModel
 {
     public Podcast Podcast { get; set; }

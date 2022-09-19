@@ -48,6 +48,7 @@ public class FeedImporter
         
         var podcast = new Podcast
         {
+            OwnerId = userId,
             Title = title,
             Description = description,
             Language = language,
@@ -66,7 +67,7 @@ public class FeedImporter
         
         // Create podcast and import job
         await _podcastService.AddOrUpdatePodcast(podcast);
-        await _podcastService.AddEditor(new Editor(userId, podcast.PodcastId, EditorRole.Admin));
+        await _podcastService.AddOrUpdateEditor(podcast.PodcastId, userId, EditorRole.Admin);
 
         var import = await _importService.CreateImport(rss, podcast.PodcastId, userId);
         await _taskQueue.QueueAsync(cancellationToken => Import(import.ImportId, cancellationToken));

@@ -21,21 +21,52 @@ public class PodcastService
     public async Task<IEnumerable<Podcast>> GetPodcasts(PodcastsQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        return await FilterPodcasts(dbContext.Podcasts.AsQueryable(), query).ToListAsync();
+        var podcasts = await FilterPodcasts(dbContext.Podcasts.AsQueryable(), query).ToListAsync();
+        
+        return podcasts.Select(podcast =>
+        {
+            var editor = podcast.Editors.FirstOrDefault(editor => query.UserId.Contains(editor.UserId));
+            if (editor != null)
+            {
+                podcast.Role = editor.Role;
+            }
+            else if (query.UserId.Contains(podcast.OwnerId))
+            {
+                podcast.Role = EditorRole.Admin;
+            }
+            return podcast;
+        });
     }
 
     public async Task<Podcast> GetPodcast(PodcastsQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        return await FilterPodcasts(dbContext.Podcasts.AsQueryable(), new PodcastsQuery
+        var podcast = await FilterPodcasts(dbContext.Podcasts.AsQueryable(), new PodcastsQuery
         {
             UserId = query.UserId,
             PodcastId = query.PodcastId,
+            IncludePeople = query.IncludePeople,
+            IncludeEditors = query.IncludeEditors,
             IncludeSeasons = query.IncludeSeasons,
             IncludeEpisodes = query.IncludeEpisodes,
-            IncludePeople = query.IncludePeople,
             IncludeContributions = query.IncludeContributions
         }).FirstOrDefaultAsync();
+        if (podcast == null) return null;
+        
+        if (query.UserId != null)
+        {
+            var editor = podcast.Editors.FirstOrDefault(editor => query.UserId.Contains(editor.UserId));
+            if (editor != null)
+            {
+                podcast.Role = editor.Role;
+            }
+            else if (query.UserId.Contains(podcast.OwnerId))
+            {
+                podcast.Role = EditorRole.Admin;
+            }
+        }
+
+        return podcast;
     }
 
     private IQueryable<Podcast> FilterPodcasts(IQueryable<Podcast> queryable, PodcastsQuery query)
@@ -43,7 +74,11 @@ public class PodcastService
         if (!string.IsNullOrEmpty(query.UserId))
         {
             queryable = queryable.Include(podcast => podcast.Editors)
-                .Where(p => p.Editors.SingleOrDefault(e => e.UserId == query.UserId) != null);
+                .Where(p => 
+                    // Owner
+                    query.UserId.Contains(p.OwnerId) || 
+                    // Editor
+                    p.Editors.SingleOrDefault(e => e.UserId == query.UserId) != null);
         }
 
         if (!string.IsNullOrEmpty(query.PodcastId))
@@ -74,6 +109,11 @@ public class PodcastService
         if (query.IncludeImports)
         {
             queryable = queryable.Include(p => p.Imports);
+        }
+
+        if (query.IncludeEditors)
+        {
+            queryable = queryable.Include(p => p.Editors);
         }
 
         if (query.IncludeContributions)
@@ -432,15 +472,36 @@ public class PodcastService
         await dbContext.SaveChangesAsync();
     }
     
-    public async Task<Editor> AddEditor(Editor editor)
+    public async Task<Editor> AddOrUpdateEditor(string podcastId, string userId, EditorRole role)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
+        var editor = await dbContext.Editors.FirstOrDefaultAsync(e => e.PodcastId == podcastId && e.UserId == userId);
 
-        var entry = await dbContext.Editors.AddAsync(editor);
-        
+        if (editor == null)
+        {
+            editor = new Editor
+            {
+                UserId = userId,
+                PodcastId = podcastId,
+                Role = role
+            };
+            await dbContext.Editors.AddAsync(editor);
+        }
+        else if (editor.Role != role)
+        {
+            editor.Role = role;
+            dbContext.Update(editor);
+        }
         await dbContext.SaveChangesAsync();
 
-        return entry.Entity;
+        return editor;
+    }
+
+    public async Task RemoveEditor(string podcastId, string userId)
+    {
+        await using var dbContext = _dbContextFactory.CreateContext();
+        var editor = await dbContext.Editors.FirstAsync(a => a.PodcastId == podcastId && a.UserId == userId);
+        await RemoveEditor(editor);
     }
 
     public async Task RemoveEditor(Editor editor)

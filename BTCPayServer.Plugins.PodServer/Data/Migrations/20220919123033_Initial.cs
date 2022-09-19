@@ -18,6 +18,7 @@ namespace BTCPayServer.Plugins.PodServer.Data.Migrations
                 columns: table => new
                 {
                     PodcastId = table.Column<string>(type: "text", nullable: false),
+                    OwnerId = table.Column<string>(type: "text", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
                     Slug = table.Column<string>(type: "text", nullable: true),
                     Description = table.Column<string>(type: "text", nullable: false),
