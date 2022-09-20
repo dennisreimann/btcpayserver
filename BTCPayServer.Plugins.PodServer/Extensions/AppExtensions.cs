@@ -9,8 +9,8 @@ public static class AppExtensions
     public static void AddAppServices(this IServiceCollection services)
     {
         services.AddHostedService<TaskQueueService>();
-        services.AddSingleton<PodcastService>();
-        services.AddSingleton<ImportService>();
+        services.AddSingleton<PodcastRepository>();
+        services.AddSingleton<ImportRepository>();
         services.AddSingleton<FeedImporter>();
         services.AddSingleton<ITaskQueue>(ctx => new TaskQueue(10));
     }

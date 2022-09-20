@@ -31,7 +31,7 @@ public class EditorsModel : BasePageModel
 
     public EditorsModel(
         UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGetAsync(string podcastId)
     {
@@ -64,7 +64,7 @@ public class EditorsModel : BasePageModel
             return Page();
         }
         
-        await PodcastService.AddOrUpdateEditor(Podcast.PodcastId, user.Id, Editor.Role);
+        await PodcastRepository.AddOrUpdateEditor(Podcast.PodcastId, user.Id, Editor.Role);
         TempData[WellKnownTempData.SuccessMessage] = "Editor successfully added.";
         return RedirectToPage("./Editors", new { podcastId });
     }
@@ -76,7 +76,7 @@ public class EditorsModel : BasePageModel
 
         try
         {
-            await PodcastService.RemoveEditor(Podcast.PodcastId, userId);
+            await PodcastRepository.RemoveEditor(Podcast.PodcastId, userId);
             
             TempData[WellKnownTempData.SuccessMessage] = "Editor successfully removed.";
             return RedirectToPage("./Editors", new { podcastId });
@@ -92,7 +92,7 @@ public class EditorsModel : BasePageModel
 
     private async Task<Podcast> GetPodcast(string podcastId)
     {
-        return await PodcastService.GetPodcast(new PodcastsQuery {
+        return await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId,
             IncludeEditors = true

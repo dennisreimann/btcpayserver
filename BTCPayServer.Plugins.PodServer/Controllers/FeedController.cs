@@ -10,12 +10,12 @@ namespace BTCPayServer.Plugins.PodServer.Controllers;
 
 public class FeedController : Controller
 {
-    private readonly PodcastService _podcastService;
+    private readonly PodcastRepository _podcastRepository;
     private readonly IFileService _fileService;
 
-    public FeedController(PodcastService podcastService, IFileService fileService)
+    public FeedController(PodcastRepository podcastRepository, IFileService fileService)
     {
-        _podcastService = podcastService;
+        _podcastRepository = podcastRepository;
         _fileService = fileService;
     }
     
@@ -25,7 +25,7 @@ public class FeedController : Controller
     [HttpGet("/plugins/podserver/podcast/{podcastSlug}/feed")]
     public async Task<IActionResult> Feed(string podcastSlug)
     {
-        var podcast = await _podcastService.GetPodcast(new PodcastsQuery {
+        var podcast = await _podcastRepository.GetPodcast(new PodcastsQuery {
             Slug = podcastSlug,
             IncludePeople = true,
             IncludeSeasons = true,
@@ -33,7 +33,7 @@ public class FeedController : Controller
         });
         if (podcast == null) return NotFound();
 
-        var episodes = (await _podcastService.GetEpisodes(new EpisodesQuery
+        var episodes = (await _podcastRepository.GetEpisodes(new EpisodesQuery
         {
             PodcastId = podcast.PodcastId, 
             OnlyPublished = true,

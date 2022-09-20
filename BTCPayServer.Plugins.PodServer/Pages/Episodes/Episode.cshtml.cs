@@ -17,18 +17,18 @@ public class EpisodeModel : BasePageModel
     public Episode Episode { get; set; }
 
     public EpisodeModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGet(string podcastId, string episodeId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId,
             IncludeEpisodes = true
         });
         if (Podcast == null) return NotFound();
         
-        Episode = await PodcastService.GetEpisode(new EpisodesQuery {
+        Episode = await PodcastRepository.GetEpisode(new EpisodesQuery {
             PodcastId = podcastId,
             EpisodeId = episodeId,
             IncludePodcast = true,

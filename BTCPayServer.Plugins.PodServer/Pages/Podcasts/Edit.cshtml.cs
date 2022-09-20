@@ -18,7 +18,7 @@ public class EditModel : BasePageModel
     public IFormFile ImageFile { get; set; }
 
     public EditModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService, IFileService fileService) : base(userManager, podcastService)
+        PodcastRepository podcastRepository, IFileService fileService) : base(userManager, podcastRepository)
     {
         _fileService = fileService;
     }
@@ -74,7 +74,7 @@ public class EditModel : BasePageModel
             return Page();
         }
         
-        await PodcastService.AddOrUpdatePodcast(Podcast);
+        await PodcastRepository.AddOrUpdatePodcast(Podcast);
         if (TempData[WellKnownTempData.ErrorMessage] is null)
         {
             TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully updated.";
@@ -85,7 +85,7 @@ public class EditModel : BasePageModel
 
     private async Task<Podcast> GetPodcast(string podcastId)
     {
-        return await PodcastService.GetPodcast(new PodcastsQuery {
+        return await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId
         });

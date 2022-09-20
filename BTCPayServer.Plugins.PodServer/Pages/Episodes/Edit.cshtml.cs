@@ -22,7 +22,7 @@ public class EditModel : BasePageModel
     public IFormFile EnclosureFile { get; set; }
 
     public EditModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService, IFileService fileService) : base(userManager, podcastService)
+        PodcastRepository podcastRepository, IFileService fileService) : base(userManager, podcastRepository)
     {
         _fileService = fileService;
     }
@@ -36,7 +36,7 @@ public class EditModel : BasePageModel
 
         if (Episode.Number == null)
         {
-            var episodes = await PodcastService.GetEpisodes(new EpisodesQuery
+            var episodes = await PodcastRepository.GetEpisodes(new EpisodesQuery
             {
                 PodcastId = podcastId
             });
@@ -118,7 +118,7 @@ public class EditModel : BasePageModel
             e => e.Enclosures))
         {
             Episode.LastUpdatedAt = DateTimeOffset.UtcNow; 
-            await PodcastService.AddOrUpdateEpisode(Episode);
+            await PodcastRepository.AddOrUpdateEpisode(Episode);
             if (TempData[WellKnownTempData.ErrorMessage] is null)
             {
                 TempData[WellKnownTempData.SuccessMessage] = "Episode successfully updated.";
@@ -132,7 +132,7 @@ public class EditModel : BasePageModel
 
     private async Task<Episode> GetEpisode(string podcastId, string episodeId)
     {
-        return await PodcastService.GetEpisode(new EpisodesQuery
+        return await PodcastRepository.GetEpisode(new EpisodesQuery
         {
             PodcastId = podcastId,
             EpisodeId = episodeId,
@@ -142,7 +142,7 @@ public class EditModel : BasePageModel
 
     private async Task<IEnumerable<SelectListItem>> GetSeasonItems(string podcastId)
     {
-        var seasons = await PodcastService.GetSeasons(new SeasonsQuery { PodcastId = podcastId });
+        var seasons = await PodcastRepository.GetSeasons(new SeasonsQuery { PodcastId = podcastId });
         return seasons.Select(s => new SelectListItem { Value = s.SeasonId, Text = s.Number + (string.IsNullOrEmpty(s.Name) ? "" : $" - {s.Name}") });
     }
 }

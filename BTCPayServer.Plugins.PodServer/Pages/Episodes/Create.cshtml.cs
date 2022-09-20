@@ -17,11 +17,11 @@ public class CreateModel : BasePageModel
     public Episode Episode { get; set; }
 
     public CreateModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGet(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery { UserId = UserId, PodcastId = podcastId });
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery { UserId = UserId, PodcastId = podcastId });
         if (Podcast == null) return NotFound();
         
         return Page();
@@ -29,7 +29,7 @@ public class CreateModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery { UserId = UserId, PodcastId = podcastId });
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery { UserId = UserId, PodcastId = podcastId });
         if (Podcast == null) return NotFound();
         
         if (!ModelState.IsValid) return Page();
@@ -46,7 +46,7 @@ public class CreateModel : BasePageModel
             Episode.Slug = Episode.Title.Slugify();
             
             Episode.LastUpdatedAt = DateTimeOffset.UtcNow;
-            await PodcastService.AddOrUpdateEpisode(Episode);
+            await PodcastRepository.AddOrUpdateEpisode(Episode);
         
             TempData[WellKnownTempData.SuccessMessage] = "Episode successfully created.";
             return RedirectToPage("./Edit", new { podcastId = Podcast.PodcastId, episodeId = Episode.EpisodeId });

@@ -5,12 +5,12 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace BTCPayServer.Plugins.PodServer.Services.Podcasts;
 
-public class PodcastService
+public class PodcastRepository
 {
     private readonly IFileService _fileService;
     private readonly PodServerPluginDbContextFactory _dbContextFactory;
 
-    public PodcastService(
+    public PodcastRepository(
         IFileService fileService,
         PodServerPluginDbContextFactory dbContextFactory)
     {

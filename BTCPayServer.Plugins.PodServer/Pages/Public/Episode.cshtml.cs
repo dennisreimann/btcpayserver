@@ -14,11 +14,11 @@ public class PublicEpisodeModel : BasePageModel
     public Episode Episode { get; set; }
 
     public PublicEpisodeModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGetAsync(string podcastSlug, string episodeSlug)
     {
-        Episode = await PodcastService.GetEpisode(new EpisodesQuery {
+        Episode = await PodcastRepository.GetEpisode(new EpisodesQuery {
             Slug = episodeSlug,
             IncludePodcast = true,
             IncludeContributions = true,

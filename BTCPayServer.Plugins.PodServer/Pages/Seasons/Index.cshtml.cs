@@ -16,11 +16,11 @@ public class IndexModel : BasePageModel
     public IEnumerable<Season> Seasons { get; set; }
 
     public IndexModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGet(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId,
             IncludeSeasons = true

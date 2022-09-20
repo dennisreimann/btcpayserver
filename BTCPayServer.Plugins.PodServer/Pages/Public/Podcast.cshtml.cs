@@ -15,16 +15,16 @@ public class PublicPodcastModel : BasePageModel
     public IEnumerable<Episode> MoreEpisodes { get; set; }
 
     public PublicPodcastModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGetAsync(string podcastSlug)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery {
             Slug = podcastSlug
         });
         if (Podcast == null) return NotFound();
 
-        var episodes = (await PodcastService.GetEpisodes(new EpisodesQuery
+        var episodes = (await PodcastRepository.GetEpisodes(new EpisodesQuery
         {
             PodcastId = Podcast.PodcastId, 
             OnlyPublished = true

@@ -17,11 +17,11 @@ public class EditModel : BasePageModel
     public Season Season { get; set; }
 
     public EditModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService, IFileService fileService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository, IFileService fileService) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGet(string podcastId, string seasonId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId,
             IncludeSeasons = true
@@ -41,7 +41,7 @@ public class EditModel : BasePageModel
         }
         else
         {
-            Season = await PodcastService.GetSeason(new SeasonsQuery {
+            Season = await PodcastRepository.GetSeason(new SeasonsQuery {
                 PodcastId = podcastId,
                 SeasonId = seasonId,
             });
@@ -60,7 +60,7 @@ public class EditModel : BasePageModel
         }
         else
         {
-            Season = await PodcastService.GetSeason(new SeasonsQuery
+            Season = await PodcastRepository.GetSeason(new SeasonsQuery
             {
                 PodcastId = podcastId, 
                 SeasonId = seasonId
@@ -78,7 +78,7 @@ public class EditModel : BasePageModel
             return Page();
         }
         
-        await PodcastService.AddOrUpdateSeason(Season);
+        await PodcastRepository.AddOrUpdateSeason(Season);
         if (TempData[WellKnownTempData.ErrorMessage] is null)
         {
             TempData[WellKnownTempData.SuccessMessage] = $"Season successfully {(isNew ? "created" : "updated")}.";

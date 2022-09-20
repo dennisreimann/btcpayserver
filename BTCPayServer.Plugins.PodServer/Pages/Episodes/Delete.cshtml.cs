@@ -17,17 +17,17 @@ public class DeleteModel : BasePageModel
     public Episode Episode { get; set; }
 
     public DeleteModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGet(string podcastId, string episodeId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId
         });
         if (Podcast == null) return NotFound();
         
-        Episode = await PodcastService.GetEpisode(new EpisodesQuery {
+        Episode = await PodcastRepository.GetEpisode(new EpisodesQuery {
             PodcastId = podcastId,
             EpisodeId = episodeId
         });
@@ -38,13 +38,13 @@ public class DeleteModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId, string episodeId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId
         });
         if (Podcast == null) return NotFound();
         
-        Episode = await PodcastService.GetEpisode(new EpisodesQuery {
+        Episode = await PodcastRepository.GetEpisode(new EpisodesQuery {
             PodcastId = podcastId,
             EpisodeId = episodeId,
             IncludeContributions = true,
@@ -52,7 +52,7 @@ public class DeleteModel : BasePageModel
         });
         if (Episode == null) return NotFound();
 
-        await PodcastService.RemoveEpisode(Episode);
+        await PodcastRepository.RemoveEpisode(Episode);
         TempData[WellKnownTempData.SuccessMessage] = "Episode successfully deleted.";
 
         return RedirectToPage("/Podcasts/Podcast", new { podcastId = Podcast.PodcastId });

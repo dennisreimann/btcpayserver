@@ -16,11 +16,11 @@ public class CreateModel : BasePageModel
     public Person Person { get; set; }
 
     public CreateModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGet(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId
         });
@@ -38,7 +38,7 @@ public class CreateModel : BasePageModel
     {
         if (!ModelState.IsValid) return Page();
 
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery { UserId = UserId, PodcastId = podcastId });
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery { UserId = UserId, PodcastId = podcastId });
         
         Person = new Person
         {
@@ -50,7 +50,7 @@ public class CreateModel : BasePageModel
             "person",
             p => p.Name))
         {
-            await PodcastService.AddOrUpdatePerson(Person);
+            await PodcastRepository.AddOrUpdatePerson(Person);
         
             TempData[WellKnownTempData.SuccessMessage] = "Person successfully created.";
             return RedirectToPage("./Edit", new { podcastId = Podcast.PodcastId, personId = Person.PersonId });

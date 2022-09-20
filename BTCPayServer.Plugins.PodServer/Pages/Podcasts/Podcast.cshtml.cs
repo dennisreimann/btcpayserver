@@ -16,11 +16,11 @@ public class PodcastModel : BasePageModel
     public IEnumerable<Episode> Episodes { get; set; }
 
     public PodcastModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGetAsync(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId,
             IncludeEpisodes = true

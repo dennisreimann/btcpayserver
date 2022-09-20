@@ -5,18 +5,18 @@ namespace BTCPayServer.Plugins.PodServer.Services.Background;
 
 public class TaskQueueService : BackgroundService
 {
-    private readonly ImportService _importService;
+    private readonly ImportRepository _importRepository;
     private readonly ILogger<TaskQueueService> _logger;
     private readonly ITaskQueue _taskQueue;
     private readonly FeedImporter _feedImporter;
 
     public TaskQueueService(
-        ImportService importService,
+        ImportRepository importRepository,
         FeedImporter feedImporter,
         ITaskQueue taskQueue, 
         ILogger<TaskQueueService> logger)
     {
-        _importService = importService;
+        _importRepository = importRepository;
         _feedImporter = feedImporter;
         _taskQueue = taskQueue;
         _logger = logger;
@@ -24,7 +24,7 @@ public class TaskQueueService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        var iss = await _importService.GetUnfinishedImports();
+        var iss = await _importRepository.GetUnfinishedImports();
 
         IEnumerable<Import> enumerable = iss.ToList();
         _logger.LogInformation("Starting with {Count} remaining imports", enumerable.Count());

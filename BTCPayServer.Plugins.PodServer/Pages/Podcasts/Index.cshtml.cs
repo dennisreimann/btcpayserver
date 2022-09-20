@@ -19,8 +19,8 @@ public class IndexModel : BasePageModel
 
     public IndexModel(
         UserManager<ApplicationUser> userManager,
-        PodcastService podcastService,
-        IFileService fileService) : base(userManager, podcastService)
+        PodcastRepository podcastRepository,
+        IFileService fileService) : base(userManager, podcastRepository)
     {
         _fileService = fileService;
     }
@@ -28,7 +28,7 @@ public class IndexModel : BasePageModel
     public async Task<IActionResult> OnGet()
     {
         
-        Podcasts = await PodcastService.GetPodcasts(new PodcastsQuery
+        Podcasts = await PodcastRepository.GetPodcasts(new PodcastsQuery
         {
             UserId = UserId
         });

@@ -15,11 +15,11 @@ public class DeleteModel : BasePageModel
     public Podcast Podcast { get; set; }
 
     public DeleteModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGet(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId
         });
@@ -30,7 +30,7 @@ public class DeleteModel : BasePageModel
 
     public async Task<IActionResult> OnPostAsync(string podcastId)
     {
-        Podcast = await PodcastService.GetPodcast(new PodcastsQuery {
+        Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery {
             UserId = UserId,
             PodcastId = podcastId,
             IncludeEpisodes = true,
@@ -40,7 +40,7 @@ public class DeleteModel : BasePageModel
         });
         if (Podcast == null) return NotFound();
 
-        await PodcastService.RemovePodcast(Podcast);
+        await PodcastRepository.RemovePodcast(Podcast);
         TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully deleted.";
 
         return RedirectToPage("./Index");

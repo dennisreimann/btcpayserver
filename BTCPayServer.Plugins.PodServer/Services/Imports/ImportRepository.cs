@@ -1,27 +1,17 @@
 using BTCPayServer.Abstractions.Contracts;
 using BTCPayServer.Plugins.PodServer.Data.Models;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace BTCPayServer.Plugins.PodServer.Services.Imports;
 
-public class ImportService
+public class ImportRepository
 {
-    private readonly IFileService _fileService;
     private readonly PodServerPluginDbContextFactory _dbContextFactory;
 
-    public ImportService(
-        IFileService fileService,
-        PodServerPluginDbContextFactory dbContextFactory)
+    public ImportRepository(PodServerPluginDbContextFactory dbContextFactory)
     {
-        _fileService = fileService;
         _dbContextFactory = dbContextFactory;
-    }
-    
-    public async Task<IStoredFile> DownloadFile(Uri url, string userId)
-    {
-        return await _fileService.AddFile(url, userId);
     }
     
     public async Task<IEnumerable<Import>> GetUnfinishedImports()
@@ -80,16 +70,5 @@ public class ImportService
         await dbContext.SaveChangesAsync();
 
         return (Import)entry.Entity;
-    }
-
-    private static string GetContentType(string filePath)
-    {
-        var mimeProvider = new FileExtensionContentTypeProvider();
-        if (!mimeProvider.TryGetContentType(filePath, out string contentType))
-        {
-            contentType = "application/octet-stream";
-        }
-
-        return contentType;
     }
 }

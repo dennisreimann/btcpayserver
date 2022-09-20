@@ -1,11 +1,11 @@
 @using BTCPayServer.Plugins.PodServer.Services.Podcasts
 @using Microsoft.AspNetCore.Identity
 @using BTCPayServer.Data
-@inject PodcastService _podcastService;
+@inject PodcastRepository PodcastRepository;
 @inject UserManager<ApplicationUser> _userManager;
 @{
     var userId = _userManager.GetUserId(User);
-    var podcasts = await _podcastService.GetPodcasts(new PodcastsQuery
+    var podcasts = await PodcastRepository.GetPodcasts(new PodcastsQuery
     {
         UserId = userId
     });

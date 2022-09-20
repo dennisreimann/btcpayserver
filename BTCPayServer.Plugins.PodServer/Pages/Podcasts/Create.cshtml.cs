@@ -17,7 +17,7 @@ public class CreateModel : BasePageModel
     public Podcast Podcast { get; set; }
 
     public CreateModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository) : base(userManager, podcastRepository) {}
 
     public IActionResult OnGet()
     {
@@ -43,8 +43,8 @@ public class CreateModel : BasePageModel
         {
             Podcast.Slug = Podcast.Title.Slugify();
                 
-            await PodcastService.AddOrUpdatePodcast(Podcast);
-            await PodcastService.AddOrUpdateEditor(Podcast.PodcastId, UserId, EditorRole.Admin);
+            await PodcastRepository.AddOrUpdatePodcast(Podcast);
+            await PodcastRepository.AddOrUpdateEditor(Podcast.PodcastId, UserId, EditorRole.Admin);
         
             TempData[WellKnownTempData.SuccessMessage] = "Podcast successfully created.";
             return RedirectToPage("./Podcast", new { podcastId = Podcast.PodcastId });

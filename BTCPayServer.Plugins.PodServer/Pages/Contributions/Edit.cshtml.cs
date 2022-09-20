@@ -18,7 +18,7 @@ public class EditModel : BasePageModel
     public Contribution Contribution { get; set; }
 
     public EditModel(UserManager<ApplicationUser> userManager,
-        PodcastService podcastService, IFileService fileService) : base(userManager, podcastService) {}
+        PodcastRepository podcastRepository, IFileService fileService) : base(userManager, podcastRepository) {}
 
     public async Task<IActionResult> OnGet(string podcastId, string personId, [FromQuery] string episodeId)
     {
@@ -53,7 +53,7 @@ public class EditModel : BasePageModel
                 c => c.Role, 
                 c => c.Split))
         {
-            await PodcastService.AddOrUpdateContribution(Contribution);
+            await PodcastRepository.AddOrUpdateContribution(Contribution);
             if (TempData[WellKnownTempData.ErrorMessage] is null)
             {
                 TempData[WellKnownTempData.SuccessMessage] = $"Contribution successfully {(isNew ? "created" : "updated")}.";
@@ -69,7 +69,7 @@ public class EditModel : BasePageModel
     {
         if (string.IsNullOrEmpty(episodeId))
         {
-            Podcast = await PodcastService.GetPodcast(new PodcastsQuery
+            Podcast = await PodcastRepository.GetPodcast(new PodcastsQuery
             {
                 UserId = UserId,
                 PodcastId = podcastId,
@@ -83,7 +83,7 @@ public class EditModel : BasePageModel
         }
         else
         {
-            Episode = await PodcastService.GetEpisode(new EpisodesQuery
+            Episode = await PodcastRepository.GetEpisode(new EpisodesQuery
             {
                 PodcastId = podcastId,
                 EpisodeId = episodeId,
