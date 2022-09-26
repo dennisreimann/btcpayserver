@@ -39,6 +39,8 @@ public class LightningInvoiceWatcher : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting");
+        
+        cancellationToken.Register(() => _logger.LogInformation("Stop request via cancellation"));
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -55,7 +57,16 @@ public class LightningInvoiceWatcher : BackgroundService
 
                 try
                 {
-                    await Task.WhenAll(list.Select(transaction => CheckPendingTransaction(walletService, transaction, cancellationToken)));
+                    await Task.WhenAll(list.Select(transaction =>
+                    {
+                        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        cts.CancelAfter(_checkInterval);
+                        return CheckPendingTransaction(walletService, transaction, cts.Token);
+                    }));
+                }
+                catch (Exception exception) when (exception is TaskCanceledException or OperationCanceledException)
+                {
+                    _logger.LogInformation("Checking pending transactions canceled after time out");
                 }
                 catch (Exception exception)
                 {
