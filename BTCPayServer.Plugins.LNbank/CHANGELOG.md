@@ -5,7 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.3] - ongoing development
+## [1.3.0] - 2022-09-26
+
+### Added
+
+- LNDhub-compatible API: Wallets are usable with BlueWallet, Zeus and Alby.
+- Wallet access keys: Share wallet access, supporting different access levels.
+- Send: LNURL-Pay and Lightning Address support.
+- Receive: Add custom invoice expiry as advanced option.
+
+### Changed
+
+- Handle expired invoices in background watcher.
+- More logging in background watcher.
+
+## [1.2.3] - 2022-07-08
 
 ### Changed
 
