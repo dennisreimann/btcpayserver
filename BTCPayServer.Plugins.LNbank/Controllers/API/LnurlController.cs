@@ -40,7 +40,7 @@ public class LnurlController : ControllerBase
             return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
         }
 
-        var data = new List<string[]> { new[] { "text/plain", wallet.Name }, new[] { "text/identifier", wallet.WalletId } };
+        var data = new List<string[]> { new[] { "text/plain", wallet.Name } };
         var meta = JsonConvert.SerializeObject(data);
         var payRequest = GetPayRequest(wallet.WalletId, meta);
 
@@ -57,7 +57,7 @@ public class LnurlController : ControllerBase
             return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
         }
 
-        var data = new List<string[]> { new[] { "text/plain", wallet.Name }, new[] { "text/identifier", wallet.WalletId } };
+        var data = new List<string[]> { new[] { "text/plain", wallet.Name } };
         var meta = JsonConvert.SerializeObject(data);
         if (amount is null)
         {
