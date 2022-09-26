@@ -65,7 +65,7 @@ cp -r $pluginsBuild/* $pluginsTarget
 cd ${pluginsDir}
 git add .
 git commit -a -m "${tagDesc}"
-git push ${remoteName} ${pluginsBranch}
+git push --force ${remoteName} ${pluginsBranch}
 
 printf "\n\n=====> Create plugin pull request\n\n"
 gh pr create --title "${tagDesc}" --body "${changes}"
