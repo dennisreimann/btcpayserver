@@ -112,6 +112,13 @@ public class Transaction
         return true;
     }
     
+    public bool SetExpired()
+    {
+        if (IsPaid || !string.IsNullOrEmpty(ExplicitStatus)) return false;
+        ExplicitStatus = StatusExpired;
+        return true;
+    }
+    
     public bool SetSettled(LightMoney amount, LightMoney amountSettled, LightMoney routingFee, DateTimeOffset date)
     {
         if (IsSettled) return false;

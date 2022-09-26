@@ -305,6 +305,23 @@ public class WalletService
         
         return await Cancel(transaction);
     }
+        
+    public async Task<bool> Expire(Transaction transaction)
+    {
+        var result = transaction.SetExpired();
+        if (result)
+        {
+            await _walletRepository.UpdateTransaction(transaction);
+            await BroadcastTransactionUpdate(transaction, Transaction.StatusCancelled);
+        }
+        
+        _logger.LogInformation(
+            // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+            result ? "Expired transaction {TransactionId}" : "Expiring transaction {TransactionId} failed",
+            transaction.TransactionId);
+        
+        return true;
+    }
     
     public async Task<bool> Cancel(Transaction transaction)
     {

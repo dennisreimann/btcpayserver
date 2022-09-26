@@ -289,8 +289,7 @@ public class WalletRepository
 
         if (!query.IncludingExpired)
         {
-            var enumerable = queryable.AsEnumerable(); // Switch to client side filtering
-            return enumerable.Where(t => t.ExpiresAt > DateTimeOffset.UtcNow || t.ExplicitStatus != null).ToList();
+            queryable = queryable.Where(t => t.ExplicitStatus != Transaction.StatusExpired);
         }
 
         return await queryable.ToListAsync();

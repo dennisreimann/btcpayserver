@@ -99,12 +99,22 @@ public class LightningInvoiceWatcher : BackgroundService
                 {
                     _logger.LogWarning("Unable to resolve invoice (Invoice Id = {InvoiceId}) for transaction {TransactionId}", transaction.InvoiceId, transaction.TransactionId);
                 }
-                else if (invoice.Status == LightningInvoiceStatus.Paid)
+                else switch (invoice.Status)
                 {
-                    var paidAt = invoice.PaidAt ?? DateTimeOffset.Now;
-                    var amount = invoice.Amount ?? invoice.AmountReceived; // Zero amount invoices have amount as null value
-                    var feeAmount = amount - invoice.AmountReceived;
-                    await walletService.Settle(transaction, amount, invoice.AmountReceived, feeAmount, paidAt);
+                    case LightningInvoiceStatus.Paid:
+                    {
+                        var paidAt = invoice.PaidAt ?? DateTimeOffset.Now;
+                        var amount = invoice.Amount ?? invoice.AmountReceived; // Zero amount invoices have amount as null value
+                        var feeAmount = amount - invoice.AmountReceived;
+                        await walletService.Settle(transaction, amount, invoice.AmountReceived, feeAmount, paidAt);
+                        break;
+                    }
+                    case LightningInvoiceStatus.Expired:
+                        await walletService.Expire(transaction);
+                        break;
+                    case LightningInvoiceStatus.Unpaid:
+                    default:
+                        break;
                 }
             }
             else
