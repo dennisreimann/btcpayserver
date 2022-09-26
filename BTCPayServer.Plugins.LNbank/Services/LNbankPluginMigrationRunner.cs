@@ -40,10 +40,13 @@ public class LNbankPluginMigrationRunner : IHostedService
         
         if (!settings.ExtendedAccessKeysWithUserId)
         {
-            var accessKeys = dbContext.AccessKeys.Include(a => a.Wallet).AsNoTracking();
+            var accessKeys = await dbContext.AccessKeys
+                .Include(a => a.Wallet)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken: cancellationToken);
             foreach (var accessKey in accessKeys)
             {
-                accessKey.UserId = accessKey.Wallet.UserId;
+                accessKey.UserId = accessKey.Wallet?.UserId;
                 dbContext.Update(accessKey);
             }
             await dbContext.SaveChangesAsync(cancellationToken);
