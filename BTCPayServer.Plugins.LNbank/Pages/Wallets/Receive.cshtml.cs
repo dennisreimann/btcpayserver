@@ -11,6 +11,7 @@ using BTCPayServer.Plugins.LNbank.Services.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
 using AuthenticationSchemes = BTCPayServer.Abstractions.Constants.AuthenticationSchemes;
 
@@ -39,6 +40,10 @@ public class ReceiveModel : BasePageModel
     [BindProperty]
     [DisplayName("Add routing hints for private channels")]
     public bool PrivateRouteHints { get; set; }
+    
+    [BindProperty]
+    [DisplayName("Custom invoice expiry")]
+    public int? Expiry { get; set; }
 
     public ReceiveModel(
         ILogger<ReceiveModel> logger,
@@ -66,7 +71,8 @@ public class ReceiveModel : BasePageModel
         try
         {
             var amount = LightMoney.Satoshis(Amount).MilliSatoshi;
-            var transaction = await WalletService.Receive(Wallet, amount, Description, AttachDescription, PrivateRouteHints, null);
+            TimeSpan? expiry = Expiry is > 0 ? TimeSpan.FromMinutes(Expiry.Value) : null;
+            var transaction = await WalletService.Receive(Wallet, amount, Description, AttachDescription, PrivateRouteHints, expiry);
             return RedirectToPage("/Transactions/Details", new { walletId, transaction.TransactionId });
         }
         catch (Exception exception)
