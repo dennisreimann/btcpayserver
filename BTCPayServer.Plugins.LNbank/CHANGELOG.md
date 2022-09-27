@@ -5,13 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2022-09-27
+
+### Added
+
+- Invoices API for BTCPay Lightning client. (btcpayserver/BTCPayServer.Lightning#99)
+
+### Fixed
+
+- Fix missing icon in sidebar.
+- LNDhub-API: Fix invoices list. (btcpayserver/btcpayserver#4168)
 
 ## [1.3.1] - 2022-09-26
 
 ### Fixed
 
 - Fix LNURL metadata. (btcpayserver/btcpayserver#4165)
-- Potential migration fix (dennisreimann/btcpayserver#22)
+- Fix migration. (dennisreimann/btcpayserver#22)
 
 ## [1.3.0] - 2022-09-26
 
