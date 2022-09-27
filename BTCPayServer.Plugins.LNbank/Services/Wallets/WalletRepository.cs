@@ -245,7 +245,7 @@ public class WalletRepository
         return entry.Entity;
     }
 
-    private async Task<IEnumerable<Transaction>> GetTransactions(TransactionsQuery query)
+    public async Task<IEnumerable<Transaction>> GetTransactions(TransactionsQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
         var queryable = dbContext.Transactions.AsQueryable();

@@ -125,6 +125,36 @@ public class LightningController : ControllerBase
         return Ok(info);
     }
 
+    [HttpGet("invoices")]
+    public async Task<IActionResult> ListLightningInvoices(
+        [FromQuery(Name = "pending_only")] bool? pendingOnly,
+        [FromQuery(Name = "offset_index")] long? offsetIndex)
+    {
+        try
+        {
+            var onlyPending = pendingOnly is true;
+            var query = new TransactionsQuery
+            {
+                UserId = UserId,
+                WalletId = WalletId,
+                IncludingPending = true,
+                IncludingPaid = !onlyPending,
+                IncludingExpired = !onlyPending,
+                IncludingInvalid = !onlyPending,
+                IncludingCancelled = !onlyPending
+            };
+            var offset = Convert.ToInt32(offsetIndex);
+            var transactions = (await _walletRepository.GetTransactions(query)).Skip(offset);
+            
+            var invoices = transactions.Select(ToLightningInvoiceData);
+            return Ok(invoices);
+        }
+        catch (Exception exception)
+        {
+            return this.CreateAPIError("generic-error", exception.Message);
+        }
+    }
+
     [HttpGet("invoice/{invoiceId}")]
     public async Task<IActionResult> GetLightningInvoice(string invoiceId)
     {
