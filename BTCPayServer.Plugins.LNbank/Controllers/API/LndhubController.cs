@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using BTCPayServer.Lightning.LNDhub.Models;
 using BTCPayServer.Plugins.LNbank.Authentication;
-using BTCPayServer.Plugins.LNbank.Data.Lndhub;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Exceptions;
 using BTCPayServer.Plugins.LNbank.Services;
@@ -14,10 +13,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using NBitcoin;
-using AuthRequest = BTCPayServer.Plugins.LNbank.Data.Lndhub.AuthRequest;
-using PaymentResponse = BTCPayServer.Plugins.LNbank.Data.Lndhub.PaymentResponse;
-using PaymentRoute = BTCPayServer.Plugins.LNbank.Data.Lndhub.PaymentRoute;
-using PaymentData = BTCPayServer.Plugins.LNbank.Data.Lndhub.PaymentData;
 using Transaction = BTCPayServer.Plugins.LNbank.Data.Models.Transaction;
 
 namespace BTCPayServer.Plugins.LNbank.Controllers.API;
@@ -85,12 +80,21 @@ public class LndhubController : ControllerBase
     public async Task<IActionResult> GetInfo()
     {
         var info = await _btcpayService.GetLightningNodeInfo();
-        var result = new InfoData
+        var result = new NodeInfoData
         {
             Uris = info.NodeURIs.Select(uri => uri.ToString()),
             IdentityPubkey = info.NodeURIs.First().NodeId.ToString(),
             BlockHeight = info.BlockHeight,
-            Alias = $"LNbank: {Wallet.Name}"
+            Alias = $"LNbank: {Wallet.Name}",
+            /* FIXME: Needs this PR merged https://github.com/btcpayserver/btcpayserver/pull/4167
+            
+            Color = info.Color,
+            Version = info.Version,
+            PeersCount = info.PeersCount.HasValue ? Convert.ToInt32(info.PeersCount.Value) : 0,
+            ActiveChannelsCount = info.ActiveChannelsCount.HasValue ? Convert.ToInt32(info.ActiveChannelsCount.Value) : 0,
+            InactiveChannelsCount = info.InactiveChannelsCount.HasValue ? Convert.ToInt32(info.InactiveChannelsCount.Value) : 0,
+            PendingChannelsCount = info.PendingChannelsCount.HasValue ? Convert.ToInt32(info.PendingChannelsCount.Value) : 0
+            */
         };
         return Ok(result);
     }
@@ -298,7 +302,7 @@ public class LndhubController : ControllerBase
         {
             Id = bolt11.Hash,
             Description = t.Description,
-            AddIndex = t.CreatedAt.ToUnixTimeSeconds().ToString(), // fake it
+            AddIndex = Convert.ToInt32(t.CreatedAt.ToUnixTimeSeconds()), // fake it
             PaymentHash = bolt11.PaymentHash?.ToString(),
             PaymentRequest = t.PaymentRequest,
             IsPaid = t.IsPaid,
