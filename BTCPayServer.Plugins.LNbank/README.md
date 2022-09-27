@@ -31,7 +31,7 @@ When using LNbank on a third-party instance whose owner you don't know, mitigate
 ## Features and Compatibility
 
 * Send to BOLT11 payment requests, as well as LNURL and Lightning Address.
-* LNbank offers a LNDhub-compatible API, wallets are usable with BlueWallet, Zeus and Alby.
+* LNbank offers a [LNDhub-compatible](./docs/LNDhub.md) API, wallets are usable with BlueWallet, Zeus and Alby.
 * Use the Greenfield API to create and manage LNbank wallets.
 
 ## How to activate and use LNbank

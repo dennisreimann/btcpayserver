@@ -16,6 +16,12 @@ A plugin for [BTCPay Server](https://github.com/btcpayserver) to self-host your 
 * Podcasting 2.0 tags: Value (podcast and episode level), Person, Season.
 * Import existing feeds.
 
+## Notes
+
+* PodServer adds itself to the value splits with a value of `1`.
+  This is to incentivice further development of the plugin.
+  In the future this setting might become configurable, so that users can decide what split to allocate to PodServer on a value for value basis.
+
 ## How to activate and use PodServer
 
 ### Server admin
