@@ -47,7 +47,7 @@
         <p id="PodcastEpisodes" class="text-secondary">There are no episodes yet.</p>
     }
     
-    @if (Model.MoreEpisodes.Any())
+    @if (Model.MoreEpisodes != null && Model.MoreEpisodes.Any())
     {
         <h2 class="mt-5 mb-4">More Episodes</h2>
         <div class="episodes">
