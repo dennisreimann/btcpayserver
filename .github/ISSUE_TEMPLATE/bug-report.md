@@ -15,7 +15,7 @@ Please fill in as much of the template below as you're able.
 -->
 
 **Plugin**
-Name and version of the plugin.
+Name and version of the plugin. <!--[available on the Server Settings > Plugins page] -->
 
 **Describe the bug**
 A clear and concise description of what the bug is.
@@ -42,12 +42,11 @@ If applicable, add screenshots to help explain your problem.
 
 **Your BTCPay Environment (please complete the following information):**
 - BTCPay Server Version:    <!--[available in the right bottom corner of footer] -->
-- Plugin Name and Version   <!--[available on the Server Settings > Plugins page] -->
+- Lightning implementation  <!--[e.g. LND, Core Lightning] -->
 - Deployment Method:        <!--[e.g. Docker, Manual, Third-Party-host]-->
 - Browser:                  <!--[e.g. Chrome, Safari]-->
 
 **Logs (if applicable)**
-
 
 <!--
 If you are using the Docker setup, please post the output of the following command:
