@@ -20,6 +20,15 @@
 
 <partial name="_StatusMessage" />
 
+
+@if (!Model.IsReady)
+{
+    <div class="alert alert-danger mb-4 text-break" role="alert">
+        In order to use PodServer, a file storage must be configured. It can be set up in the
+        <a asp-controller="UIServer" asp-action="Files" class="alert-link">Server Settings > Files</a>.
+    </div>
+}
+
 <p>Self-host your podcast and start Podcasting 2.0 like a pro.</p>
 
 @if (Model.Podcasts.Any())

@@ -43,10 +43,6 @@ public class IndexModel : BasePageModel
                 return RedirectToPage("./Create");
             }
         }
-        else
-        {
-            TempData[WellKnownTempData.ErrorMessage] = "In order to use PodServer, a file storage must be configured. It can be set up in Server Settings > Files.";
-        }
 
         return Page();
     }
