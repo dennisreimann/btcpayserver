@@ -167,6 +167,7 @@ public class LightningInvoiceWatcher : BackgroundService
             var isInflight = transaction.IsPending && transaction.CreatedAt > DateTimeOffset.Now - _inflightDelay;
             if (!isInflight)
             {
+                invalidate = true;
                 _logger.LogWarning("Unable to resolve payment (Payment Hash = {PaymentHash}) for transaction {TransactionId}{Details}",
                     transaction.PaymentHash, transaction.TransactionId, string.IsNullOrEmpty(errorDetails) ? "" : $": {errorDetails}");
             }
