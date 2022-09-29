@@ -94,7 +94,7 @@ public class Transaction
 
     public bool SetCancelled()
     {
-        if (IsPaid || IsExpired) return false;
+        if (IsPaid || !string.IsNullOrEmpty(ExplicitStatus)) return false;
         AmountSettled = null;
         RoutingFee = null;
         PaidAt = null;
@@ -104,7 +104,7 @@ public class Transaction
     
     public bool SetInvalid()
     {
-        if (IsPaid || IsExpired) return false;
+        if (IsPaid || !string.IsNullOrEmpty(ExplicitStatus)) return false;
         AmountSettled = null;
         RoutingFee = null;
         PaidAt = null;
