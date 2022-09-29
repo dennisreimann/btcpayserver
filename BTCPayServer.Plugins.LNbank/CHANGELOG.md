@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.3] - 2022-09-29
 
+### Changed
+
+- Handle invalid transactions in background watcher.
+
 ### Fixed
 
 - LNDhub API: Fix send error.

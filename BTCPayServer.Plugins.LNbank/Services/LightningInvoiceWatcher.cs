@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BTCPayServer.Client;
+using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
@@ -89,71 +91,109 @@ public class LightningInvoiceWatcher : BackgroundService
     
     private async Task CheckPendingTransaction(WalletService walletService, Transaction transaction, CancellationToken cancellationToken = default)
     {
+        await (string.IsNullOrEmpty(transaction.InvoiceId)
+            ? CheckPayment(walletService, transaction, cancellationToken)
+            : CheckInvoice(walletService, transaction, cancellationToken));
+    }
+
+    private async Task CheckInvoice(WalletService walletService, Transaction transaction, CancellationToken cancellationToken = default)
+    {
+        LightningInvoiceData invoice = null;
+        string errorDetails = null;
+        var invalidate = false;
+        
         try
         {
-            if (!string.IsNullOrEmpty(transaction.InvoiceId))
-            {
-                // Receiving transaction - cancelled invoices return null, hence we need to null-check it
-                var invoice = await _btcpayService.GetLightningInvoice(transaction.InvoiceId, cancellationToken);
-                if (invoice == null)
-                {
-                    _logger.LogWarning("Unable to resolve invoice (Invoice Id = {InvoiceId}) for transaction {TransactionId}", transaction.InvoiceId, transaction.TransactionId);
-                }
-                else switch (invoice.Status)
-                {
-                    case LightningInvoiceStatus.Paid:
-                    {
-                        var paidAt = invoice.PaidAt ?? DateTimeOffset.Now;
-                        var amount = invoice.Amount ?? invoice.AmountReceived; // Zero amount invoices have amount as null value
-                        var feeAmount = amount - invoice.AmountReceived;
-                        await walletService.Settle(transaction, amount, invoice.AmountReceived, feeAmount, paidAt);
-                        break;
-                    }
-                    case LightningInvoiceStatus.Expired:
-                        await walletService.Expire(transaction);
-                        break;
-                    case LightningInvoiceStatus.Unpaid:
-                    default:
-                        break;
-                }
-            }
-            else
-            {
-                // Sending transaction - cancelled payments return null, hence we need to null-check it
-                var payment = await _btcpayService.GetLightningPayment(transaction.PaymentHash, cancellationToken);
-                
-                if (payment == null)
-                {
-                    var isInflight = transaction.IsPending && transaction.CreatedAt > DateTimeOffset.Now - _inflightDelay;
-                    if (!isInflight)
-                    {
-                        _logger.LogWarning("Unable to resolve payment (Payment Hash = {PaymentHash}) for transaction {TransactionId}", transaction.PaymentHash, transaction.TransactionId);
-                    }
-                }
-                else switch (payment.Status)
-                {
-                    case LightningPaymentStatus.Complete:
-                    {
-                        var paidAt = payment.CreatedAt ?? DateTimeOffset.Now;
-                        var originalAmount = payment.TotalAmount - payment.FeeAmount;
-                        await walletService.Settle(transaction, originalAmount, payment.TotalAmount * -1, payment.FeeAmount, paidAt);
-                        break;
-                    }
-                    case LightningPaymentStatus.Failed:
-                        _logger.LogWarning("Failed payment (Payment Hash = {PaymentHash}) for transaction {TransactionId} - invalidating transaction", transaction.PaymentHash, transaction.TransactionId);
-                        await walletService.Invalidate(transaction);
-                        break;
-                    case LightningPaymentStatus.Unknown:
-                    case LightningPaymentStatus.Pending:
-                    default:
-                        _logger.LogDebug("Transaction {TransactionId} status: {Status}", transaction.TransactionId, payment.Status.ToString());
-                        break;
-                }
-            }
+            invoice = await _btcpayService.GetLightningInvoice(transaction.InvoiceId, cancellationToken);
+        }
+        catch (GreenfieldAPIException apiException) when (apiException.APIError.Code == "invoice-not-found")
+        {
+            errorDetails = apiException.Message;
+            invalidate = true;
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Checking pending transaction {TransactionId} failed: {Message}", transaction.TransactionId, exception.Message);
+            errorDetails = exception.Message;
+        }
+        
+        if (invoice == null)
+        {
+            _logger.LogWarning(
+                "Unable to resolve invoice (Invoice Id = {InvoiceId}) for transaction {TransactionId}{Details}",
+                transaction.InvoiceId, transaction.TransactionId, string.IsNullOrEmpty(errorDetails) ? "" : $": {errorDetails}");
+            if (invalidate) 
+                await walletService.Invalidate(transaction);
+            return;
+        }
+
+        switch (invoice.Status)
+        {
+            case LightningInvoiceStatus.Paid:
+            {
+                var paidAt = invoice.PaidAt ?? DateTimeOffset.Now;
+                var amount = invoice.Amount ?? invoice.AmountReceived; // Zero amount invoices have amount as null value
+                var feeAmount = amount - invoice.AmountReceived;
+                await walletService.Settle(transaction, amount, invoice.AmountReceived, feeAmount, paidAt);
+                break;
+            }
+            case LightningInvoiceStatus.Expired:
+                await walletService.Expire(transaction);
+                break;
+        }
+    }
+    
+    private async Task CheckPayment(WalletService walletService, Transaction transaction, CancellationToken cancellationToken = default)
+    {
+        LightningPaymentData payment = null;
+        string errorDetails = null;
+        var invalidate = false;
+        
+        try
+        {
+            payment = await _btcpayService.GetLightningPayment(transaction.PaymentHash, cancellationToken);
+        }
+        catch (GreenfieldAPIException apiException) when (apiException.APIError.Code == "payment-not-found")
+        {
+            errorDetails = apiException.Message;
+            invalidate = true;
+        }
+        catch (Exception exception)
+        {
+            errorDetails = exception.Message;
+        }
+        
+        if (payment == null)
+        {
+            var isInflight = transaction.IsPending && transaction.CreatedAt > DateTimeOffset.Now - _inflightDelay;
+            if (!isInflight)
+            {
+                _logger.LogWarning("Unable to resolve payment (Payment Hash = {PaymentHash}) for transaction {TransactionId}{Details}",
+                    transaction.PaymentHash, transaction.TransactionId, string.IsNullOrEmpty(errorDetails) ? "" : $": {errorDetails}");
+            }
+            if (invalidate) 
+                await walletService.Invalidate(transaction);
+            return;
+        }
+        
+        switch (payment.Status)
+        {
+            case LightningPaymentStatus.Complete:
+            {
+                var paidAt = payment.CreatedAt ?? DateTimeOffset.Now;
+                var originalAmount = payment.TotalAmount - payment.FeeAmount;
+                await walletService.Settle(transaction, originalAmount, payment.TotalAmount * -1, payment.FeeAmount, paidAt);
+                break;
+            }
+            case LightningPaymentStatus.Failed:
+                _logger.LogWarning("Failed payment (Payment Hash = {PaymentHash}) for transaction {TransactionId} - invalidating transaction",
+                    transaction.PaymentHash, transaction.TransactionId);
+                await walletService.Invalidate(transaction);
+                break;
+            case LightningPaymentStatus.Unknown:
+            case LightningPaymentStatus.Pending:
+                _logger.LogDebug("Transaction {TransactionId} status: {Status}",
+                    transaction.TransactionId, payment.Status.ToString());
+                break;
         }
     }
 }
