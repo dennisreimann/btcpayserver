@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - LNDhub API: Fix send error.
+- Lightning setup: Fix setting LNbank wallet in WebKit-based browsers. (btcpayserver/btcpayserver-plugins#44)
 
 ## [1.3.2] - 2022-09-27
 
