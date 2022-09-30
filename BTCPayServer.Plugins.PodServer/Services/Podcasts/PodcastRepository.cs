@@ -41,16 +41,7 @@ public class PodcastRepository
     public async Task<Podcast> GetPodcast(PodcastsQuery query)
     {
         await using var dbContext = _dbContextFactory.CreateContext();
-        var podcast = await FilterPodcasts(dbContext.Podcasts.AsQueryable(), new PodcastsQuery
-        {
-            UserId = query.UserId,
-            PodcastId = query.PodcastId,
-            IncludePeople = query.IncludePeople,
-            IncludeEditors = query.IncludeEditors,
-            IncludeSeasons = query.IncludeSeasons,
-            IncludeEpisodes = query.IncludeEpisodes,
-            IncludeContributions = query.IncludeContributions
-        }).FirstOrDefaultAsync();
+        var podcast = await FilterPodcasts(dbContext.Podcasts.AsQueryable(), query).FirstOrDefaultAsync();
         if (podcast == null) return null;
         
         if (query.UserId != null)

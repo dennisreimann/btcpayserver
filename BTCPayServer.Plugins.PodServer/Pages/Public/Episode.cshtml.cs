@@ -26,9 +26,10 @@ public class PublicEpisodeModel : BasePageModel
             IncludeSeason = true
         });
         
-        if (!Episode.IsPublished) return NotFound();
-        
         Podcast = Episode.Podcast;
+        
+        if (!Podcast.Slug.Equals(podcastSlug)) return NotFound();
+        if (!Episode.IsPublished) return NotFound();
 
         return Page();
     }
