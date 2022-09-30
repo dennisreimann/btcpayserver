@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Improve LNURL payment flow.
-- LNbank: Improve invoice canceling and invalidating.
+- Improve invoice canceling and invalidating.
+- Minor Send and Receive view improvements.
 
 ## [1.3.3] - 2022-09-29
 

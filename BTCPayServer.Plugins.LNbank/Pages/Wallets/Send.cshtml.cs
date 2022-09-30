@@ -36,7 +36,7 @@ public class SendModel : BasePageModel
     public string PaymentRequest { get; set; } // this is set from the parsed Destination
     
     [BindProperty]
-    [DisplayName("Amount in sats")]
+    [DisplayName("Amount")]
     [Range(1, 2100000000000)]
     public long? ExplicitAmount { get; set; }
     

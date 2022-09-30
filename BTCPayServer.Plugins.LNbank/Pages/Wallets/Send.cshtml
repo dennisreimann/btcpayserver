@@ -43,15 +43,18 @@
             
             <p id="LNbank-Expiry">
                 Expires
-                    @Model.Bolt11.ExpiryDate.ToTimeAgo()
-                    <span class="text-muted">(@Model.Bolt11.ExpiryDate)</span>
+                @Model.Bolt11.ExpiryDate.ToTimeAgo()
+                <span class="text-muted">(@Model.Bolt11.ExpiryDate)</span>
             </p>
             
             @if (Model.ExplicitAmount != null)
             {
                 <div class="form-group">
                     <label asp-for="ExplicitAmount" class="form-label" data-required></label>
-                    <input asp-for="ExplicitAmount" class="form-control text-end hide-number-spin" type="number" max="@Model.Wallet.Balance.ToUnit(LightMoneyUnit.Satoshi)" style="width:15ch;" autofocus required />
+                    <div class="input-group">
+                        <input asp-for="ExplicitAmount" class="form-control flex-grow-0 text-end hide-number-spin" type="number" aria-describedby="ExplicitAmount-Addon" max="@Model.Wallet.Balance.ToUnit(LightMoneyUnit.Satoshi)" style="width:15ch;" autofocus required />
+                        <span class="input-group-text" id="ExplicitAmount-Addon">SATS</span>
+                    </div>
                     <span asp-validation-for="ExplicitAmount" class="text-danger"></span>
                 </div>
             }
