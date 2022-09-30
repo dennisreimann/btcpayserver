@@ -7,8 +7,8 @@ using BTCPayServer.Data;
 using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Authentication;
 using BTCPayServer.Plugins.LNbank.Data.Models;
-using BTCPayServer.Plugins.LNbank.Exceptions;
 using BTCPayServer.Plugins.LNbank.Services.Wallets;
+using LNURL;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +24,7 @@ public class SendModel : BasePageModel
 
     public Wallet Wallet { get; set; }
     public BOLT11PaymentRequest Bolt11 { get; set; }
+    public LNURLPayRequest LnurlPay { get; set; }
     
     [BindProperty]
     [DisplayName("Payment Request, LNURL or Lightning Address")]
@@ -37,12 +38,13 @@ public class SendModel : BasePageModel
     [BindProperty]
     [DisplayName("Amount in sats")]
     [Range(1, 2100000000000)]
-    public long ExplicitAmount { get; set; }
+    public long? ExplicitAmount { get; set; }
     
     [BindProperty]
     public string Description { get; set; }
-
-    public bool ValidationFailed { get; set; }
+    
+    [BindProperty]
+    public string Comment { get; set; }
 
     public SendModel(
         ILogger<SendModel> logger,
@@ -70,15 +72,46 @@ public class SendModel : BasePageModel
         try
         {
             Destination = Destination.Trim();
-            Bolt11 = await WalletService.GetBolt11(Destination);
-            PaymentRequest = Bolt11.ToString();
-            Description = Bolt11.ShortDescription;
+            (Bolt11, LnurlPay) = await WalletService.GetPaymentRequests(Destination);
+
+            if (Bolt11 != null)
+            {
+                Description = Bolt11.ShortDescription;
+                PaymentRequest = Bolt11.ToString();
+                
+                if (Bolt11.MinimumAmount == LightMoney.Zero)
+                {
+                    ExplicitAmount = 1;
+                }
+            }
+            else
+            {
+                Description = GetLnurlMetadata("text/plain");
+
+                var isDefinedAmount = LnurlPay.MinSendable == LnurlPay.MaxSendable;
+                var isCommentAllowed = LnurlPay.CommentAllowed is > 0;
+                
+                if (!isDefinedAmount)
+                {
+                    ExplicitAmount = (long)LnurlPay.MinSendable.ToUnit(LightMoneyUnit.Satoshi);
+                }
+                
+                // no further interaction required, get the BOLT11
+                if (isDefinedAmount && !isCommentAllowed)
+                {
+                    Bolt11 = await WalletService.GetBolt11(LnurlPay);
+                    PaymentRequest = Bolt11.ToString();
+                }
+            }
             
-            await WalletService.ValidatePaymentRequest(PaymentRequest);
+            // Payment request is not present in LNURL case with further interaction required
+            if (PaymentRequest != null)
+            {
+                await WalletService.ValidatePaymentRequest(PaymentRequest);
+            }
         }
         catch (Exception exception)
         {
-            ValidationFailed = exception is PaymentRequestValidationException;
             TempData[WellKnownTempData.ErrorMessage] = exception.Message;
         }
 
@@ -89,19 +122,52 @@ public class SendModel : BasePageModel
     {
         Wallet = await GetWallet(UserId, walletId);
         if (Wallet == null) return NotFound();
+        if (!ModelState.IsValid) return Page();
 
+        if (string.IsNullOrEmpty(PaymentRequest))
+        {
+            // LNURL case with further interaction required 
+            try
+            {
+                Destination = Destination.Trim();
+                (Bolt11, LnurlPay) = await WalletService.GetPaymentRequests(Destination);
+
+                if (Bolt11 == null)
+                {
+                    var isDefinedAmount = LnurlPay.MinSendable == LnurlPay.MaxSendable;
+                    var explicitAmount = ExplicitAmount.HasValue ? LightMoney.Satoshis(ExplicitAmount.Value) : null;
+                    var amount = isDefinedAmount ? LnurlPay.MinSendable : explicitAmount;
+                
+                    if (amount == null)
+                    {
+                        ModelState.AddModelError(nameof(ExplicitAmount), "Amount must be defined");
+                    }
+                    else
+                    {
+                        // Everything is ok, get the BOLT11
+                        Bolt11 = await WalletService.GetBolt11(LnurlPay, amount, Comment);
+                        PaymentRequest = Bolt11.ToString();
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                TempData[WellKnownTempData.ErrorMessage] = exception.Message;
+            }
+        }
+        
+        // Abort if there's still no payment request - from here on we require a BOLT11
         if (string.IsNullOrEmpty(PaymentRequest))
         {
             ModelState.AddModelError(nameof(PaymentRequest), "A valid BOLT11 Payment Request is required");
         }
-        
         if (!ModelState.IsValid) return Page();
-        
-        Bolt11 = await WalletService.GetBolt11(PaymentRequest);
+
+        Bolt11 ??= WalletService.ParsePaymentRequest(PaymentRequest!);
 
         try
         {
-            var explicitAmount = Bolt11?.MinimumAmount == LightMoney.Zero ? LightMoney.Satoshis(ExplicitAmount) : null;
+            var explicitAmount = ExplicitAmount.HasValue ? LightMoney.Satoshis(ExplicitAmount.Value) : null;
             var transaction = await WalletService.Send(Wallet, Bolt11, Description, explicitAmount);
             TempData[WellKnownTempData.SuccessMessage] = transaction.IsPending
                 ? "Payment successfully sent, awaiting settlement."
@@ -113,12 +179,18 @@ public class SendModel : BasePageModel
             const string message = "Payment failed";
             _logger.LogError(exception, message);
 
-            ValidationFailed = exception is PaymentRequestValidationException;
             TempData[WellKnownTempData.ErrorMessage] = string.IsNullOrEmpty(exception.Message)
                 ? message
                 : exception.Message;
         }
 
         return Page();
+    }
+
+    internal string GetLnurlMetadata(string key)
+    {
+        var pair = LnurlPay?.ParsedMetadata
+            .Find(pair => pair.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase));
+        return pair?.Value;
     }
 }

@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +7,7 @@ using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.LNbank.Data.Models;
 using BTCPayServer.Plugins.LNbank.Exceptions;
 using BTCPayServer.Plugins.LNbank.Hubs;
+using LNURL;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -59,13 +61,13 @@ public class WalletService
     public async Task<Transaction> Receive(Wallet wallet, long amount, string description, bool attachDescription, bool privateRouteHints, TimeSpan? expiry, CancellationToken cancellationToken = default) =>
         await Receive(wallet, amount, description, null, attachDescription, privateRouteHints, expiry, cancellationToken);
     
-    public async Task<Transaction> Receive(Wallet wallet, long amount, string description, uint256 descriptionHash, CancellationToken cancellationToken = default) =>
+    public async Task<Transaction> Receive(Wallet wallet, long amount, string description, uint256? descriptionHash, CancellationToken cancellationToken = default) =>
         await Receive(wallet, amount, description, descriptionHash, false, false, null, cancellationToken);
         
-    public async Task<Transaction> Receive(Wallet wallet, long amount, uint256 descriptionHash, bool privateRouteHints, TimeSpan? expiry, CancellationToken cancellationToken = default) =>
+    public async Task<Transaction> Receive(Wallet wallet, long amount, uint256? descriptionHash, bool privateRouteHints, TimeSpan? expiry, CancellationToken cancellationToken = default) =>
         await Receive(wallet, amount, null, descriptionHash, false, privateRouteHints, expiry, cancellationToken);
 
-    private async Task<Transaction> Receive(Wallet wallet, long amount, string description, uint256 descriptionHash, bool attachDescription, bool privateRouteHints, TimeSpan? expiry, CancellationToken cancellationToken = default)
+    private async Task<Transaction> Receive(Wallet wallet, long amount, string? description, uint256? descriptionHash, bool attachDescription, bool privateRouteHints, TimeSpan? expiry, CancellationToken cancellationToken = default)
     {
         if (amount < 0) throw new ArgumentException("Amount should be a non-negative value", nameof(amount));
         if (expiry <= TimeSpan.Zero) throw new ArgumentException("Expiry should be more than 0", nameof(expiry));
@@ -104,7 +106,7 @@ public class WalletService
         return await Send(wallet, bolt11, bolt11.ShortDescription);
     }
 
-    public async Task<Transaction> Send(Wallet wallet, BOLT11PaymentRequest bolt11, string description, LightMoney explicitAmount = null, float maxFeePercent = 3, CancellationToken cancellationToken = default)
+    public async Task<Transaction> Send(Wallet wallet, BOLT11PaymentRequest bolt11, string? description, LightMoney? explicitAmount = null, float maxFeePercent = 3, CancellationToken cancellationToken = default)
     {
         if (bolt11.ExpiryDate <= DateTimeOffset.UtcNow)
         {
@@ -113,6 +115,7 @@ public class WalletService
 
         // check balance
         var amount = bolt11.MinimumAmount == LightMoney.Zero ? explicitAmount : bolt11.MinimumAmount;
+        if (amount == null) throw new ArgumentException("Amount must be defined.", nameof(amount));
         if (wallet.Balance < amount)
         {
             throw new InsufficientBalanceException($"Insufficient balance: {Sats(wallet.Balance)} — tried to send {Sats(amount)}.");
@@ -134,14 +137,14 @@ public class WalletService
             AmountSettled = new LightMoney(amount.MilliSatoshi * -1),
         };
         
-        return await (isInternal
+        return await (isInternal && receivingTransaction != null
             ? SendInternal(sendingTransaction, receivingTransaction, cancellationToken)
             : SendExternal(sendingTransaction, amount, wallet.Balance, maxFeePercent, cancellationToken));
     }
 
     private async Task<Transaction> SendInternal(Transaction sendingTransaction, Transaction receivingTransaction, CancellationToken cancellationToken = default)
     {
-        Transaction transaction = null;
+        Transaction transaction = sendingTransaction;
         await using var dbContext = _dbContextFactory.CreateContext();
         var executionStrategy = dbContext.Database.CreateExecutionStrategy();
         var isSettled = false;
@@ -266,7 +269,7 @@ public class WalletService
         return ParsePaymentRequest(paymentRequest).VerifyDescriptionHash(metadata);
     }
 
-    public async Task<Transaction> ValidatePaymentRequest(string paymentRequest)
+    public async Task<Transaction?> ValidatePaymentRequest(string paymentRequest)
     {
         Transaction transaction = await _walletRepository.GetTransaction(new TransactionQuery
         {
@@ -282,20 +285,23 @@ public class WalletService
         };
     }
 
-    public BOLT11PaymentRequest ParsePaymentRequest(string payReq)
-    {
-        return BOLT11PaymentRequest.Parse(payReq.Trim(), _network);
-    }
+    public BOLT11PaymentRequest ParsePaymentRequest(string payReq) =>
+        BOLT11PaymentRequest.Parse(payReq.Trim(), _network);
 
-    public async Task<BOLT11PaymentRequest> GetBolt11(string destination)
+    public async Task<BOLT11PaymentRequest> GetBolt11(LNURLPayRequest lnurlPay, LightMoney? amount = null, string? comment = null) => 
+        await _lnurlService.GetBolt11(lnurlPay, amount, comment);
+
+    public async Task<(BOLT11PaymentRequest? bolt11, LNURLPayRequest? lnurlPay)> GetPaymentRequests(string destination)
     {
         try
         {
-            return ParsePaymentRequest(destination);
+            var bolt11 = ParsePaymentRequest(destination);
+            return (bolt11, null);
         }
         catch (Exception)
         {
-            return await _lnurlService.GetBolt11(destination, _network);
+            var lnurlPay = await _lnurlService.GetPaymentRequest(destination);
+            return (null, lnurlPay);
         }
     }
 
