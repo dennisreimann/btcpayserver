@@ -32,7 +32,7 @@ public class ReceiveModel : BasePageModel
     public bool AttachDescription { get; set; }
     
     [BindProperty]
-    [DisplayName("Amount in sats")]
+    [DisplayName("Amount")]
     [Required]
     [Range(0, 2100000000000)]
     public long Amount { get; set; }

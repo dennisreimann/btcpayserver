@@ -14,4 +14,9 @@ public class LightningInvoicePayRequest
     
     [JsonConverter(typeof(LightMoneyJsonConverter))]
     public LightMoney Amount { get; set; }
+    
+    public string Description { get; set; }
+    
+    // For LNURL
+    public string Comment { get; set; }
 }

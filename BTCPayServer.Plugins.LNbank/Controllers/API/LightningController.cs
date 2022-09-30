@@ -71,20 +71,26 @@ public class LightningController : ControllerBase
     {
         if (Wallet == null) return this.CreateAPIError(404, "wallet-not-found", "The wallet was not found");
 
-        var bolt11 = await _walletService.GetBolt11(req.PaymentRequest);
-        var isZeroAmount = bolt11.MinimumAmount == LightMoney.Zero;
-        var amount = isZeroAmount ? req.Amount : null;
-        if (isZeroAmount && amount == null)
+        var (bolt11, lnurlPay) = await _walletService.GetPaymentRequests(req.PaymentRequest);
+        var amountRequired = bolt11 != null
+            ? bolt11.MinimumAmount == LightMoney.Zero
+            : lnurlPay.MinSendable != lnurlPay.MaxSendable;
+        var amount = amountRequired ? req.Amount : null;
+        if (amountRequired && amount == null)
         {
-            ModelState.AddModelError(nameof(req.Amount), "Amount is required to pay a zero amount invoice");
+            ModelState.AddModelError(nameof(req.Amount), "Amount is required to pay an invoice with unspecified amount");
             return this.CreateValidationError(ModelState);
         }
 
         try
         {
+            // if not present, resolve BOLT11 from LNURLPay request
+            bolt11 ??= await _walletService.GetBolt11(lnurlPay, amount, req.Comment);
+            
             // load wallet including transactions to do the balance check
             var wallet = await GetWalletWithTransactions(Wallet.WalletId);
-            var transaction = await _walletService.Send(wallet, bolt11, bolt11.ShortDescription, amount);
+            var description = req.Description ?? bolt11.ShortDescription;
+            var transaction = await _walletService.Send(wallet, bolt11, description, amount);
             var details = transaction.IsSettled
                 ? new PayDetails { TotalAmount = transaction.Amount, FeeAmount = transaction.RoutingFee }
                 : null;
