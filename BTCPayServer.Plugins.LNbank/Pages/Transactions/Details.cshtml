@@ -21,9 +21,7 @@
             {
                 <span>
                     Paid
-                    <time datetime="@Model.Transaction.PaidAt?.ToString("o", CultureInfo.InvariantCulture)">
-                        @Model.Transaction.PaidAt?.ToTimeAgo()
-                    </time>
+                    @Model.Transaction.PaidAt?.ToBrowserDate(ViewsRazor.DateDisplayFormat.Relative)
                 </span>
             }
             else
@@ -43,9 +41,7 @@
         {
             <h4 class="h4 text-muted">
                 @(Model.Transaction.IsExpired ? "Expired" : "Expires")
-                <time datetime="@Model.Transaction.ExpiresAt.ToString("o", CultureInfo.InvariantCulture)">
-                    @Model.Transaction.ExpiresAt.ToTimeAgo()
-                </time>
+                @Model.Transaction.ExpiresAt.ToBrowserDate(ViewsRazor.DateDisplayFormat.Relative)
             </h4>
         }
 

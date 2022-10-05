@@ -30,7 +30,12 @@
             <table class="table table-hover">
                 <thead>
                 <tr>
-                    <th>Date</th>
+                    <th class="w-150px">
+                        <div class="d-flex align-items-center gap-1">
+                            Date
+                            <button type="button" class="btn btn-link p-0 fa fa-clock-o switch-time-format" title="Switch date format"></button>
+                        </div>
+                    </th>
                     <th>Description</th>
                     <th class="text-end">Amount</th>
                     <th class="text-end">Settled</th>
@@ -42,9 +47,7 @@
                     <tr id="LNbank-Transaction-@transaction.TransactionId">
                         <td>
                             <a asp-page="/Transactions/Details" asp-route-walletId="@Model.Wallet.WalletId" asp-route-transactionId="@transaction.TransactionId" class="transaction-details">
-                                <time datetime="@transaction.CreatedAt.ToString("o", CultureInfo.InvariantCulture)">
-                                    @transaction.CreatedAt.ToTimeAgo()
-                                </time>
+                                @transaction.CreatedAt.ToBrowserDate(ViewsRazor.DateDisplayFormat.Relative)
                             </a>
                         </td>
                         <td>
