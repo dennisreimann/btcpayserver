@@ -53,7 +53,7 @@ public class FeedController : Controller
         });
         
         var rootUri = Request.GetAbsoluteRootUri();
-        var lastUpdated = episodes.FirstOrDefault()?.LastUpdatedAt ?? DateTimeOffset.Now;
+        var lastUpdated = episodes.FirstOrDefault()?.PublishedAt!.Value ?? DateTimeOffset.Now;
         
         await xml.WriteStartDocumentAsync();
         xml.WriteStartElement("rss");
@@ -166,7 +166,7 @@ public class FeedController : Controller
 
         xml.WriteStartElement("item");
 
-        await xml.WriteElementStringAsync(null, "pubDate", null, episode.LastUpdatedAt.ToString("R"));
+        await xml.WriteElementStringAsync(null, "pubDate", null, episode.PublishedAt!.Value.ToString("R"));
         
         xml.WriteStartElement("title");
         await xml.WriteCDataAsync(episode.Title);
