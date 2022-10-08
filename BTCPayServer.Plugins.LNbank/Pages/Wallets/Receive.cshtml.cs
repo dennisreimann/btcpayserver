@@ -77,12 +77,9 @@ public class ReceiveModel : BasePageModel
         }
         catch (Exception exception)
         {
-            const string message = "Invoice creation failed";
-            _logger.LogError(exception, message);
+            _logger.LogError("Invoice creation failed: {Message}", exception.Message);
 
-            TempData[WellKnownTempData.ErrorMessage] = string.IsNullOrEmpty(exception.Message)
-                ? message
-                : exception.Message;
+            TempData[WellKnownTempData.ErrorMessage] = $"Invoice creation failed: {exception.Message}";
         }
 
         return Page();

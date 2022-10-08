@@ -176,12 +176,9 @@ public class SendModel : BasePageModel
         }
         catch (Exception exception)
         {
-            const string message = "Payment failed";
-            _logger.LogError(exception, message);
+            _logger.LogError("Payment failed: {Message}", exception.Message);
 
-            TempData[WellKnownTempData.ErrorMessage] = string.IsNullOrEmpty(exception.Message)
-                ? message
-                : exception.Message;
+            TempData[WellKnownTempData.ErrorMessage] = $"Payment failed: {exception.Message}";
         }
 
         return Page();
