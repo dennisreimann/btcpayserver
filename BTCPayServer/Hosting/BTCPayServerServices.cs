@@ -41,7 +41,6 @@ using BTCPayServer.Services.PaymentRequests;
 using BTCPayServer.Services.Rates;
 using BTCPayServer.Services.Stores;
 using BTCPayServer.Services.Wallets;
-using BundlerMinifier.TagHelpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -103,7 +102,6 @@ namespace BTCPayServer.Hosting
             services.TryAddSingleton<SettingsRepository>();
             services.TryAddSingleton<ISettingsRepository>(provider => provider.GetService<SettingsRepository>());
             services.TryAddSingleton<IStoreRepository>(provider => provider.GetService<StoreRepository>());
-            services.TryAddSingleton<LabelFactory>();
             services.TryAddSingleton<TorServices>();
             services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<TorServices>());
             services.AddSingleton<ISwaggerProvider, DefaultSwaggerProvider>();
@@ -428,16 +426,6 @@ namespace BTCPayServer.Hosting
             services.AddAPIKeyAuthentication();
             services.AddBtcPayServerAuthenticationSchemes();
             services.AddAuthorization(o => o.AddBTCPayPolicies());
-            // bundling
-            services.AddSingleton<IBundleProvider, ResourceBundleProvider>();
-            services.AddTransient<BundleOptions>(provider =>
-            {
-                var opts = provider.GetRequiredService<BTCPayServerOptions>();
-                var bundle = new BundleOptions();
-                bundle.UseBundles = opts.BundleJsCss;
-                bundle.AppendVersion = true;
-                return bundle;
-            });
 
             services.AddCors(options =>
             {
