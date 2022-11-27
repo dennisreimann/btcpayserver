@@ -1,14 +1,16 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Abstractions.Extensions;
+using BTCPayServer.Abstractions.Form;
 using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Data;
 using BTCPayServer.Filters;
+using BTCPayServer.Forms;
+using BTCPayServer.Models;
 using BTCPayServer.Models.PaymentRequestViewModels;
 using BTCPayServer.PaymentRequest;
 using BTCPayServer.Services.Invoices;
@@ -18,7 +20,7 @@ using BTCPayServer.Services.Stores;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing;
+using Newtonsoft.Json.Linq;
 using PaymentRequestData = BTCPayServer.Data.PaymentRequestData;
 using StoreData = BTCPayServer.Data.StoreData;
 
@@ -37,6 +39,8 @@ namespace BTCPayServer.Controllers
         private readonly InvoiceRepository _InvoiceRepository;
         private readonly StoreRepository _storeRepository;
 
+        private FormComponentProviders FormProviders { get; }
+
         public UIPaymentRequestController(
             UIInvoiceController invoiceController,
             UserManager<ApplicationUser> userManager,
@@ -45,7 +49,8 @@ namespace BTCPayServer.Controllers
             EventAggregator eventAggregator,
             CurrencyNameTable currencies,
             StoreRepository storeRepository,
-            InvoiceRepository invoiceRepository)
+            InvoiceRepository invoiceRepository,
+            FormComponentProviders formProviders)
         {
             _InvoiceController = invoiceController;
             _UserManager = userManager;
@@ -55,6 +60,7 @@ namespace BTCPayServer.Controllers
             _Currencies = currencies;
             _storeRepository = storeRepository;
             _InvoiceRepository = invoiceRepository;
+            FormProviders = formProviders;
         }
 
         [BitpayAPIConstraint(false)]
@@ -74,7 +80,15 @@ namespace BTCPayServer.Controllers
                 IncludeArchived = includeArchived
             });
 
-            model.Items = result.Select(data => new ViewPaymentRequestViewModel(data)).ToList();
+            model.Items = result.Select(data =>
+            {
+                var blob = data.GetBlob();
+                return new ViewPaymentRequestViewModel(data)
+                {
+                    AmountFormatted = _Currencies.FormatCurrency(blob.Amount, blob.Currency)
+                };
+            }).ToList();
+            
             return View(model);
         }
 
@@ -137,6 +151,7 @@ namespace BTCPayServer.Controllers
             blob.EmbeddedCSS = viewModel.EmbeddedCSS;
             blob.CustomCSSLink = viewModel.CustomCSSLink;
             blob.AllowCustomPaymentAmounts = viewModel.AllowCustomPaymentAmounts;
+            blob.FormId = viewModel.FormId;
 
             data.SetBlob(blob);
             var isNewPaymentRequest = string.IsNullOrEmpty(payReqId);
@@ -166,6 +181,56 @@ namespace BTCPayServer.Controllers
             return View(result);
         }
 
+        [HttpGet("{payReqId}/form")]
+        [HttpPost("{payReqId}/form")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ViewPaymentRequestForm(string payReqId)
+        {
+            var result = await _PaymentRequestRepository.FindPaymentRequest(payReqId, GetUserId());
+            if (result == null)
+            {
+                return NotFound();
+            }
+
+            var prBlob = result.GetBlob();
+            var prFormId = prBlob.FormId;
+            switch (prFormId)
+            {
+                case null:
+                case { } when string.IsNullOrEmpty(prFormId):
+                case { } when Request.Method == "GET" && prBlob.FormResponse is not null:
+                    return RedirectToAction("ViewPaymentRequest", new { payReqId });
+                case { } when Request.Method == "GET" && prBlob.FormResponse is null:
+                        break;
+                default:
+                    // POST case: Handle form submit
+                    var formData = Form.Parse(UIFormsController.GetFormData(prFormId).Config);
+                    formData.ApplyValuesFromForm(Request.Form);
+                    if (FormProviders.Validate(formData, ModelState))
+                    {
+                        prBlob.FormResponse = JObject.FromObject(formData.GetValues());
+                        result.SetBlob(prBlob);
+                        await _PaymentRequestRepository.CreateOrUpdatePaymentRequest(result);
+                        return RedirectToAction("PayPaymentRequest", new { payReqId });
+                    }
+                    break;
+            }
+
+            return View("PostRedirect", new PostRedirectViewModel
+            {
+                AspController = "UIForms",
+                AspAction = "ViewPublicForm",
+                RouteParameters =
+                {
+                    { "formId", prFormId }
+                },
+                FormParameters =
+                {
+                    { "redirectUrl", Request.GetCurrentUrl() }
+                }
+            });
+        }
+        
         [HttpGet("{payReqId}/pay")]
         [AllowAnonymous]
         public async Task<IActionResult> PayPaymentRequest(string payReqId, bool redirectToInvoice = true,

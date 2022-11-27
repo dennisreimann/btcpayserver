@@ -298,9 +298,9 @@ namespace BTCPayServer.Controllers
         [HttpPost("server/policies")]
         public async Task<IActionResult> Policies([FromServices] BTCPayNetworkProvider btcPayNetworkProvider, PoliciesSettings settings, string command = "")
         {
-
             ViewBag.UpdateUrlPresent = _Options.UpdateUrl != null;
             ViewBag.AppsList = await GetAppSelectList();
+            
             if (command == "add-domain")
             {
                 ModelState.Clear();
@@ -512,6 +512,7 @@ namespace BTCPayServer.Controllers
                     case ExternalServiceTypes.RTL:
                     case ExternalServiceTypes.ThunderHub:
                     case ExternalServiceTypes.Spark:
+                    case ExternalServiceTypes.Torq:
                         if (connectionString.AccessKey == null)
                         {
                             TempData[WellKnownTempData.ErrorMessage] = $"The access key of the service is not set";

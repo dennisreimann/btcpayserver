@@ -288,6 +288,117 @@ namespace BTCPayServer.Tests
                 await client.GetApp(retrievedApp.Id);
             });
         }
+
+        [Fact(Timeout = TestTimeout)]
+        [Trait("Integration", "Integration")]
+        public async Task CanCreateCrowdfundApp()
+        {
+            using var tester = CreateServerTester();
+            await tester.StartAsync();
+            var user = tester.NewAccount();
+            await user.RegisterDerivationSchemeAsync("BTC");
+            var client = await user.CreateClient();
+
+            // Test validation for creating the app
+            await AssertValidationError(new[] { "AppName" },
+                async () => await client.CreateCrowdfundApp(user.StoreId, new CreateCrowdfundAppRequest() {}));
+            await AssertValidationError(new[] { "AppName" },
+                async () => await client.CreateCrowdfundApp(
+                    user.StoreId,
+                    new CreateCrowdfundAppRequest()
+                    {
+                        AppName = "this is a really long app name this is a really long app name this is a really long app name",
+                    }
+                )
+            );
+            await AssertValidationError(new[] { "TargetCurrency" },
+                async () => await client.CreateCrowdfundApp(
+                    user.StoreId,
+                    new CreateCrowdfundAppRequest()
+                    {
+                        AppName = "good name",
+                        TargetCurrency = "fake currency"
+                    }
+                )
+            );
+            await AssertValidationError(new[] { "PerksTemplate" },
+                async () => await client.CreateCrowdfundApp(
+                    user.StoreId,
+                    new CreateCrowdfundAppRequest()
+                    {
+                        AppName = "good name",
+                        PerksTemplate = "lol invalid template"
+                    }
+                )
+            );
+            await AssertValidationError(new[] { "AppName", "TargetCurrency", "PerksTemplate" },
+                async () => await client.CreateCrowdfundApp(
+                    user.StoreId,
+                    new CreateCrowdfundAppRequest()
+                    {
+                        TargetCurrency = "fake currency",
+                        PerksTemplate = "lol invalid template"
+                    }
+                )
+            );
+            await AssertValidationError(new[] { "AnimationColors" },
+                async () => await client.CreateCrowdfundApp(
+                    user.StoreId,
+                    new CreateCrowdfundAppRequest()
+                    {
+                        AppName = "good name",
+                        AnimationColors = new string[] {}
+                    }
+                )
+            );
+            await AssertValidationError(new[] { "AnimationColors" },
+                async () => await client.CreateCrowdfundApp(
+                    user.StoreId,
+                    new CreateCrowdfundAppRequest()
+                    {
+                        AppName = "good name",
+                        AnimationColors = new string[] { "  ", " " }
+                    }
+                )
+            );
+            await AssertValidationError(new[] { "Sounds" },
+                async () => await client.CreateCrowdfundApp(
+                    user.StoreId,
+                    new CreateCrowdfundAppRequest()
+                    {
+                        AppName = "good name",
+                        Sounds = new string[] { "  " }
+                    }
+                )
+            );
+            await AssertValidationError(new[] { "Sounds" },
+                async () => await client.CreateCrowdfundApp(
+                    user.StoreId,
+                    new CreateCrowdfundAppRequest()
+                    {
+                        AppName = "good name",
+                        Sounds = new string[] { " ", " ", " "  }
+                    }
+                )
+            );
+            await AssertValidationError(new[] { "EndDate" },
+                async () => await client.CreateCrowdfundApp(
+                    user.StoreId,
+                    new CreateCrowdfundAppRequest()
+                    {
+                        AppName = "good name",
+                        StartDate = DateTime.Parse("1998-01-01"),
+                        EndDate = DateTime.Parse("1997-12-31")
+                    }
+                )
+            );
+
+            // Test creating a crowdfund app
+            var app = await client.CreateCrowdfundApp(user.StoreId, new CreateCrowdfundAppRequest() { AppName = "test app from API" });
+            Assert.Equal("test app from API", app.Name);
+            Assert.Equal(user.StoreId, app.StoreId);
+            Assert.Equal("Crowdfund", app.AppType);
+        }
         
         [Fact(Timeout = TestTimeout)]
         [Trait("Integration", "Integration")]
@@ -795,6 +906,100 @@ namespace BTCPayServer.Tests
             payout = (await client.GetPayouts(payout.PullPaymentId)).First(data => data.Id == payout.Id);
             Assert.Equal(PayoutState.Completed, payout.State);
             await AssertAPIError("invalid-state", async () => await client.MarkPayoutPaid(storeId, payout.Id));
+        }
+
+        [Fact]
+        [Trait("Integration", "Integration")]
+        public async Task CanProcessPayoutsExternally()
+        {
+            using var tester = CreateServerTester();
+            await tester.StartAsync();
+            var acc = tester.NewAccount();
+            acc.Register();
+            await acc.CreateStoreAsync();
+            var storeId = (await acc.RegisterDerivationSchemeAsync("BTC", importKeysToNBX: true)).StoreId;
+            var client = await acc.CreateClient();
+            var address = await tester.ExplorerNode.GetNewAddressAsync();
+            var payout = await client.CreatePayout(storeId, new CreatePayoutThroughStoreRequest()
+            {
+                 Approved = false,
+                 PaymentMethod = "BTC",
+                 Amount = 0.0001m,
+                 Destination = address.ToString()
+            });
+            await AssertAPIError("invalid-state", async () =>
+            {
+                await client.MarkPayout(storeId, payout.Id, new MarkPayoutRequest() {State = PayoutState.Completed});
+
+            });
+
+            await client.ApprovePayout(storeId, payout.Id, new ApprovePayoutRequest());
+            
+            await client.MarkPayout(storeId, payout.Id, new MarkPayoutRequest() {State = PayoutState.Completed});
+            Assert.Equal(PayoutState.Completed,(await client.GetStorePayouts(storeId,false)).Single(data => data.Id == payout.Id ).State );
+            Assert.Null((await client.GetStorePayouts(storeId,false)).Single(data => data.Id == payout.Id ).PaymentProof );
+
+            foreach (var state in new []{ PayoutState.AwaitingApproval, PayoutState.Cancelled, PayoutState.Completed, PayoutState.AwaitingApproval, PayoutState.InProgress})
+            {
+                await AssertAPIError("invalid-state", async () =>
+                {
+                    await client.MarkPayout(storeId, payout.Id, new MarkPayoutRequest() {State = state});
+                });
+            }
+            payout = await client.CreatePayout(storeId, new CreatePayoutThroughStoreRequest()
+            {
+                Approved = true,
+                PaymentMethod = "BTC",
+                Amount = 0.0001m,
+                Destination = address.ToString()
+            });
+
+            payout = await client.GetStorePayout(storeId, payout.Id);
+            Assert.NotNull(payout);
+            Assert.Equal(PayoutState.AwaitingPayment, payout.State);
+            await AssertValidationError(new []{"PaymentProof"}, async () =>
+            {
+                await client.MarkPayout(storeId, payout.Id, new MarkPayoutRequest() {State = PayoutState.Completed, PaymentProof = JObject.FromObject(new
+                {
+                    test = "zyx"
+                })});
+            });
+            await client.MarkPayout(storeId, payout.Id, new MarkPayoutRequest() {State = PayoutState.InProgress, PaymentProof = JObject.FromObject(new
+            {
+                proofType = "external-proof"
+            })});
+            payout = await client.GetStorePayout(storeId, payout.Id);
+            Assert.NotNull(payout);
+            Assert.Equal(PayoutState.InProgress, payout.State);
+            Assert.True(payout.PaymentProof.TryGetValue("proofType", out var savedType));
+            Assert.Equal("external-proof",savedType);
+            
+            await client.MarkPayout(storeId, payout.Id, new MarkPayoutRequest() {State = PayoutState.AwaitingPayment, PaymentProof = JObject.FromObject(new
+            {
+                proofType = "external-proof",
+                id="finality proof",
+                link="proof.com"
+            })});
+            payout = await client.GetStorePayout(storeId, payout.Id);
+            Assert.NotNull(payout);
+            Assert.Null(payout.PaymentProof);
+            Assert.Equal(PayoutState.AwaitingPayment, payout.State);
+            
+            await client.MarkPayout(storeId, payout.Id, new MarkPayoutRequest() {State = PayoutState.Completed, PaymentProof = JObject.FromObject(new
+            {
+                proofType = "external-proof",
+                id="finality proof",
+                link="proof.com"
+            })});
+            payout = await client.GetStorePayout(storeId, payout.Id);
+            Assert.NotNull(payout);
+            Assert.Equal(PayoutState.Completed, payout.State);
+            Assert.True(payout.PaymentProof.TryGetValue("proofType", out savedType));
+            Assert.True(payout.PaymentProof.TryGetValue("link", out var savedLink));
+            Assert.True(payout.PaymentProof.TryGetValue("id", out var savedId));
+            Assert.Equal("external-proof",savedType);
+            Assert.Equal("finality proof",savedId);
+            Assert.Equal("proof.com",savedLink);
         }
 
         private DateTimeOffset RoundSeconds(DateTimeOffset dateTimeOffset)
@@ -1394,13 +1599,11 @@ namespace BTCPayServer.Tests
                     {
                         RedirectAutomatically = true,
                         RequiresRefundEmail = true,
-                        CheckoutFormId = GenericFormOption.Email.ToString()
                     },
                     AdditionalSearchTerms = new string[] { "Banana" }
                 });
             Assert.True(newInvoice.Checkout.RedirectAutomatically);
             Assert.True(newInvoice.Checkout.RequiresRefundEmail);
-            Assert.Equal(GenericFormOption.Email.ToString(), newInvoice.Checkout.CheckoutFormId);
             Assert.Equal(user.StoreId, newInvoice.StoreId);
             //list 
             var invoices = await viewOnly.GetInvoices(user.StoreId);
@@ -2784,7 +2987,134 @@ namespace BTCPayServer.Tests
              Assert.Empty(payouts.Where(data => data.State != PayoutState.InProgress));
          });
         }
-        
+
+        [Fact(Timeout = 60 * 2 * 1000)]
+        [Trait("Integration", "Integration")]
+        public async Task CanUseWalletObjectsAPI()
+        {
+            using var tester = CreateServerTester();
+            await tester.StartAsync();
+
+            var admin = tester.NewAccount();
+            await admin.GrantAccessAsync(true);
+
+            var client = await admin.CreateClient(Policies.Unrestricted);
+
+            Assert.Empty(await client.GetOnChainWalletObjects(admin.StoreId, "BTC"));
+            var test = new OnChainWalletObjectId("test", "test");
+            Assert.NotNull(await client.AddOrUpdateOnChainWalletObject(admin.StoreId, "BTC", new AddOnChainWalletObjectRequest(test.Type, test.Id)));
+
+            Assert.Single(await client.GetOnChainWalletObjects(admin.StoreId, "BTC"));
+            Assert.NotNull(await client.GetOnChainWalletObject(admin.StoreId, "BTC", test));
+            Assert.Null(await client.GetOnChainWalletObject(admin.StoreId, "BTC", new OnChainWalletObjectId("test-wrong", "test")));
+            Assert.Null(await client.GetOnChainWalletObject(admin.StoreId, "BTC", new OnChainWalletObjectId("test", "test-wrong")));
+
+            await client.RemoveOnChainWalletObject(admin.StoreId, "BTC", new OnChainWalletObjectId("test", "test"));
+
+            Assert.Empty(await client.GetOnChainWalletObjects(admin.StoreId, "BTC"));
+
+            var test1 = new OnChainWalletObjectId("test", "test1");
+            var test2 = new OnChainWalletObjectId("test", "test2");
+            await client.AddOrUpdateOnChainWalletObject(admin.StoreId, "BTC", new AddOnChainWalletObjectRequest(test.Type, test.Id));
+            // Those links don't exists
+            await AssertAPIError("wallet-object-not-found", () => client.AddOrUpdateOnChainWalletLink(admin.StoreId, "BTC", test, new AddOnChainWalletObjectLinkRequest(test1.Type, test1.Id)));
+            await AssertAPIError("wallet-object-not-found", () => client.AddOrUpdateOnChainWalletLink(admin.StoreId, "BTC", test, new AddOnChainWalletObjectLinkRequest(test2.Type, test2.Id)));
+
+            Assert.Single(await client.GetOnChainWalletObjects(admin.StoreId, "BTC"));
+
+            await client.AddOrUpdateOnChainWalletObject(admin.StoreId, "BTC", new AddOnChainWalletObjectRequest(test1.Type, test1.Id));
+            await client.AddOrUpdateOnChainWalletObject(admin.StoreId, "BTC", new AddOnChainWalletObjectRequest(test2.Type, test2.Id));
+
+            await client.AddOrUpdateOnChainWalletLink(admin.StoreId, "BTC", test, new AddOnChainWalletObjectLinkRequest(test1.Type, test1.Id));
+            await client.AddOrUpdateOnChainWalletLink(admin.StoreId, "BTC", test, new AddOnChainWalletObjectLinkRequest(test2.Type, test2.Id));
+
+            var objs = await client.GetOnChainWalletObjects(admin.StoreId, "BTC");
+            Assert.Equal(3, objs.Length);
+            var middleObj = objs.Single(data => data.Id == "test" && data.Type == "test");
+            Assert.Equal(2, middleObj.Links.Length);
+            Assert.Contains("test1", middleObj.Links.Select(l => l.Id));
+            Assert.Contains("test2", middleObj.Links.Select(l => l.Id));
+
+            var test1Obj = objs.Single(data => data.Id == "test1" && data.Type == "test");
+            var test2Obj = objs.Single(data => data.Id == "test2" && data.Type == "test");
+            Assert.Single(test1Obj.Links.Select(l => l.Id), l => l == "test");
+            Assert.Single(test2Obj.Links.Select(l => l.Id), l => l == "test");
+
+            await client.RemoveOnChainWalletLinks(admin.StoreId, "BTC",
+                test1,
+                test);
+
+            var testObj = await client.GetOnChainWalletObject(admin.StoreId, "BTC", test);
+            Assert.Single(testObj.Links.Select(l => l.Id), l => l == "test2");
+            Assert.Single(testObj.Links);
+            test1Obj = await client.GetOnChainWalletObject(admin.StoreId, "BTC", test1);
+            Assert.Empty(test1Obj.Links);
+
+            await client.AddOrUpdateOnChainWalletLink(admin.StoreId, "BTC",
+                test1,
+                new AddOnChainWalletObjectLinkRequest(test.Type, test.Id) { Data = new JObject() { ["testData"] = "lol" } });
+
+            // Add some data to test1
+            await client.AddOrUpdateOnChainWalletObject(admin.StoreId, "BTC", new AddOnChainWalletObjectRequest() { Type = test1.Type, Id = test1.Id, Data = new JObject() { ["testData"] = "test1" } });
+
+            // Create a new type
+            await client.AddOrUpdateOnChainWalletObject(admin.StoreId, "BTC", new AddOnChainWalletObjectRequest() { Type = "newtype", Id = test1.Id });
+
+            testObj = await client.GetOnChainWalletObject(admin.StoreId, "BTC", test);
+            Assert.Single(testObj.Links.Where(l => l.Id == "test1" && l.LinkData["testData"]?.Value<string>() == "lol"));
+            Assert.Single(testObj.Links.Where(l => l.Id == "test1" && l.ObjectData["testData"]?.Value<string>() == "test1"));
+            testObj = await client.GetOnChainWalletObject(admin.StoreId, "BTC", test, false);
+            Assert.Single(testObj.Links.Where(l => l.Id == "test1" && l.LinkData["testData"]?.Value<string>() == "lol"));
+            Assert.Single(testObj.Links.Where(l => l.Id == "test1" && l.ObjectData is null));
+
+            async Task TestWalletRepository(bool useInefficient)
+            {
+                // We should have 4 nodes, two `test` type and one `newtype`
+                // Only the node `test` `test` is connected to `test1`
+                var wid = new WalletId(admin.StoreId, "BTC");
+                var repo = tester.PayTester.GetService<WalletRepository>();
+                var allObjects = await repo.GetWalletObjects((new(wid, null) { UseInefficientPath = useInefficient }));
+                var allObjectsNoWallet = await repo.GetWalletObjects((new() { UseInefficientPath = useInefficient }));
+                var allObjectsNoWalletAndType = await repo.GetWalletObjects((new() { Type = "test", UseInefficientPath = useInefficient }));
+                var allTests = await repo.GetWalletObjects((new(wid, "test") { UseInefficientPath = useInefficient }));
+                var twoTests2 = await repo.GetWalletObjects((new(wid, "test", new[] { "test1", "test2", "test-unk" }) { UseInefficientPath = useInefficient }));
+                var oneTest = await repo.GetWalletObjects((new(wid, "test", new[] { "test" }) { UseInefficientPath = useInefficient }));
+                var oneTestWithoutData = await repo.GetWalletObjects((new(wid, "test", new[] { "test" }) { UseInefficientPath = useInefficient, IncludeNeighbours = false }));
+                var idsTypes = await repo.GetWalletObjects((new(wid) { TypesIds = new[] { new ObjectTypeId("test", "test1"), new ObjectTypeId("test", "test2") }, UseInefficientPath = useInefficient }));
+
+                Assert.Equal(4, allObjects.Count);
+                // We are reusing a db in this test, as such we may have other wallets here.
+                Assert.True(allObjectsNoWallet.Count >= 4);
+                Assert.True(allObjectsNoWalletAndType.Count >= 3);
+                Assert.Equal(3, allTests.Count);
+                Assert.Equal(2, twoTests2.Count);
+                Assert.Single(oneTest);
+                Assert.NotNull(oneTest.First().Value.GetNeighbours().Select(n => n.Data).FirstOrDefault());
+                Assert.Single(oneTestWithoutData);
+                Assert.Null(oneTestWithoutData.First().Value.GetNeighbours().Select(n => n.Data).FirstOrDefault());
+                Assert.Equal(2, idsTypes.Count);
+            }
+            await TestWalletRepository(false);
+            await TestWalletRepository(true);
+
+            {
+                var allObjects = await client.GetOnChainWalletObjects(admin.StoreId, "BTC");
+                var allTests = await client.GetOnChainWalletObjects(admin.StoreId, "BTC", new GetWalletObjectsRequest() { Type = "test" });
+                var twoTests2 = await client.GetOnChainWalletObjects(admin.StoreId, "BTC", new GetWalletObjectsRequest() { Type = "test", Ids = new[] { "test1", "test2", "test-unk" } });
+                var oneTest = await client.GetOnChainWalletObjects(admin.StoreId, "BTC", new GetWalletObjectsRequest() { Type = "test", Ids=new[] { "test" } });
+                var oneTestWithoutData = await client.GetOnChainWalletObjects(admin.StoreId, "BTC", new GetWalletObjectsRequest() { Type = "test", Ids = new[] { "test" }, IncludeNeighbourData = false });
+
+                Assert.Equal(4, allObjects.Length);
+                Assert.Equal(3, allTests.Length);
+                Assert.Equal(2, twoTests2.Length);
+                Assert.Single(oneTest);
+                Assert.NotNull(oneTest.First().Links.Select(n => n.ObjectData).FirstOrDefault());
+                Assert.Single(oneTestWithoutData);
+                Assert.Null(oneTestWithoutData.First().Links.Select(n => n.ObjectData).FirstOrDefault());
+            }
+
+
+        }
         
         [Fact(Timeout = TestTimeout)]
         [Trait("Integration", "Integration")]
