@@ -1,6 +1,6 @@
-[submodule "LNbank"]
+[submodule "Plugins/BTCPayServer.Plugins.LNbank"]
 	path = Plugins/BTCPayServer.Plugins.LNbank
 	url = git@github.com:dennisreimann/btcpayserver-plugin-lnbank.git
-[submodule "PodServer"]
+[submodule "Plugins/BTCPayServer.Plugins.PodServer"]
 	path = Plugins/BTCPayServer.Plugins.PodServer
 	url = git@github.com:dennisreimann/btcpayserver-plugin-podserver.git
