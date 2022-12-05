@@ -133,6 +133,8 @@
 	  <ProjectReference Include="..\BTCPayServer.Data\BTCPayServer.Data.csproj" />
 	  <ProjectReference Include="..\BTCPayServer.Rating\BTCPayServer.Rating.csproj" />
 	  <ProjectReference Include="..\BTCPayServer.Common\BTCPayServer.Common.csproj" />
+    <ProjectReference Include="..\Plugins\BTCPayServer.Plugins.LNbank\BTCPayServer.Plugins.LNbank.csproj" />
+	  <ProjectReference Include="..\Plugins\BTCPayServer.Plugins.PodServer\BTCPayServer.Plugins.PodServer.csproj" />
 	  <ProjectReference Include="..\Plugins\BTCPayServer.Plugins.Custodians.FakeCustodian\BTCPayServer.Plugins.Custodians.FakeCustodian.csproj" />
 	</ItemGroup>
 
