@@ -77,6 +77,7 @@ namespace BTCPayServer.Tests
                 s.Driver.FindElement(By.Id("Description")).SendKeys(description);
                 s.Driver.FindElement(By.Id("Amount")).Clear();
                 s.Driver.FindElement(By.Id("Amount")).SendKeys("21");
+                s.Driver.SetCheckbox(By.Id("AttachDescription"), true);
                 s.Driver.FindElement(By.Id("LNbank-CreateInvoice")).Click();
                 
                 // Details
