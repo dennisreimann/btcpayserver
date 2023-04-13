@@ -31,7 +31,7 @@
         "BTCPAY_CHEATMODE": "true",
         "BTCPAY_EXPLORERPOSTGRES": "User ID=postgres;Include Error Detail=true;Host=127.0.0.1;Port=39372;Database=nbxplorer"
       },
-      "applicationUrl": "http://localhost:14142/"
+      "applicationUrl": "http://0.0.0.0:14142/"
     },
     "Bitcoin-HTTPS": {
       "commandName": "Project",
@@ -68,7 +68,7 @@
         "BTCPAY_CHEATMODE": "true",
         "BTCPAY_EXPLORERPOSTGRES": "User ID=postgres;Include Error Detail=true;Host=127.0.0.1;Port=39372;Database=nbxplorer"
       },
-      "applicationUrl": "https://localhost:14142/"
+      "applicationUrl": "https://0.0.0.0:14142/"
     },
     "Altcoins": {
       "commandName": "Project",
@@ -150,7 +150,7 @@
         "BTCPAY_XMR_WALLET_DAEMON_URI": "http://127.0.0.1:18082",
         "BTCPAY_XMR_WALLET_DAEMON_WALLETDIR": "/path/to/monero_wallet"
       },
-      "applicationUrl": "https://localhost:14142/"
+      "applicationUrl": "https://0.0.0.0:14142/"
     }
   }
 }
