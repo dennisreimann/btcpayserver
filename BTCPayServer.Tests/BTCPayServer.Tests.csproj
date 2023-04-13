@@ -49,6 +49,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\plugin-lnbank\BTCPayServer.Plugins.LNbank\BTCPayServer.Plugins.LNbank.csproj" />
     <ProjectReference Include="..\BTCPayServer.Rating\BTCPayServer.Rating.csproj" />
     <ProjectReference Include="..\BTCPayServer\BTCPayServer.csproj" />
   </ItemGroup>
