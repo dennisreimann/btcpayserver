@@ -39,8 +39,7 @@ namespace BTCPayServer.Tests
 
     public class BTCPayServerTester : IDisposable
     {
-        private readonly string _Directory;
-
+        internal readonly string _Directory;
         public ILoggerProvider LoggerProvider { get; }
 
         ILog TestLogs;
@@ -60,6 +59,11 @@ namespace BTCPayServer.Tests
         public Uri LBTCNBXplorerUri { get; set; }
 
         public Uri ServerUri
+        {
+            get;
+            set;
+        }
+        public Uri ServerUriWithIP
         {
             get;
             set;
@@ -88,6 +92,13 @@ namespace BTCPayServer.Tests
         public TestDatabases TestDatabase
         {
             get; set;
+        }
+
+        public async Task RestartStartupTask<T>()
+        {
+            var startupTask = GetService<IServiceProvider>().GetServices<Abstractions.Contracts.IStartupTask>()
+                .Single(task => task is T);
+            await startupTask.ExecuteAsync();
         }
 
         public bool MockRates { get; set; } = true;
@@ -164,6 +175,7 @@ namespace BTCPayServer.Tests
             await File.WriteAllTextAsync(confPath, config.ToString());
 
             ServerUri = new Uri("http://" + HostName + ":" + Port + "/");
+            ServerUriWithIP = new Uri("http://127.0.0.1:" + Port + "/");
             HttpClient = new HttpClient();
             HttpClient.BaseAddress = ServerUri;
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");

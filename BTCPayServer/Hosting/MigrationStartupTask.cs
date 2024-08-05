@@ -4,9 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AngleSharp.Common;
 using BTCPayServer.Abstractions.Contracts;
-using BTCPayServer.Client.Models;
 using BTCPayServer.Configuration;
 using BTCPayServer.Data;
 using BTCPayServer.Fido2;
@@ -15,6 +13,7 @@ using BTCPayServer.Payments;
 using BTCPayServer.Payments.Bitcoin;
 using BTCPayServer.Payments.Lightning;
 using BTCPayServer.PayoutProcessors;
+using BTCPayServer.Payouts;
 using BTCPayServer.Plugins.Crowdfund;
 using BTCPayServer.Plugins.PointOfSale;
 using BTCPayServer.Plugins.PointOfSale.Models;
@@ -25,17 +24,14 @@ using BTCPayServer.Services.Stores;
 using BTCPayServer.Storage.Models;
 using BTCPayServer.Storage.Services.Providers.FileSystemStorage.Configuration;
 using Fido2NetLib.Objects;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NBitcoin;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PeterO.Cbor;
 using YamlDotNet.RepresentationModel;
 using LightningAddressData = BTCPayServer.Data.LightningAddressData;
-using Serializer = NBXplorer.Serializer;
 
 namespace BTCPayServer.Hosting
 {
@@ -47,12 +43,12 @@ namespace BTCPayServer.Hosting
         private readonly PaymentMethodHandlerDictionary _handlers;
         private readonly SettingsRepository _Settings;
         private readonly AppService _appService;
-        private readonly IEnumerable<IPayoutHandler> _payoutHandlers;
+        private readonly PayoutMethodHandlerDictionary _payoutHandlers;
         private readonly BTCPayNetworkJsonSerializerSettings _btcPayNetworkJsonSerializerSettings;
         private readonly LightningAddressService _lightningAddressService;
         private readonly ILogger<MigrationStartupTask> _logger;
         private readonly LightningClientFactoryService _lightningClientFactoryService;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IFileService _fileService;
 
         public IOptions<LightningNetworkOptions> LightningOptions { get; }
 
@@ -60,14 +56,14 @@ namespace BTCPayServer.Hosting
             PaymentMethodHandlerDictionary handlers,
             StoreRepository storeRepository,
             ApplicationDbContextFactory dbContextFactory,
-            UserManager<ApplicationUser> userManager,
             IOptions<LightningNetworkOptions> lightningOptions,
             SettingsRepository settingsRepository,
             AppService appService,
-            IEnumerable<IPayoutHandler> payoutHandlers,
+            PayoutMethodHandlerDictionary payoutHandlers,
             BTCPayNetworkJsonSerializerSettings btcPayNetworkJsonSerializerSettings,
             LightningAddressService lightningAddressService,
             ILogger<MigrationStartupTask> logger,
+            IFileService fileService,
             LightningClientFactoryService lightningClientFactoryService)
         {
             _handlers = handlers;
@@ -79,8 +75,8 @@ namespace BTCPayServer.Hosting
             _btcPayNetworkJsonSerializerSettings = btcPayNetworkJsonSerializerSettings;
             _lightningAddressService = lightningAddressService;
             _logger = logger;
+            _fileService = fileService;
             _lightningClientFactoryService = lightningClientFactoryService;
-            _userManager = userManager;
             LightningOptions = lightningOptions;
         }
         public async Task ExecuteAsync(CancellationToken cancellationToken = default)
@@ -98,54 +94,15 @@ namespace BTCPayServer.Hosting
                         prop.SetValue(settings, true);
                     }
                     // Ensure these checks still get run
-                    settings.CheckedFirstRun = false;
                     settings.FileSystemStorageAsDefault = false;
                     await _Settings.UpdateSetting(settings);
+                    await _Settings.UpdateSetting(new ThemeSettings());
                 }
 
                 if (!settings.PaymentMethodCriteria)
                 {
                     await MigratePaymentMethodCriteria();
                     settings.PaymentMethodCriteria = true;
-                    await _Settings.UpdateSetting(settings);
-                }
-                if (!settings.DeprecatedLightningConnectionStringCheck)
-                {
-                    await DeprecatedLightningConnectionStringCheck();
-                    settings.DeprecatedLightningConnectionStringCheck = true;
-                    await _Settings.UpdateSetting(settings);
-                }
-                if (!settings.ConvertMultiplierToSpread)
-                {
-                    await ConvertMultiplierToSpread();
-                    settings.ConvertMultiplierToSpread = true;
-                    await _Settings.UpdateSetting(settings);
-                }
-                if (!settings.ConvertNetworkFeeProperty)
-                {
-                    await ConvertNetworkFeeProperty();
-                    settings.ConvertNetworkFeeProperty = true;
-                    await _Settings.UpdateSetting(settings);
-                }
-                if (!settings.ConvertCrowdfundOldSettings)
-                {
-                    await ConvertCrowdfundOldSettings();
-                    settings.ConvertCrowdfundOldSettings = true;
-                    await _Settings.UpdateSetting(settings);
-                }
-                if (!settings.ConvertWalletKeyPathRoots)
-                {
-                    await ConvertConvertWalletKeyPathRoots();
-                    settings.ConvertWalletKeyPathRoots = true;
-                    await _Settings.UpdateSetting(settings);
-                }
-                if (!settings.CheckedFirstRun)
-                {
-                    var themeSettings = await _Settings.GetSettingAsync<ThemeSettings>() ?? new ThemeSettings();
-                    var admin = await _userManager.GetUsersInRoleAsync(Roles.ServerAdmin);
-                    themeSettings.FirstRun = admin.Count == 0;
-                    await _Settings.UpdateSetting(themeSettings);
-                    settings.CheckedFirstRun = true;
                     await _Settings.UpdateSetting(settings);
                 }
 
@@ -237,12 +194,6 @@ namespace BTCPayServer.Hosting
                     settings.FileSystemStorageAsDefault = true;
                     await _Settings.UpdateSetting(settings);
                 }
-                if (!settings.FixSeqAfterSqliteMigration)
-                {
-                    await FixSeqAfterSqliteMigration();
-                    settings.FixSeqAfterSqliteMigration = true;
-                    await _Settings.UpdateSetting(settings);
-                }
                 if (!settings.FixMappedDomainAppType)
                 {
                     await FixMappedDomainAppType();
@@ -280,7 +231,7 @@ namespace BTCPayServer.Hosting
             var processors = await ctx.PayoutProcessors.ToArrayAsync();
             foreach (var processor in processors)
             {
-                processor.PaymentMethod = processor.GetPaymentMethodId().ToString();
+                processor.PaymentMethod = processor.GetPayoutMethodId().ToString();
             }
             await ctx.SaveChangesAsync();
         }
@@ -366,16 +317,6 @@ namespace BTCPayServer.Hosting
             }
             setting.Value = data.ToString();
             await ctx.SaveChangesAsync();
-        }
-
-
-        private async Task FixSeqAfterSqliteMigration()
-        {
-            await using var ctx = _DBContextFactory.CreateContext();
-            var state = await GetMigrationState(ctx);
-            if (state != "complete")
-                return;
-            await UpdateSequenceInvoiceSearch(ctx);
         }
         static async Task<string> GetMigrationState(ApplicationDbContext postgresContext)
         {
@@ -683,18 +624,18 @@ WHERE cte.""Id""=p.""Id""
             await using var ctx = _DBContextFactory.CreateContext();
             foreach (var payoutData in await ctx.Payouts.AsQueryable().ToArrayAsync())
             {
-                var pmi = payoutData.GetPaymentMethodId();
+                var pmi = payoutData.GetPayoutMethodId();
                 if (pmi is null)
                 {
                     continue;
                 }
                 var handler = _payoutHandlers
-                    .FindPayoutHandler(pmi);
+                    .TryGet(pmi);
                 if (handler is null)
                 {
                     continue;
                 }
-                var claim = await handler?.ParseClaimDestination(pmi, payoutData.GetBlob(_btcPayNetworkJsonSerializerSettings).Destination, default);
+                var claim = await handler?.ParseClaimDestination(payoutData.GetBlob(_btcPayNetworkJsonSerializerSettings).Destination, default);
                 payoutData.Destination = claim.destination?.Id;
             }
             await ctx.SaveChangesAsync();
@@ -927,21 +868,25 @@ WHERE cte.""Id""=p.""Id""
 
         private async Task Migrate(CancellationToken cancellationToken)
         {
-            using (CancellationTokenSource timeout = new CancellationTokenSource(10_000))
+            int cancellationTimeout = 60 * 60 * 24;
+            using (CancellationTokenSource timeout = new CancellationTokenSource(cancellationTimeout))
             using (CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken))
             {
 retry:
                 try
                 {
-                    var db = _DBContextFactory.CreateContext();
-                    await db.Database.MigrateAsync();
+                    _logger.LogInformation("Running the migration scripts...");
+                    var db = _DBContextFactory.CreateContext(o => o.CommandTimeout(cancellationTimeout + 1));
+                    await db.Database.MigrateAsync(timeout.Token);
+                    _logger.LogInformation("All migration scripts ran successfully");
                 }
                 // Starting up
                 catch (ConfigException) { throw; }
-                catch when (!cts.Token.IsCancellationRequested)
+                catch (Exception ex) when (!cts.Token.IsCancellationRequested)
                 {
                     try
                     {
+                        _logger.LogWarning(ex, "Error while running migration scripts, retrying...");
                         await Task.Delay(1000, cts.Token);
                     }
                     catch { }
@@ -950,43 +895,6 @@ retry:
             }
         }
 
-        private async Task ConvertConvertWalletKeyPathRoots()
-        {
-            bool save = false;
-            using var ctx = _DBContextFactory.CreateContext();
-            foreach (var store in await ctx.Stores.AsQueryable().ToArrayAsync())
-            {
-#pragma warning disable CS0618 // Type or member is obsolete
-                var blob = store.GetStoreBlob();
-
-                if (blob.AdditionalData.TryGetValue("walletKeyPathRoots", out var walletKeyPathRootsJToken))
-                {
-                    var walletKeyPathRoots = walletKeyPathRootsJToken.ToObject<Dictionary<string, string>>();
-
-                    if (!(walletKeyPathRoots?.Any() is true))
-                        continue;
-                    var walletKeyPathRoots2 = walletKeyPathRoots.ToDictionary(w => PaymentMethodId.Parse(w.Key), w => w.Value);
-                    foreach (var (id, scheme) in store.GetPaymentMethodConfigs<DerivationSchemeSettings>(_handlers))
-                    {
-                        var handler = (BitcoinLikePaymentHandler)_handlers[id];
-                        if (walletKeyPathRoots2.TryGetValue(id,
-                            out var root))
-                        {
-                            scheme.AccountKeyPath = new NBitcoin.KeyPath(root);
-                            MigrateDerivationSettings(scheme, handler.Network);
-                            store.SetPaymentMethodConfig(_handlers[id], scheme);
-                            save = true;
-                        }
-                    }
-
-                    blob.AdditionalData.Remove("walletKeyPathRoots");
-                    store.SetStoreBlob(blob);
-                }
-#pragma warning restore CS0618 // Type or member is obsolete
-            }
-            if (save)
-                await ctx.SaveChangesAsync();
-        }
         void MigrateDerivationSettings(DerivationSchemeSettings s, BTCPayNetwork network)
         {
             if (network == null || s.AccountKeySettings is not (null or { Length: 1 }))
@@ -1002,22 +910,6 @@ retry:
             s.AccountKeyPath = null;
             s.RootFingerprint = null;
 #pragma warning restore CS0618 // Type or member is obsolete
-        }
-
-        private async Task ConvertCrowdfundOldSettings()
-        {
-            using var ctx = _DBContextFactory.CreateContext();
-            foreach (var app in await ctx.Apps.Where(a => a.AppType == "Crowdfund").ToArrayAsync())
-            {
-                var settings = app.GetSettings<Services.Apps.CrowdfundSettings>();
-#pragma warning disable CS0618 // Type or member is obsolete
-                if (settings.UseAllStoreInvoices)
-#pragma warning restore CS0618 // Type or member is obsolete
-                {
-                    app.TagAllInvoices = true;
-                }
-            }
-            await ctx.SaveChangesAsync();
         }
 
         private async Task MigratePaymentMethodCriteria()
@@ -1074,53 +966,6 @@ retry:
             await ctx.SaveChangesAsync();
         }
 
-        private async Task ConvertNetworkFeeProperty()
-        {
-            using var ctx = _DBContextFactory.CreateContext();
-            foreach (var store in await ctx.Stores.AsQueryable().ToArrayAsync())
-            {
-                var blob = store.GetStoreBlob();
-                if (blob.AdditionalData.TryGetValue("networkFeeDisabled", out var networkFeeModeJToken))
-                {
-                    var networkFeeMode = networkFeeModeJToken.ToObject<bool?>();
-                    if (networkFeeMode != null)
-                    {
-                        blob.NetworkFeeMode = networkFeeMode.Value ? NetworkFeeMode.Never : NetworkFeeMode.Always;
-                    }
-
-                    blob.AdditionalData.Remove("networkFeeDisabled");
-                    store.SetStoreBlob(blob);
-                }
-            }
-            await ctx.SaveChangesAsync();
-        }
-
-        private async Task ConvertMultiplierToSpread()
-        {
-            using var ctx = _DBContextFactory.CreateContext();
-            foreach (var store in await ctx.Stores.AsQueryable().ToArrayAsync())
-            {
-                var blob = store.GetStoreBlob();
-                decimal multiplier = 1.0m;
-                if (blob.AdditionalData.TryGetValue("rateRules", out var rateRulesJToken))
-                {
-                    var rateRules = new Serializer(null).ToObject<List<RateRule_Obsolete>>(rateRulesJToken.ToString());
-                    if (rateRules != null && rateRules.Count != 0)
-                    {
-                        foreach (var rule in rateRules)
-                        {
-                            multiplier = rule.Apply(null, multiplier);
-                        }
-                    }
-
-                    blob.AdditionalData.Remove("rateRules");
-                    blob.Spread = Math.Min(1.0m, Math.Max(0m, -(multiplier - 1.0m)));
-                    store.SetStoreBlob(blob);
-                }
-            }
-            await ctx.SaveChangesAsync();
-        }
-
         public class RateRule_Obsolete
         {
             public RateRule_Obsolete()
@@ -1135,28 +980,6 @@ retry:
             {
                 return rate * (decimal)Multiplier;
             }
-        }
-
-        private async Task DeprecatedLightningConnectionStringCheck()
-        {
-            await using var ctx = _DBContextFactory.CreateContext();
-            foreach (var store in await ctx.Stores.AsQueryable().ToArrayAsync())
-            {
-                foreach (var (id, method) in store.GetPaymentMethodConfigs<LightningPaymentMethodConfig>(_handlers))
-                {
-                    var lightning = method.GetExternalLightningUrl();
-                    if (lightning is null)
-                        continue;
-                    var client = _lightningClientFactoryService.Create(lightning,
-                        ((IHasNetwork)_handlers[id]).Network);
-                    if (client?.ToString() != lightning)
-                    {
-                        method.SetLightningUrl(client);
-                        store.SetPaymentMethodConfig(_handlers[id], method);
-                    }
-                }
-            }
-            await ctx.SaveChangesAsync();
         }
     }
 }

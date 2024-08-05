@@ -21,6 +21,7 @@ using BTCPayServer.Models.WalletViewModels;
 using BTCPayServer.Payments;
 using BTCPayServer.Payments.Bitcoin;
 using BTCPayServer.Payments.PayJoin;
+using BTCPayServer.Payouts;
 using BTCPayServer.Services;
 using BTCPayServer.Services.Invoices;
 using BTCPayServer.Services.Labels;
@@ -72,6 +73,7 @@ namespace BTCPayServer.Controllers
         private readonly PayjoinClient _payjoinClient;
         private readonly LabelService _labelService;
         private readonly PaymentMethodHandlerDictionary _handlers;
+        private readonly DefaultRulesCollection _defaultRules;
         private readonly Dictionary<PaymentMethodId, IPaymentModelExtension> _paymentModelExtensions;
         private readonly TransactionLinkProviders _transactionLinkProviders;
         private readonly PullPaymentHostedService _pullPaymentHostedService;
@@ -98,12 +100,14 @@ namespace BTCPayServer.Controllers
                                  IServiceProvider serviceProvider,
                                  PullPaymentHostedService pullPaymentHostedService,
                                  LabelService labelService,
+                                 DefaultRulesCollection defaultRules,
                                  PaymentMethodHandlerDictionary handlers,
                                  Dictionary<PaymentMethodId, IPaymentModelExtension> paymentModelExtensions,
                                  TransactionLinkProviders transactionLinkProviders)
         {
             _currencyTable = currencyTable;
             _labelService = labelService;
+            _defaultRules = defaultRules;
             _handlers = handlers;
             _paymentModelExtensions = paymentModelExtensions;
             _transactionLinkProviders = transactionLinkProviders;
@@ -455,7 +459,7 @@ namespace BTCPayServer.Controllers
             if (network == null || network.ReadonlyWallet)
                 return NotFound();
             var storeData = store.GetStoreBlob();
-            var rateRules = store.GetStoreBlob().GetRateRules(NetworkProvider);
+            var rateRules = store.GetStoreBlob().GetRateRules(_defaultRules);
             rateRules.Spread = 0.0m;
             var currencyPair = new Rating.CurrencyPair(walletId.CryptoCode, storeData.DefaultCurrency);
             double.TryParse(defaultAmount, out var amount);
@@ -531,7 +535,7 @@ namespace BTCPayServer.Controllers
                 try
                 {
                     cts.CancelAfter(TimeSpan.FromSeconds(5));
-                    var result = await RateFetcher.FetchRate(currencyPair, rateRules, cts.Token)
+                    var result = await RateFetcher.FetchRate(currencyPair, rateRules, new StoreIdRateContext(walletId.StoreId),  cts.Token)
                         .WithCancellation(cts.Token);
                     if (result.BidAsk != null)
                     {
@@ -746,7 +750,7 @@ namespace BTCPayServer.Controllers
             foreach (var transactionOutput in vm.Outputs.Where(output => output.Labels?.Any() is true))
             {
                 var labels = transactionOutput.Labels.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
-                var walletObjectAddress = new WalletObjectId(walletId, WalletObjectData.Types.Address, transactionOutput.DestinationAddress.ToLowerInvariant());
+                var walletObjectAddress = new WalletObjectId(walletId, WalletObjectData.Types.Address, transactionOutput.DestinationAddress);
                 var obj = await WalletRepository.GetWalletObject(walletObjectAddress);
                 if (obj is null)
                 {
@@ -761,14 +765,14 @@ namespace BTCPayServer.Controllers
             CreatePSBTResponse psbtResponse;
             if (command == "schedule")
             {
-                var pmi = PaymentTypes.CHAIN.GetPaymentMethodId(walletId.CryptoCode);
+                var pmi = PayoutTypes.CHAIN.GetPayoutMethodId(walletId.CryptoCode);
                 var claims =
                     vm.Outputs.Where(output => string.IsNullOrEmpty(output.PayoutId)).Select(output => new ClaimRequest()
                     {
                         Destination = new AddressClaimDestination(
                             BitcoinAddress.Create(output.DestinationAddress, network.NBitcoinNetwork)),
                         Value = output.Amount,
-                        PaymentMethodId = pmi,
+                        PayoutMethodId = pmi,
                         StoreId = walletId.StoreId,
                         PreApprove = true,
                     }).ToArray();

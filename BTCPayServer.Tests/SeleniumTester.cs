@@ -5,10 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Abstractions.Models;
-using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using BTCPayServer.Lightning.CLightning;
-using BTCPayServer.Services;
 using BTCPayServer.Views.Manage;
 using BTCPayServer.Views.Server;
 using BTCPayServer.Views.Stores;
@@ -196,11 +194,10 @@ retry:
             TestLogs.LogInformation($"Created store {name}");
             Driver.WaitForElement(By.Id("Name")).SendKeys(name);
             var rateSource = new SelectElement(Driver.FindElement(By.Id("PreferredExchange")));
-            Assert.Equal("Kraken (Recommended)", rateSource.SelectedOption.Text);
+            Assert.Equal("Recommendation (Kraken)", rateSource.SelectedOption.Text);
             rateSource.SelectByText("CoinGecko");
             Driver.WaitForElement(By.Id("Create")).Click();
-            Driver.FindElement(By.Id("StoreNav-StoreSettings")).Click();
-            Driver.FindElement(By.Id($"SectionNav-{StoreNavPages.General.ToString()}")).Click();
+            Driver.FindElement(By.Id("StoreNav-General")).Click();
             var storeId = Driver.WaitForElement(By.Id("Id")).GetAttribute("value");
             if (keepId)
                 StoreId = storeId;
@@ -326,14 +323,15 @@ retry:
                 }
             }
 
-            Driver.FindElement(By.Id("save")).Click();
+            ClickPagePrimary();
             Assert.Contains($"{cryptoCode} Lightning node updated.", FindAlertMessage().Text);
 
             var enabled = Driver.FindElement(By.Id($"{cryptoCode}LightningEnabled"));
-            if (enabled.Text == "Enable")
+            if (enabled.Selected == false)
             {
                 enabled.Click();
-                Assert.Contains($"{cryptoCode} Lightning payments are now enabled for this store.", FindAlertMessage().Text);
+                ClickPagePrimary();
+                Assert.Contains($"{cryptoCode} Lightning settings successfully updated", FindAlertMessage().Text);
             }
         }
 
@@ -396,6 +394,10 @@ retry:
             Driver.FindElement(By.Id("Nav-Logout")).Click();
         }
 
+        public void LogIn()
+        {
+            LogIn(CreatedUser, "123456");
+        }
         public void LogIn(string user, string password = "123456")
         {
             Driver.FindElement(By.Id("Email")).SendKeys(user);
@@ -418,23 +420,11 @@ retry:
                     WalletId = new WalletId(storeId, WalletId.CryptoCode);
             }
 
-            Driver.FindElement(By.Id("StoreNav-StoreSettings")).Click();
-
             if (storeNavPage != StoreNavPages.General)
             {
-                switch (storeNavPage)
-                {
-                    case StoreNavPages.Dashboard:
-                    case StoreNavPages.Payouts:
-                    case StoreNavPages.PayButton:
-                    case StoreNavPages.PullPayments:
-                        Driver.FindElement(By.Id($"StoreNav-{storeNavPage.ToString()}")).Click();
-                        break;
-                    default:
-                        Driver.FindElement(By.Id($"SectionNav-{storeNavPage.ToString()}")).Click();
-                        break;
-                }
+                Driver.FindElement(By.Id($"StoreNav-{StoreNavPages.General}")).Click();
             }
+            Driver.FindElement(By.Id($"StoreNav-{storeNavPage}")).Click();
         }
 
         public void GoToWalletSettings(string cryptoCode = "BTC")
@@ -450,9 +440,9 @@ retry:
         {
             Driver.FindElement(By.Id($"StoreNav-Lightning{cryptoCode}")).Click();
             // if Lightning is already set up we need to navigate to the settings
-            if (Driver.PageSource.Contains("id=\"SectionNav-LightningSettings\""))
+            if (Driver.PageSource.Contains("id=\"StoreNav-LightningSettings\""))
             {
-                Driver.FindElement(By.Id("SectionNav-LightningSettings")).Click();
+                Driver.FindElement(By.Id("StoreNav-LightningSettings")).Click();
             }
         }
 
@@ -525,7 +515,7 @@ retry:
         {
             GoToInvoices(storeId);
 
-            Driver.FindElement(By.Id("CreateNewInvoice")).Click();
+            ClickPagePrimary();
             if (amount is decimal v)
                 Driver.FindElement(By.Id("Amount")).SendKeys(v.ToString(CultureInfo.InvariantCulture));
             var currencyEl = Driver.FindElement(By.Id("Currency"));
@@ -534,7 +524,7 @@ retry:
             Driver.FindElement(By.Id("BuyerEmail")).SendKeys(refundEmail);
             if (defaultPaymentMethod is not null)
                 new SelectElement(Driver.FindElement(By.Name("DefaultPaymentMethod"))).SelectByValue(defaultPaymentMethod);
-            Driver.FindElement(By.Id("Create")).Click();
+            ClickPagePrimary();
 
             var statusElement = FindAlertMessage(expectedSeverity);
             var inv = expectedSeverity == StatusMessageModel.StatusSeverity.Success ? statusElement.Text.Split(" ")[1] : null;
@@ -614,10 +604,10 @@ retry:
             Driver.Navigate().GoToUrl(new Uri(ServerUri, relativeUrl));
         }
 
-        public void GoToServer(ServerNavPages navPages = ServerNavPages.Index)
+        public void GoToServer(ServerNavPages navPages = ServerNavPages.Policies)
         {
             Driver.FindElement(By.Id("Nav-ServerSettings")).Click();
-            if (navPages != ServerNavPages.Index)
+            if (navPages != ServerNavPages.Policies)
             {
                 Driver.FindElement(By.Id($"SectionNav-{navPages}")).Click();
             }
@@ -651,10 +641,22 @@ retry:
                 name = $"{type}-{Guid.NewGuid().ToString()[..14]}";
             Driver.FindElement(By.Id($"StoreNav-Create{type}")).Click();
             Driver.FindElement(By.Name("AppName")).SendKeys(name);
-            Driver.FindElement(By.Id("Create")).Click();
+            ClickPagePrimary();
             Assert.Contains("App successfully created", FindAlertMessage().Text);
             var appId = Driver.Url.Split('/')[4];
             return (name, appId);
+        }
+
+        public void ClickPagePrimary()
+        {
+            try
+            {
+                Driver.FindElement(By.Id("page-primary")).Click();
+            }
+            catch (NoSuchElementException)
+            {
+                Driver.WaitForAndClick(By.Id("page-primary"));
+            }
         }
     }
 }

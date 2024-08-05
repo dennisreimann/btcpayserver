@@ -10,9 +10,8 @@ using BTCPayServer.Controllers;
 using BTCPayServer.JsonConverters;
 using BTCPayServer.Payments;
 using BTCPayServer.Rating;
+using BTCPayServer.Services.Invoices;
 using BTCPayServer.Services.Mails;
-using BTCPayServer.Services.Rates;
-using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -103,7 +102,19 @@ namespace BTCPayServer.Data
 
         public decimal Spread { get; set; } = 0.0m;
 
+        /// <summary>
+        /// This may be null. Use <see cref="GetPreferredExchange(DefaultRulesCollection)"/> instead if you want to return a valid exchange
+        /// </summary>
         public string PreferredExchange { get; set; }
+        /// <summary>
+        /// Use the preferred exchange of the store, or the recommended exchange from the default currency
+        /// </summary>
+        /// <param name="defaultRules"></param>
+        /// <returns></returns>
+        public string GetPreferredExchange(DefaultRulesCollection defaultRules)
+        {
+            return string.IsNullOrEmpty(PreferredExchange) ? defaultRules.GetRecommendedExchange(DefaultCurrency) : PreferredExchange;
+        }
 
         public List<PaymentMethodCriteria> PaymentMethodCriteria { get; set; }
         public string HtmlTitle { get; set; }
@@ -136,18 +147,18 @@ namespace BTCPayServer.Data
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public double PaymentTolerance { get; set; }
 
-        public BTCPayServer.Rating.RateRules GetRateRules(BTCPayNetworkProvider networkProvider)
+        public BTCPayServer.Rating.RateRules GetRateRules(DefaultRulesCollection defaultRules)
         {
-            return GetRateRules(networkProvider, out _);
+            return GetRateRules(defaultRules, out _);
         }
-        public BTCPayServer.Rating.RateRules GetRateRules(BTCPayNetworkProvider networkProvider, out bool preferredSource)
+        public BTCPayServer.Rating.RateRules GetRateRules(DefaultRulesCollection defaultRules, out bool preferredSource)
         {
             if (!RateScripting ||
                 string.IsNullOrEmpty(RateScript) ||
                 !BTCPayServer.Rating.RateRules.TryParse(RateScript, out var rules))
             {
                 preferredSource = true;
-                return GetDefaultRateRules(networkProvider);
+                return GetDefaultRateRules(defaultRules);
             }
             else
             {
@@ -157,49 +168,12 @@ namespace BTCPayServer.Data
             }
         }
 
-        public RateRules GetDefaultRateRules(BTCPayNetworkProvider networkProvider)
+        public RateRules GetDefaultRateRules(DefaultRulesCollection defaultRules)
         {
-            var builder = new StringBuilder();
-            foreach (var network in networkProvider.GetAll())
-            {
-                if (network.DefaultRateRules.Length != 0)
-                {
-                    builder.AppendLine(CultureInfo.InvariantCulture, $"// Default rate rules for {network.CryptoCode}");
-                    foreach (var line in network.DefaultRateRules)
-                    {
-                        builder.AppendLine(line);
-                    }
-                    builder.AppendLine("////////");
-                    builder.AppendLine();
-                }
-            }
-
-            var preferredExchange = string.IsNullOrEmpty(PreferredExchange) ? GetRecommendedExchange() : PreferredExchange;
-            builder.AppendLine(CultureInfo.InvariantCulture, $"X_X = {preferredExchange}(X_X);");
-
-            RateRules.TryParse(builder.ToString(), out var rules);
+            var rules = defaultRules.WithPreferredExchange(PreferredExchange);
             rules.Spread = Spread;
             return rules;
         }
-
-        public static JObject RecommendedExchanges = new()
-        {
-            { "EUR", "kraken" },
-            { "USD", "kraken" },
-            { "GBP", "kraken" },
-            { "CHF", "kraken" },
-            { "GTQ", "bitpay" },
-            { "COP", "yadio" },
-            { "ARS", "yadio" },
-            { "JPY", "bitbank" },
-            { "TRY", "btcturk" },
-            { "UGX", "yadio"},
-            { "RSD", "bitpay"},
-            { "NGN", "bitnob"}
-        };
-
-        public string GetRecommendedExchange() =>
-            RecommendedExchanges.Property(DefaultCurrency)?.Value.ToString() ?? "coingecko";
 
         [Obsolete("Use GetExcludedPaymentMethods instead")]
         public string[] ExcludedPaymentMethods { get; set; }
@@ -217,8 +191,10 @@ namespace BTCPayServer.Data
 
         public List<UIStoresController.StoreEmailRule> EmailRules { get; set; }
         public string BrandColor { get; set; }
-        public string LogoFileId { get; set; }
-        public string CssFileId { get; set; }
+        [JsonConverter(typeof(UnresolvedUriJsonConverter))]
+        public UnresolvedUri LogoUrl { get; set; }
+        [JsonConverter(typeof(UnresolvedUriJsonConverter))]
+        public UnresolvedUri CssUrl { get; set; }
 
         [DefaultValue(true)]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -236,7 +212,8 @@ namespace BTCPayServer.Data
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public bool PlaySoundOnPayment { get; set; }
 
-        public string SoundFileId { get; set; }
+		[JsonConverter(typeof(UnresolvedUriJsonConverter))]
+		public UnresolvedUri PaymentSoundUrl { get; set; }
 
         public IPaymentFilter GetExcludedPaymentMethods()
         {

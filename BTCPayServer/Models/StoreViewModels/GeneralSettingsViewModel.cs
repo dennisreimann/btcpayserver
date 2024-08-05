@@ -8,7 +8,7 @@ namespace BTCPayServer.Models.StoreViewModels
     public class GeneralSettingsViewModel
     {
 
-        [Display(Name = "Store ID")]
+        [Display(Name = "Store Id")]
         public string Id { get; set; }
 
         [Display(Name = "Store Name")]
@@ -27,11 +27,11 @@ namespace BTCPayServer.Models.StoreViewModels
 
         [Display(Name = "Logo")]
         public IFormFile LogoFile { get; set; }
-        public string LogoFileId { get; set; }
+        public string LogoUrl { get; set; }
 
         [Display(Name = "Custom CSS")]
         public IFormFile CssFile { get; set; }
-        public string CssFileId { get; set; }
+        public string CssUrl { get; set; }
 
         public bool Archived { get; set; }
 
@@ -45,7 +45,7 @@ namespace BTCPayServer.Models.StoreViewModels
         [Display(Name = "Add additional fee (network fee) to invoice …")]
         public NetworkFeeMode NetworkFeeMode { get; set; }
 
-        [Display(Name = "Consider the invoice paid even if the paid amount is ... % less than expected")]
+        [Display(Name = "Consider the invoice paid even if the paid amount is … % less than expected")]
         [Range(0, 100)]
         public double PaymentTolerance { get; set; }
 

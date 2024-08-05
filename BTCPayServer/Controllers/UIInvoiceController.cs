@@ -34,6 +34,7 @@ using Newtonsoft.Json.Linq;
 using StoreData = BTCPayServer.Data.StoreData;
 using Serilog.Filters;
 using PeterO.Numbers;
+using BTCPayServer.Payouts;
 
 namespace BTCPayServer.Controllers
 {
@@ -49,7 +50,9 @@ namespace BTCPayServer.Controllers
         private readonly DisplayFormatter _displayFormatter;
         readonly EventAggregator _EventAggregator;
         readonly BTCPayNetworkProvider _NetworkProvider;
+        private readonly PayoutMethodHandlerDictionary _payoutHandlers;
         private readonly PaymentMethodHandlerDictionary _handlers;
+        private readonly DefaultRulesCollection _defaultRules;
         private readonly ApplicationDbContextFactory _dbContextFactory;
         private readonly PullPaymentHostedService _paymentHostedService;
         private readonly LanguageService _languageService;
@@ -63,6 +66,7 @@ namespace BTCPayServer.Controllers
         private readonly PaymentMethodViewProvider _viewProvider;
         private readonly AppService _appService;
         private readonly IFileService _fileService;
+        private readonly UriResolver _uriResolver;
 
         public WebhookSender WebhookNotificationManager { get; }
 
@@ -77,6 +81,7 @@ namespace BTCPayServer.Controllers
             EventAggregator eventAggregator,
             ContentSecurityPolicies csp,
             BTCPayNetworkProvider networkProvider,
+            PayoutMethodHandlerDictionary payoutHandlers,
             PaymentMethodHandlerDictionary paymentMethodHandlerDictionary,
             ApplicationDbContextFactory dbContextFactory,
             PullPaymentHostedService paymentHostedService,
@@ -88,6 +93,8 @@ namespace BTCPayServer.Controllers
             LinkGenerator linkGenerator,
             AppService appService,
             IFileService fileService,
+            UriResolver uriResolver,
+            DefaultRulesCollection defaultRules,
             IAuthorizationService authorizationService,
             TransactionLinkProviders transactionLinkProviders,
             Dictionary<PaymentMethodId, IPaymentModelExtension> paymentModelExtensions,
@@ -102,6 +109,7 @@ namespace BTCPayServer.Controllers
             _UserManager = userManager;
             _EventAggregator = eventAggregator;
             _NetworkProvider = networkProvider;
+            this._payoutHandlers = payoutHandlers;
             _handlers = paymentMethodHandlerDictionary;
             _dbContextFactory = dbContextFactory;
             _paymentHostedService = paymentHostedService;
@@ -116,6 +124,8 @@ namespace BTCPayServer.Controllers
             _paymentModelExtensions = paymentModelExtensions;
             _viewProvider = viewProvider;
             _fileService = fileService;
+            _uriResolver = uriResolver;
+            _defaultRules = defaultRules;
             _appService = appService;
         }
 
@@ -225,7 +235,7 @@ namespace BTCPayServer.Controllers
             }
 
             var getAppsTaggingStore = _InvoiceRepository.GetAppsTaggingStore(store.Id);
-            entity.Status = InvoiceStatusLegacy.New;
+            entity.Status = InvoiceStatus.New;
             entity.UpdateTotals();
 
 
@@ -287,7 +297,7 @@ namespace BTCPayServer.Controllers
 
         private async Task FetchRates(InvoiceCreationContext context, CancellationToken cancellationToken)
         {
-            var rateRules = context.StoreBlob.GetRateRules(_NetworkProvider);
+            var rateRules = context.StoreBlob.GetRateRules(_defaultRules);
             await context.FetchingRates(_RateProvider, rateRules, cancellationToken);
         }
     }

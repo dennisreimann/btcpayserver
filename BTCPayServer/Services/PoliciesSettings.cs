@@ -23,6 +23,11 @@ namespace BTCPayServer.Services
             set { LockSubscription = !value; }
         }
 
+        [DefaultValue("English")]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+        [Display(Name = "Backend's language")]
+        public string LangDictionary { get; set; } = "English";
+
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         [Display(Name = "Admin must approve new users")]
         public bool RequiresUserApproval { get; set; }
@@ -72,6 +77,8 @@ namespace BTCPayServer.Services
 
         [Display(Name = "Show plugins in pre-release")]
         public bool PluginPreReleases { get; set; }
+        [Display(Name = "Select the Default Currency during Store Creation")]
+        public string DefaultCurrency { get; set; }
 
         public bool DisableSSHService { get; set; }
 

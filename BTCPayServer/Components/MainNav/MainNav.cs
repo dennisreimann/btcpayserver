@@ -1,10 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
+using System.Threading;
 using System.Threading.Tasks;
+using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Controllers;
 using BTCPayServer.Data;
-using BTCPayServer.Models.StoreViewModels;
 using BTCPayServer.Payments;
 using BTCPayServer.Payments.Lightning;
 using BTCPayServer.Services;
@@ -13,9 +14,8 @@ using BTCPayServer.Services.Invoices;
 using BTCPayServer.Services.Stores;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Caching.Memory;
 using NBitcoin;
-using NBitcoin.Secp256k1;
 
 namespace BTCPayServer.Components.MainNav
 {
@@ -28,6 +28,9 @@ namespace BTCPayServer.Components.MainNav
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly PaymentMethodHandlerDictionary _paymentMethodHandlerDictionary;
         private readonly SettingsRepository _settingsRepository;
+        private readonly UriResolver _uriResolver;
+        private readonly IMemoryCache _cache;
+
         public PoliciesSettings PoliciesSettings { get; }
 
         public MainNav(
@@ -38,6 +41,8 @@ namespace BTCPayServer.Components.MainNav
             UserManager<ApplicationUser> userManager,
             PaymentMethodHandlerDictionary paymentMethodHandlerDictionary,
             SettingsRepository settingsRepository,
+            IMemoryCache cache,
+            UriResolver uriResolver,
             PoliciesSettings policiesSettings)
         {
             _storeRepo = storeRepo;
@@ -47,6 +52,8 @@ namespace BTCPayServer.Components.MainNav
             _storesController = storesController;
             _paymentMethodHandlerDictionary = paymentMethodHandlerDictionary;
             _settingsRepository = settingsRepository;
+            _uriResolver = uriResolver;
+            _cache = cache;
             PoliciesSettings = policiesSettings;
         }
 
@@ -69,6 +76,38 @@ namespace BTCPayServer.Components.MainNav
                 // Wallets
                 _storesController.AddPaymentMethods(store, storeBlob,
                     out var derivationSchemes, out var lightningNodes);
+
+                foreach (var lnNode in lightningNodes)
+                {
+                    var pmi = PaymentTypes.LN.GetPaymentMethodId(lnNode.CryptoCode);
+                    if (_paymentMethodHandlerDictionary.TryGet(pmi) is not LightningLikePaymentHandler handler)
+                        continue;
+
+                    if (lnNode.CacheKey is not null)
+                    {
+						using var cts = new CancellationTokenSource(5000);
+						try
+						{
+							lnNode.Available = await _cache.GetOrCreateAsync(lnNode.CacheKey, async entry =>
+							{
+								entry.SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
+								try
+								{
+									var paymentMethodDetails = store.GetPaymentMethodConfig<LightningPaymentMethodConfig>(pmi, _paymentMethodHandlerDictionary);
+									await handler.GetNodeInfo(paymentMethodDetails, null, throws: true);
+									// if we came here without exception, this means the node is available
+									return true;
+								}
+								catch (Exception)
+								{
+									return false;
+								}
+							}).WithCancellation(cts.Token);
+						}
+						catch when (cts.IsCancellationRequested) { }
+                    }
+                }
+                
                 vm.DerivationSchemes = derivationSchemes;
                 vm.LightningNodes = lightningNodes;
 
@@ -84,6 +123,16 @@ namespace BTCPayServer.Components.MainNav
                     }).ToList();
 
                 vm.ArchivedAppsCount = apps.Count(a => a.Archived);
+            }
+            
+            var user = await _userManager.GetUserAsync(HttpContext.User);
+            if (user != null)
+            {
+                var blob = user.GetBlob();
+                vm.UserName = blob?.Name;
+                vm.UserImageUrl = string.IsNullOrEmpty(blob?.ImageUrl)
+                    ? null
+                    : await _uriResolver.Resolve(Request.GetAbsoluteRootUri(), UnresolvedUri.Create(blob?.ImageUrl));
             }
 
             return View(vm);

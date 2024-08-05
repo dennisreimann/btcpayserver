@@ -65,8 +65,10 @@ namespace BTCPayServer.Controllers
         private readonly IFileService _fileService;
         private readonly IEnumerable<IStorageProviderService> _StorageProviderServices;
         private readonly LinkGenerator _linkGenerator;
+        private readonly UriResolver _uriResolver;
         private readonly EmailSenderFactory _emailSenderFactory;
         private readonly TransactionLinkProviders _transactionLinkProviders;
+        private readonly LocalizerService _localizer;
 
         public UIServerController(
             UserManager<ApplicationUser> userManager,
@@ -88,10 +90,13 @@ namespace BTCPayServer.Controllers
             IOptions<ExternalServicesOptions> externalServiceOptions,
             Logs logs,
             LinkGenerator linkGenerator,
+            UriResolver uriResolver,
             EmailSenderFactory emailSenderFactory,
             IHostApplicationLifetime applicationLifetime,
             IHtmlHelper html,
-            TransactionLinkProviders transactionLinkProviders
+            TransactionLinkProviders transactionLinkProviders,
+            LocalizerService localizer,
+            BTCPayServerEnvironment environment
         )
         {
             _policiesSettings = policiesSettings;
@@ -113,10 +118,13 @@ namespace BTCPayServer.Controllers
             _externalServiceOptions = externalServiceOptions;
             Logs = logs;
             _linkGenerator = linkGenerator;
+            _uriResolver = uriResolver;
             _emailSenderFactory = emailSenderFactory;
             ApplicationLifetime = applicationLifetime;
             Html = html;
             _transactionLinkProviders = transactionLinkProviders;
+            _localizer = localizer;
+            Environment = environment;
         }
 
         [HttpGet("server/stores")]
@@ -319,20 +327,26 @@ namespace BTCPayServer.Controllers
         public IHttpClientFactory HttpClientFactory { get; }
         public IHostApplicationLifetime ApplicationLifetime { get; }
         public IHtmlHelper Html { get; }
+        public BTCPayServerEnvironment Environment { get; }
 
         [Route("server/policies")]
         public async Task<IActionResult> Policies()
         {
+            await UpdateViewBag();
+            return View(_policiesSettings);
+        }
+
+        private async Task UpdateViewBag()
+        {
             ViewBag.UpdateUrlPresent = _Options.UpdateUrl != null;
             ViewBag.AppsList = await GetAppSelectList();
-            return View(_policiesSettings);
+            ViewBag.LangDictionaries = await GetLangDictionariesSelectList();
         }
 
         [HttpPost("server/policies")]
         public async Task<IActionResult> Policies([FromServices] BTCPayNetworkProvider btcPayNetworkProvider, PoliciesSettings settings, string command = "")
         {
-            ViewBag.UpdateUrlPresent = _Options.UpdateUrl != null;
-            ViewBag.AppsList = await GetAppSelectList();
+            await UpdateViewBag();
 
             if (command == "add-domain")
             {
@@ -381,9 +395,12 @@ namespace BTCPayServer.Controllers
                     domainToAppMappingItem.AppType = apps[domainToAppMappingItem.AppId];
                 }
             }
+            
 
             await _SettingsRepository.UpdateSetting(settings);
             _ = _transactionLinkProviders.RefreshTransactionLinkTemplates();
+            if (_policiesSettings.LangDictionary != settings.LangDictionary)
+                await _localizer.Load();
             TempData[WellKnownTempData.SuccessMessage] = "Policies updated successfully";
             return RedirectToAction(nameof(Policies));
         }
@@ -450,6 +467,12 @@ namespace BTCPayServer.Controllers
                     new SelectListItem($"{types[a.AppType]} - {a.AppName} - {a.StoreName}", a.Id)).ToList();
             apps.Insert(0, new SelectListItem("(None)", null));
             return apps;
+        }
+
+        private async Task<List<SelectListItem>> GetLangDictionariesSelectList()
+        {
+            var dictionaries = await this._localizer.GetDictionaries();
+            return dictionaries.Select(d => new SelectListItem(d.DictionaryName, d.DictionaryName)).OrderBy(d => d.Value).ToList();
         }
 
         private static bool TryParseAsExternalService(TorService torService, [MaybeNullWhen(false)] out ExternalService externalService)
@@ -1025,9 +1048,8 @@ namespace BTCPayServer.Controllers
                 ContactUrl = server.ContactUrl,
                 CustomTheme = theme.CustomTheme,
                 CustomThemeExtension = theme.CustomThemeExtension,
-                CustomThemeCssUri = theme.CustomThemeCssUri,
-                CustomThemeFileId = theme.CustomThemeFileId,
-                LogoFileId = theme.LogoFileId
+                CustomThemeCssUrl = await _uriResolver.Resolve(Request.GetAbsoluteRootUri(), theme.CustomThemeCssUrl),
+                LogoUrl = await _uriResolver.Resolve(Request.GetAbsoluteRootUri(), theme.LogoUrl)
             };
             return View(vm);
         }
@@ -1046,8 +1068,8 @@ namespace BTCPayServer.Controllers
             if (userId is null)
                 return NotFound();
 
-            vm.LogoFileId = theme.LogoFileId;
-            vm.CustomThemeFileId = theme.CustomThemeFileId;
+            vm.LogoUrl = await _uriResolver.Resolve(this.Request.GetAbsoluteRootUri(), theme.LogoUrl);
+            vm.CustomThemeCssUrl = await _uriResolver.Resolve(this.Request.GetAbsoluteRootUri(), theme.CustomThemeCssUrl);
             
             if (server.ServerName != vm.ServerName)
             {
@@ -1072,17 +1094,12 @@ namespace BTCPayServer.Controllers
             {
                 if (vm.CustomThemeFile.ContentType.Equals("text/css", StringComparison.InvariantCulture))
                 {
-                    // delete existing file
-                    if (!string.IsNullOrEmpty(theme.CustomThemeFileId))
-                    {
-                        await _fileService.RemoveFile(theme.CustomThemeFileId, userId);
-                    }
-
                     // add new file
                     try
                     {
                         var storedFile = await _fileService.AddFile(vm.CustomThemeFile, userId);
-                        vm.CustomThemeFileId = theme.CustomThemeFileId = storedFile.Id;
+                        theme.CustomThemeCssUrl = new UnresolvedUri.FileIdUri(storedFile.Id);
+                        vm.CustomThemeCssUrl = await _uriResolver.Resolve(Request.GetAbsoluteRootUri(), theme.CustomThemeCssUrl);
                         settingsChanged = true;
                     }
                     catch (Exception e)
@@ -1095,10 +1112,12 @@ namespace BTCPayServer.Controllers
                     ModelState.AddModelError(nameof(vm.CustomThemeFile), "The uploaded theme file needs to be a CSS file");
                 }
             }
-            else if (RemoveCustomThemeFile && !string.IsNullOrEmpty(theme.CustomThemeFileId))
+            else if (RemoveCustomThemeFile && theme.CustomThemeCssUrl is not null)
             {
-                await _fileService.RemoveFile(theme.CustomThemeFileId, userId);
-                vm.CustomThemeFileId = theme.CustomThemeFileId = null;
+                vm.CustomThemeCssUrl = null;
+                theme.CustomThemeCssUrl = null;
+                theme.CustomTheme = false;
+                theme.CustomThemeExtension = ThemeExtension.Custom;
                 settingsChanged = true;
             }
 
@@ -1122,16 +1141,12 @@ namespace BTCPayServer.Controllers
                     else
                     {
                         vm.LogoFile = formFile;
-                        // delete existing file
-                        if (!string.IsNullOrEmpty(theme.LogoFileId))
-                        {
-                            await _fileService.RemoveFile(theme.LogoFileId, userId);
-                        }
                         // add new file
                         try
                         {
                             var storedFile = await _fileService.AddFile(vm.LogoFile, userId);
-                            vm.LogoFileId = theme.LogoFileId = storedFile.Id;
+                            theme.LogoUrl = new UnresolvedUri.FileIdUri(storedFile.Id);
+                            vm.LogoUrl = await _uriResolver.Resolve(Request.GetAbsoluteRootUri(), theme.LogoUrl);
                             settingsChanged = true;
                         }
                         catch (Exception e)
@@ -1141,29 +1156,19 @@ namespace BTCPayServer.Controllers
                     }
                 }
             }
-            else if (RemoveLogoFile && !string.IsNullOrEmpty(theme.LogoFileId))
+            else if (RemoveLogoFile && theme.LogoUrl is not null)
             {
-                await _fileService.RemoveFile(theme.LogoFileId, userId);
-                vm.LogoFileId = theme.LogoFileId = null;
+                vm.LogoUrl = null;
+                theme.LogoUrl = null;
                 settingsChanged = true;
             }
 
-            if (vm.CustomTheme && !string.IsNullOrEmpty(vm.CustomThemeCssUri) && !Uri.IsWellFormedUriString(vm.CustomThemeCssUri, UriKind.RelativeOrAbsolute))
-            {
-                ModelState.AddModelError(nameof(theme.CustomThemeCssUri), "Please provide a non-empty theme URI");
-            }
-            else if (theme.CustomThemeCssUri != vm.CustomThemeCssUri)
-            {
-                theme.CustomThemeCssUri = vm.CustomThemeCssUri;
-                settingsChanged = true;
-            }
-
-            if (theme.CustomThemeExtension != vm.CustomThemeExtension)
+            if (vm.CustomTheme && theme.CustomThemeExtension != vm.CustomThemeExtension)
             {
                 // Require a custom theme to be defined in that case
-                if (string.IsNullOrEmpty(vm.CustomThemeCssUri) && string.IsNullOrEmpty(theme.CustomThemeFileId))
+                if (string.IsNullOrEmpty(vm.CustomThemeCssUrl) && theme.CustomThemeCssUrl is null)
                 {
-                    ModelState.AddModelError(nameof(vm.CustomThemeFile), "Please provide a custom theme");
+                    ModelState.AddModelError(nameof(vm.CustomThemeCssUrl), "Please provide a custom theme");
                 }
                 else
                 {
@@ -1172,7 +1177,7 @@ namespace BTCPayServer.Controllers
                 }
             }
 
-            if (theme.CustomTheme != vm.CustomTheme)
+            if (theme.CustomTheme != vm.CustomTheme && !RemoveCustomThemeFile)
             {
                 theme.CustomTheme = vm.CustomTheme;
                 settingsChanged = true;
@@ -1182,6 +1187,7 @@ namespace BTCPayServer.Controllers
             {
                 await _SettingsRepository.UpdateSetting(theme);
                 TempData[WellKnownTempData.SuccessMessage] = "Settings updated successfully";
+                return RedirectToAction(nameof(Branding));
             }
 
             return View(vm);

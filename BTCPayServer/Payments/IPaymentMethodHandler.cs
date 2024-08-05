@@ -31,8 +31,9 @@ namespace BTCPayServer.Payments
     /// <summary>
     /// This class customize invoice creation by the creation of payment details for the PaymentMethod during invoice creation
     /// </summary>
-    public interface IPaymentMethodHandler
+    public interface IPaymentMethodHandler : IHandler<PaymentMethodId>
     {
+        PaymentMethodId IHandler<PaymentMethodId>.Id => PaymentMethodId;
         PaymentMethodId PaymentMethodId { get; }
         /// <summary>
         /// The creation of the prompt details and prompt data
@@ -163,7 +164,7 @@ namespace BTCPayServer.Payments
         public async Task FetchingRates(RateFetcher rateFetcher, RateRules rateRules, CancellationToken cancellationToken)
         {
             var currencyPairsToFetch = GetCurrenciesToFetch();
-            var fetchingRates = rateFetcher.FetchRates(currencyPairsToFetch, rateRules, cancellationToken);
+            var fetchingRates = rateFetcher.FetchRates(currencyPairsToFetch, rateRules, new StoreIdRateContext(InvoiceEntity.StoreId), cancellationToken);
             HashSet<CurrencyPair> failedRates = new HashSet<CurrencyPair>();
             foreach (var fetching in fetchingRates)
             {
@@ -172,7 +173,7 @@ namespace BTCPayServer.Payments
                     var rateResult = await fetching.Value;
                     Logs.Write($"The rating rule is {rateResult.Rule}", InvoiceEventData.EventSeverity.Info);
                     Logs.Write($"The evaluated rating rule is {rateResult.EvaluatedRule}", InvoiceEventData.EventSeverity.Info);
-                    if (rateResult is RateResult { BidAsk: var bidAsk })
+                    if (rateResult is RateResult { BidAsk: { } bidAsk })
                     {
                         InvoiceEntity.AddRate(fetching.Key, bidAsk.Bid);
                     }

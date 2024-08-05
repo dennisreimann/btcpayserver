@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Constants;
@@ -54,8 +55,10 @@ public partial class UIStoresController : Controller
         IOptions<LightningNetworkOptions> lightningNetworkOptions,
         IOptions<ExternalServicesOptions> externalServiceOptions,
         IHtmlHelper html,
+        DefaultRulesCollection defaultRules,
         EmailSenderFactory emailSenderFactory,
         WalletFileParsers onChainWalletParsers,
+        UriResolver uriResolver,
         SettingsRepository settingsRepository,
         EventAggregator eventAggregator)
     {
@@ -78,9 +81,11 @@ public partial class UIStoresController : Controller
         _externalServiceOptions = externalServiceOptions;
         _emailSenderFactory = emailSenderFactory;
         _onChainWalletParsers = onChainWalletParsers;
+        _uriResolver = uriResolver;
         _settingsRepository = settingsRepository;
         _eventAggregator = eventAggregator;
         _html = html;
+        _defaultRules = defaultRules;
         _dataProtector = dataProtector.CreateProtector("ConfigProtector");
         _webhookNotificationManager = webhookNotificationManager;
         _lightningNetworkOptions = lightningNetworkOptions.Value;
@@ -99,6 +104,7 @@ public partial class UIStoresController : Controller
     private readonly ExplorerClientProvider _explorerProvider;
     private readonly LanguageService _langService;
     private readonly PaymentMethodHandlerDictionary _handlers;
+    private readonly DefaultRulesCollection _defaultRules;
     private readonly PoliciesSettings _policiesSettings;
     private readonly IAuthorizationService _authorizationService;
     private readonly AppService _appService;
@@ -106,6 +112,7 @@ public partial class UIStoresController : Controller
     private readonly IOptions<ExternalServicesOptions> _externalServiceOptions;
     private readonly EmailSenderFactory _emailSenderFactory;
     private readonly WalletFileParsers _onChainWalletParsers;
+    private readonly UriResolver _uriResolver;
     private readonly EventAggregator _eventAggregator;
     private readonly IHtmlHelper _html;
     private readonly WebhookSender _webhookNotificationManager;

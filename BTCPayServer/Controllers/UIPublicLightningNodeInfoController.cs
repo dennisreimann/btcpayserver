@@ -5,10 +5,10 @@ using System.Threading.Tasks;
 using BTCPayServer.Data;
 using BTCPayServer.Filters;
 using BTCPayServer.Lightning;
-using BTCPayServer.Logging;
 using BTCPayServer.Models;
 using BTCPayServer.Payments;
 using BTCPayServer.Payments.Lightning;
+using BTCPayServer.Services;
 using BTCPayServer.Services.Invoices;
 using BTCPayServer.Services.Stores;
 using Microsoft.AspNetCore.Authorization;
@@ -22,19 +22,20 @@ namespace BTCPayServer.Controllers
     {
         private readonly BTCPayNetworkProvider _BtcPayNetworkProvider;
         private readonly Dictionary<PaymentMethodId, IPaymentModelExtension> _paymentModelExtensions;
+        private readonly UriResolver _uriResolver;
         private readonly PaymentMethodHandlerDictionary _handlers;
-        private readonly LightningLikePaymentHandler _LightningLikePaymentHandler;
         private readonly StoreRepository _StoreRepository;
 
         public UIPublicLightningNodeInfoController(BTCPayNetworkProvider btcPayNetworkProvider,
             Dictionary<PaymentMethodId, IPaymentModelExtension> paymentModelExtensions,
+            UriResolver uriResolver,
             PaymentMethodHandlerDictionary handlers,
-            LightningLikePaymentHandler lightningLikePaymentHandler, StoreRepository storeRepository)
+            StoreRepository storeRepository)
         {
             _BtcPayNetworkProvider = btcPayNetworkProvider;
             _paymentModelExtensions = paymentModelExtensions;
+            _uriResolver = uriResolver;
             _handlers = handlers;
-            _LightningLikePaymentHandler = lightningLikePaymentHandler;
             _StoreRepository = storeRepository;
         }
 
@@ -43,7 +44,8 @@ namespace BTCPayServer.Controllers
         public async Task<IActionResult> ShowLightningNodeInfo(string storeId, string cryptoCode)
         {
             var store = await _StoreRepository.FindStore(storeId);
-            if (store == null)
+            var pmi = PaymentTypes.LN.GetPaymentMethodId(cryptoCode);
+            if (store == null || _handlers.TryGet(pmi) is not LightningLikePaymentHandler handler)
                 return NotFound();
 
             var storeBlob = store.GetStoreBlob();
@@ -51,14 +53,12 @@ namespace BTCPayServer.Controllers
             {
                 CryptoCode = cryptoCode,
                 StoreName = store.StoreName,
-                StoreBranding = new StoreBrandingViewModel(storeBlob)
+                StoreBranding = await StoreBrandingViewModel.CreateAsync(Request, _uriResolver, storeBlob)
             };
             try
             {
-                var pmi = PaymentTypes.LN.GetPaymentMethodId(cryptoCode);
                 var paymentMethodDetails = store.GetPaymentMethodConfig<LightningPaymentMethodConfig>(pmi, _handlers);
-                var network = _BtcPayNetworkProvider.GetNetwork<BTCPayNetwork>(cryptoCode);
-                var nodeInfo = await _LightningLikePaymentHandler.GetNodeInfo(paymentMethodDetails, null, throws: true);
+                var nodeInfo = await handler.GetNodeInfo(paymentMethodDetails, null, throws: true);
 
                 vm.Available = true;
                 vm.CryptoImage = GetImage(pmi);

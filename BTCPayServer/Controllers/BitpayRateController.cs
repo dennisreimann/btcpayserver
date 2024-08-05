@@ -30,8 +30,8 @@ namespace BTCPayServer.Controllers
     {
 
         readonly RateFetcher _rateProviderFactory;
-        readonly BTCPayNetworkProvider _networkProvider;
         readonly CurrencyNameTable _currencyNameTable;
+        private readonly DefaultRulesCollection _defaultRules;
         private readonly PaymentMethodHandlerDictionary _handlers;
         readonly StoreRepository _storeRepo;
         private readonly InvoiceRepository _invoiceRepository;
@@ -40,17 +40,17 @@ namespace BTCPayServer.Controllers
 
         public BitpayRateController(
             RateFetcher rateProviderFactory,
-            BTCPayNetworkProvider networkProvider,
             StoreRepository storeRepo,
             InvoiceRepository invoiceRepository,
             CurrencyNameTable currencyNameTable,
+            DefaultRulesCollection defaultRules,
             PaymentMethodHandlerDictionary handlers)
         {
             _rateProviderFactory = rateProviderFactory ?? throw new ArgumentNullException(nameof(rateProviderFactory));
-            _networkProvider = networkProvider;
             _storeRepo = storeRepo;
             _invoiceRepository = invoiceRepository;
             _currencyNameTable = currencyNameTable ?? throw new ArgumentNullException(nameof(currencyNameTable));
+            _defaultRules = defaultRules;
             _handlers = handlers;
         }
 
@@ -124,7 +124,7 @@ namespace BTCPayServer.Controllers
                 }
             }
 
-            var rules = store.GetStoreBlob().GetRateRules(_networkProvider);
+            var rules = store.GetStoreBlob().GetRateRules(_defaultRules);
             var pairs = new HashSet<CurrencyPair>();
             foreach (var currency in currencyPairs.Split(','))
             {
@@ -137,7 +137,7 @@ namespace BTCPayServer.Controllers
                 pairs.Add(pair);
             }
 
-            var fetching = _rateProviderFactory.FetchRates(pairs, rules, cancellationToken);
+            var fetching = _rateProviderFactory.FetchRates(pairs, rules, new StoreIdRateContext(storeId), cancellationToken);
             await Task.WhenAll(fetching.Select(f => f.Value).ToArray());
             return Json(pairs
                             .Select(r => (Pair: r, Value: fetching[r].GetAwaiter().GetResult().BidAsk?.Bid))

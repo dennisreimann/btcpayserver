@@ -48,7 +48,6 @@ using NBXplorer.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using OpenQA.Selenium.DevTools.V100.DOMSnapshot;
 using Xunit;
 using Xunit.Abstractions;
 using StoreData = BTCPayServer.Data.StoreData;
@@ -717,43 +716,6 @@ namespace BTCPayServer.Tests
         }
 
         [Fact]
-        public void CanCalculatePeriod()
-        {
-            Data.PullPaymentData data = new Data.PullPaymentData();
-            data.StartDate = Date(0);
-            data.EndDate = null;
-            var period = data.GetPeriod(Date(1)).Value;
-            Assert.Equal(Date(0), period.Start);
-            Assert.Null(period.End);
-            data.EndDate = Date(7);
-            period = data.GetPeriod(Date(1)).Value;
-            Assert.Equal(Date(0), period.Start);
-            Assert.Equal(Date(7), period.End);
-            data.Period = (long)TimeSpan.FromDays(2).TotalSeconds;
-            period = data.GetPeriod(Date(1)).Value;
-            Assert.Equal(Date(0), period.Start);
-            Assert.Equal(Date(2), period.End);
-            period = data.GetPeriod(Date(2)).Value;
-            Assert.Equal(Date(2), period.Start);
-            Assert.Equal(Date(4), period.End);
-            period = data.GetPeriod(Date(6)).Value;
-            Assert.Equal(Date(6), period.Start);
-            Assert.Equal(Date(7), period.End);
-            Assert.Null(data.GetPeriod(Date(7)));
-            Assert.Null(data.GetPeriod(Date(8)));
-            data.EndDate = null;
-            period = data.GetPeriod(Date(6)).Value;
-            Assert.Equal(Date(6), period.Start);
-            Assert.Equal(Date(8), period.End);
-            Assert.Null(data.GetPeriod(Date(-1)));
-        }
-
-        private DateTimeOffset Date(int days)
-        {
-            return new DateTimeOffset(1970, 1, 1, 0, 0, 0, TimeSpan.Zero) + TimeSpan.FromDays(days);
-        }
-
-        [Fact]
         public void CanDetectFileType()
         {
             Assert.True(FileTypeDetector.IsPicture(new byte[] { 0x42, 0x4D }, "test.bmp"));
@@ -1110,6 +1072,19 @@ bc1qfzu57kgu5jthl934f9xrdzzx8mmemx7gn07tf0grnvz504j6kzusu2v0ku
         }
 
         [Fact]
+        public async Task CanPassContextToRateProviders()
+        {
+            var factory = CreateBTCPayRateFactory();
+            var fetcher = new RateFetcher(factory);
+            Assert.True(RateRules.TryParse("X_X=spy(X_X)", out var rule));
+			var result = await fetcher.FetchRate(CurrencyPair.Parse("BTC_USD"), rule, null, default);
+			Assert.Single(result.Errors);
+			result = await fetcher.FetchRate(CurrencyPair.Parse("BTC_USD"), rule, new StoreIdRateContext("hello"), default);
+            Assert.Empty(result.Errors);
+            Assert.Equal(SpyContextualRateProvider.ExpectedBidAsk, result.BidAsk);
+		}
+
+        [Fact]
         public async Task CheckRatesProvider()
         {
             var spy = new SpyRateProvider();
@@ -1122,15 +1097,15 @@ bc1qfzu57kgu5jthl934f9xrdzzx8mmemx7gn07tf0grnvz504j6kzusu2v0ku
             var fetch = new BackgroundFetcherRateProvider(spy);
             fetch.DoNotAutoFetchIfExpired = true;
             factory.Providers.Add("bitpay", fetch);
-            var fetchedRate = await fetcher.FetchRate(CurrencyPair.Parse("BTC_USD"), rateRules, default);
+            var fetchedRate = await fetcher.FetchRate(CurrencyPair.Parse("BTC_USD"), rateRules, null,  default);
             spy.AssertHit();
-            fetchedRate = await fetcher.FetchRate(CurrencyPair.Parse("BTC_USD"), rateRules, default);
+            fetchedRate = await fetcher.FetchRate(CurrencyPair.Parse("BTC_USD"), rateRules, null, default);
             spy.AssertNotHit();
             await fetch.UpdateIfNecessary(default);
             spy.AssertNotHit();
             fetch.RefreshRate = TimeSpan.FromSeconds(1.0);
             Thread.Sleep(1020);
-            fetchedRate = await fetcher.FetchRate(CurrencyPair.Parse("BTC_USD"), rateRules, default);
+            fetchedRate = await fetcher.FetchRate(CurrencyPair.Parse("BTC_USD"), rateRules, null, default);
             spy.AssertNotHit();
             fetch.ValidatyTime = TimeSpan.FromSeconds(1.0);
             await fetch.UpdateIfNecessary(default);
@@ -1140,11 +1115,27 @@ bc1qfzu57kgu5jthl934f9xrdzzx8mmemx7gn07tf0grnvz504j6kzusu2v0ku
             await Assert.ThrowsAsync<InvalidOperationException>(() => fetch.GetRatesAsync(default));
         }
 
+        class SpyContextualRateProvider : IContextualRateProvider
+        {
+            public static BidAsk ExpectedBidAsk = new BidAsk(1.12345m);
+            public RateSourceInfo RateSourceInfo => new RateSourceInfo("spy", "hello world", "abc...");
+            public Task<PairRate[]> GetRatesAsync(IRateContext context, CancellationToken cancellationToken)
+            {
+                Assert.IsAssignableFrom<IHasStoreIdRateContext>(context);
+                return Task.FromResult(new [] { new PairRate(new CurrencyPair("BTC", "USD"), ExpectedBidAsk) });
+            }
+
+            public Task<PairRate[]> GetRatesAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+        }
         public static RateProviderFactory CreateBTCPayRateFactory()
         {
             ServiceCollection services = new ServiceCollection();
             services.AddHttpClient();
             BTCPayServerServices.RegisterRateSources(services);
+            services.AddRateProvider<SpyContextualRateProvider>();
             var o = services.BuildServiceProvider();
             return new RateProviderFactory(TestUtils.CreateHttpFactory(), o.GetService<IEnumerable<IRateProvider>>());
         }
@@ -1306,17 +1297,22 @@ bc1qfzu57kgu5jthl934f9xrdzzx8mmemx7gn07tf0grnvz504j6kzusu2v0ku
 
             filter = "status:abed, status:abed2";
             search = new SearchString(filter);
-            Assert.Equal("", search.TextSearch);
+            Assert.Null(search.TextSearch);
+            Assert.Null(search.TextFilters);
             Assert.Equal("status:abed, status:abed2", search.ToString());
             Assert.Throws<KeyNotFoundException>(() => search.Filters["test"]);
             Assert.Equal(2, search.Filters["status"].Count);
             Assert.Equal("abed", search.Filters["status"].First());
             Assert.Equal("abed2", search.Filters["status"].Skip(1).First());
 
-            filter = "StartDate:2019-04-25 01:00 AM, hekki";
+            filter = "StartDate:2019-04-25 01:00 AM, hekki,orderid:MYORDERID,orderid:MYORDERID_2";
             search = new SearchString(filter);
             Assert.Equal("2019-04-25 01:00 AM", search.Filters["startdate"].First());
             Assert.Equal("hekki", search.TextSearch);
+            Assert.Equal("orderid:MYORDERID,orderid:MYORDERID_2", search.TextFilters);
+            Assert.Equal("orderid:MYORDERID,orderid:MYORDERID_2,hekki", search.TextCombined);
+            Assert.Equal("StartDate:2019-04-25 01:00 AM", search.WithoutSearchText());
+            Assert.Equal(filter, search.ToString());
 
             // modify search
             filter = $"status:settled,exceptionstatus:paidLate,unusual:true, fulltext searchterm, storeid:{storeId},startdate:2019-04-25 01:00:00";

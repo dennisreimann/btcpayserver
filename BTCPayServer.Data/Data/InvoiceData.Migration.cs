@@ -37,6 +37,10 @@ namespace BTCPayServer.Data
                 {
                     paymentData.Migrate();
                 }
+                else if (entity is PayoutData payoutData && payoutData.Currency is null)
+                {
+                    payoutData.Migrate();
+                }
                 return entity;
             }
         }
@@ -349,7 +353,24 @@ namespace BTCPayServer.Data
             if (blob["defaultPaymentMethod"] is not (null or { Type : JTokenType.Null }))
                 blob["defaultPaymentMethod"] = MigrationExtensions.MigratePaymentMethodId(blob["defaultPaymentMethod"].Value<string>());
             blob.Remove("derivationStrategies");
-
+            Status = Status switch
+            {
+                "new" => "New",
+                "paid" => "Processing",
+                "complete" or "confirmed" => "Settled",
+                "expired" => "Expired",
+                null or "invalid" => "Invalid",
+                _ => throw new NotSupportedException($"Unknown Status for invoice ({Status})")
+            };
+            ExceptionStatus = ExceptionStatus switch
+            {
+                "marked" => "Marked",
+                "paidLate" => "PaidLate",
+                "paidPartial" => "PaidPartial",
+                "paidOver" => "PaidOver",
+                null or "" => "",
+                _ => throw new NotSupportedException($"Unknown ExceptionStatus for invoice ({ExceptionStatus})")
+            };
             blob["version"] = 3;
             Blob2 = blob.ToString(Formatting.None);
         }

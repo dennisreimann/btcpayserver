@@ -99,7 +99,7 @@ namespace BTCPayServer.Services.Altcoins.Monero.UI
             var monero = storeData.GetPaymentMethodConfigs(_handlers)
                 .Where(s => s.Value is MoneroPaymentPromptDetails)
                 .Select(s => (PaymentMethodId: s.Key, Details: (MoneroPaymentPromptDetails)s.Value));
-            var pmi = MoneroPaymentType.Instance.GetPaymentMethodId(cryptoCode);
+            var pmi = PaymentTypes.CHAIN.GetPaymentMethodId(cryptoCode);
             var settings = monero.Where(method => method.PaymentMethodId == pmi).Select(m => m.Details).SingleOrDefault();
             _MoneroRpcProvider.Summaries.TryGetValue(cryptoCode, out var summary);
             _MoneroLikeConfiguration.MoneroLikeConfigurationItems.TryGetValue(cryptoCode,
@@ -127,7 +127,7 @@ namespace BTCPayServer.Services.Altcoins.Monero.UI
                 WalletFileFound = System.IO.File.Exists(fileAddress),
                 Enabled =
                     settings != null &&
-                    !excludeFilters.Match(MoneroPaymentType.Instance.GetPaymentMethodId(cryptoCode)),
+                    !excludeFilters.Match(PaymentTypes.CHAIN.GetPaymentMethodId(cryptoCode)),
                 Summary = summary,
                 CryptoCode = cryptoCode,
                 AccountIndex = settings?.AccountIndex ?? accountsResponse?.SubaddressAccounts?.FirstOrDefault()?.AccountIndex ?? 0,
@@ -253,12 +253,30 @@ namespace BTCPayServer.Services.Altcoins.Monero.UI
                         }
                     }
 
-                    return RedirectToAction(nameof(GetStoreMoneroLikePaymentMethod), new
+                    try
                     {
-                        cryptoCode,
-                        StatusMessage = "View-only wallet files uploaded. If they are valid the wallet will soon become available."
-
+                        var response = await _MoneroRpcProvider.WalletRpcClients[cryptoCode].SendCommandAsync<OpenWalletRequest, OpenWalletResponse>("open_wallet", new OpenWalletRequest
+                        {
+                            Filename = "wallet",
+                            Password = viewModel.WalletPassword
+                        });
+                        if (response?.Error != null)
+                        {
+                            throw new Exception(response.Error.Message);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ModelState.AddModelError(nameof(viewModel.AccountIndex), $"Could not open the wallet: {ex.Message}");
+                        return View(viewModel);
+                    }
+                    
+                    TempData.SetStatusMessageModel(new StatusMessageModel()
+                    {
+                        Severity = StatusMessageModel.StatusSeverity.Info,
+                        Message = $"View-only wallet files uploaded. The wallet will soon become available."
                     });
+                    return RedirectToAction(nameof(GetStoreMoneroLikePaymentMethod), new { cryptoCode });
                 }
             }
 
@@ -278,7 +296,7 @@ namespace BTCPayServer.Services.Altcoins.Monero.UI
 
             var storeData = StoreData;
             var blob = storeData.GetStoreBlob();
-            storeData.SetPaymentMethodConfig(_handlers[MoneroPaymentType.Instance.GetPaymentMethodId(cryptoCode)], new MoneroPaymentPromptDetails()
+            storeData.SetPaymentMethodConfig(_handlers[PaymentTypes.CHAIN.GetPaymentMethodId(cryptoCode)], new MoneroPaymentPromptDetails()
             {
                 AccountIndex = viewModel.AccountIndex,
                 InvoiceSettledConfirmationThreshold = viewModel.SettlementConfirmationThresholdChoice switch
@@ -291,7 +309,7 @@ namespace BTCPayServer.Services.Altcoins.Monero.UI
                 }
             });
 
-            blob.SetExcluded(MoneroPaymentType.Instance.GetPaymentMethodId(viewModel.CryptoCode), !viewModel.Enabled);
+            blob.SetExcluded(PaymentTypes.CHAIN.GetPaymentMethodId(viewModel.CryptoCode), !viewModel.Enabled);
             storeData.SetStoreBlob(blob);
             await _StoreRepository.UpdateStore(storeData);
             return RedirectToAction("GetStoreMoneroLikePaymentMethods",
@@ -343,7 +361,7 @@ namespace BTCPayServer.Services.Altcoins.Monero.UI
             public IFormFile WalletKeysFile { get; set; }
             [Display(Name = "Wallet Password")]
             public string WalletPassword { get; set; }
-            [Display(Name = "Consider the invoice settled when the payment transaction �")]
+            [Display(Name = "Consider the invoice settled when the payment transaction …")]
             public MoneroLikeSettlementThresholdChoice SettlementConfirmationThresholdChoice { get; set; }
             [Display(Name = "Required Confirmations"), Range(0, 100)]
             public long? CustomSettlementConfirmationThreshold { get; set; }
