@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Contracts;
+using BTCPayServer.Client.Models;
 using BTCPayServer.Configuration;
 using BTCPayServer.Data;
 using BTCPayServer.Fido2;
@@ -12,11 +13,9 @@ using BTCPayServer.Fido2.Models;
 using BTCPayServer.Payments;
 using BTCPayServer.Payments.Bitcoin;
 using BTCPayServer.Payments.Lightning;
-using BTCPayServer.PayoutProcessors;
 using BTCPayServer.Payouts;
 using BTCPayServer.Plugins.Crowdfund;
 using BTCPayServer.Plugins.PointOfSale;
-using BTCPayServer.Plugins.PointOfSale.Models;
 using BTCPayServer.Services;
 using BTCPayServer.Services.Apps;
 using BTCPayServer.Services.Invoices;
@@ -343,9 +342,10 @@ namespace BTCPayServer.Hosting
             await ctx.SaveChangesAsync();
             
         }
-        public static ViewPointOfSaleViewModel.Item[] ParsePOSYML(string yaml)
+
+        private static AppItem[] ParsePOSYML(string yaml)
         {
-            var items = new List<ViewPointOfSaleViewModel.Item>();
+            var items = new List<AppItem>();
             var stream = new YamlStream();
             if (string.IsNullOrEmpty(yaml))
                 return items.ToArray();
@@ -362,9 +362,9 @@ namespace BTCPayServer.Hosting
                     continue;
                 }
 
-                var currentItem = new ViewPointOfSaleViewModel.Item
+                var currentItem = new AppItem
                 {
-                    Id = trimmedKey, Title = trimmedKey, PriceType = ViewPointOfSaleViewModel.ItemPriceType.Fixed
+                    Id = trimmedKey, Title = trimmedKey, PriceType = AppItemPriceType.Fixed
                 };
                 var itemSpecs = (YamlMappingNode)posItem.Value;
                 foreach (var spec in itemSpecs)
@@ -402,15 +402,15 @@ namespace BTCPayServer.Hosting
                                 if (customBoolValue)
                                 {
                                     currentItem.PriceType = currentItem.Price is null or 0
-                                        ? ViewPointOfSaleViewModel.ItemPriceType.Topup
-                                        : ViewPointOfSaleViewModel.ItemPriceType.Minimum;
+                                        ? AppItemPriceType.Topup
+                                        : AppItemPriceType.Minimum;
                                 }
                                 else
                                 {
-                                    currentItem.PriceType = ViewPointOfSaleViewModel.ItemPriceType.Fixed;
+                                    currentItem.PriceType = AppItemPriceType.Fixed;
                                 }
                             }
-                            else if (Enum.TryParse<ViewPointOfSaleViewModel.ItemPriceType>(scalarValue?.Value, true,
+                            else if (Enum.TryParse<AppItemPriceType>(scalarValue?.Value, true,
                                          out var customPriceType))
                             {
                                 currentItem.PriceType = customPriceType;

@@ -409,6 +409,7 @@ namespace BTCPayServer.Controllers.Greenfield
         {
             var settings = appData.GetSettings<PointOfSaleSettings>();
             Enum.TryParse<PosViewType>(settings.DefaultView.ToString(), true, out var defaultView);
+            var items = AppService.Parse(settings.Template);
             
             return new PointOfSaleAppData
             {
@@ -436,16 +437,7 @@ namespace BTCPayServer.Controllers.Greenfield
                 RedirectUrl = settings.RedirectUrl,
                 Description = settings.Description,
                 RedirectAutomatically = settings.RedirectAutomatically,
-                Items = JsonConvert.DeserializeObject(
-                    JsonConvert.SerializeObject(
-                        AppService.Parse(settings.Template),
-                        new JsonSerializerSettings
-                        {
-                            ContractResolver =
-                                new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
-                        }
-                    )
-                )
+                Items = items
             };
         }
 
@@ -474,6 +466,7 @@ namespace BTCPayServer.Controllers.Greenfield
         {
             var settings = appData.GetSettings<CrowdfundSettings>();
             Enum.TryParse<CrowdfundResetEvery>(settings.ResetEvery.ToString(), true, out var resetEvery);
+            var perks = AppService.Parse(settings.PerksTemplate);
 
             return new CrowdfundAppData
             {
@@ -505,15 +498,7 @@ namespace BTCPayServer.Controllers.Greenfield
                 SortPerksByPopularity = settings.SortPerksByPopularity,
                 Sounds = settings.Sounds,
                 AnimationColors = settings.AnimationColors,
-                Perks = JsonConvert.DeserializeObject(
-                    JsonConvert.SerializeObject(
-                        AppService.Parse(settings.PerksTemplate), 
-                        new JsonSerializerSettings
-                        {
-                            ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
-                        }
-                    )
-                )
+                Perks = perks
             };
         }
 
