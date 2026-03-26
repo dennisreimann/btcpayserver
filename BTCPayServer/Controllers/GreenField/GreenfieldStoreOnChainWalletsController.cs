@@ -36,7 +36,7 @@ namespace BTCPayServer.Controllers.Greenfield
     [ApiController]
     [Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
     [EnableCors(CorsPolicies.All)]
-    public class GreenfieldStoreOnChainWalletsController : Controller
+    public class GreenfieldStoreOnChainWalletsController : ControllerBase
     {
         private StoreData Store => HttpContext.GetStoreData();
 
@@ -119,7 +119,7 @@ namespace BTCPayServer.Controllers.Greenfield
         [HttpGet("~/api/v1/stores/{storeId}/payment-methods/{paymentMethodId}/wallet/histogram")]
         public async Task<IActionResult> GetOnChainWalletHistogram(string storeId, string paymentMethodId, [FromQuery] string? type = null)
         {
-            if (IsInvalidWalletRequest(paymentMethodId, out var network, out var derivationScheme, out var actionResult))
+            if (IsInvalidWalletRequest(paymentMethodId, out var network, out _, out var actionResult))
                 return actionResult;
 
             var walletId = new WalletId(storeId, network.CryptoCode);
@@ -135,7 +135,7 @@ namespace BTCPayServer.Controllers.Greenfield
                 Labels = data.Labels
             });
         }
-        
+
         [Authorize(Policy = Policies.CanViewStoreSettings, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
         [HttpGet("~/api/v1/stores/{storeId}/payment-methods/{paymentMethodId}/wallet/feerate")]
         public async Task<IActionResult> GetOnChainFeeRate(string storeId, string paymentMethodId, int? blockTarget = null)
@@ -360,9 +360,7 @@ namespace BTCPayServer.Controllers.Greenfield
                         Timestamp = coin.Timestamp,
                         KeyPath = coin.KeyPath,
                         Confirmations = coin.Confirmations,
-                        Address = network.NBXplorerNetwork
-                            .CreateAddress(derivationScheme.AccountDerivation, coin.KeyPath, coin.ScriptPubKey)
-                            .ToString()
+                        Address = coin.Address.ToString()
                     };
                 }).ToList()
             );
@@ -376,14 +374,15 @@ namespace BTCPayServer.Controllers.Greenfield
             if (IsInvalidWalletRequest(paymentMethodId, out var network,
                     out var derivationScheme, out var actionResult))
                 return actionResult;
+
             if (network.ReadonlyWallet)
             {
                 return this.CreateAPIError(503, "not-available",
                     $"This network only support read-only features");
             }
 
-            //This API is only meant for hot wallet usage for now. We can expand later when we allow PSBT manipulation.
-            if (!(await CanUseHotWallet()).CanCreateHotWallet)
+            // Only enforce the hot wallet policy when we are actually signing on the server.
+            if (request.SignWithSeed && !(await CanUseHotWallet()).CanCreateHotWallet)
             {
                 return this.CreateAPIError(503, "not-available",
                     $"You need to allow non-admins to use hotwallets for their stores (in /server/policies)");
@@ -407,6 +406,12 @@ namespace BTCPayServer.Controllers.Greenfield
                 );
 
                 return this.CreateValidationError(ModelState);
+            }
+
+            if (!request.SignWithSeed && request.ProceedWithBroadcast)
+            {
+                ModelState.AddModelError(nameof(request.ProceedWithBroadcast),
+                    "Cannot request broadcast when signing is disabled (signWithSeed = false).");
             }
 
             var explorerClient = _explorerClientProvider.GetExplorerClient(network);
@@ -535,12 +540,12 @@ namespace BTCPayServer.Controllers.Greenfield
             CreatePSBTResponse psbt;
             try
             {
-                psbt = await _walletsController.CreatePSBT(network, derivationScheme,
+                psbt = await _walletsController.CreatePSBT(storeId, network, derivationScheme,
                     new WalletSendModel()
                     {
                         SelectedInputs = request.SelectedInputs?.Select(point => point.ToString()),
                         Outputs = outputs,
-                        AlwaysIncludeNonWitnessUTXO = true,
+                        AlwaysIncludeNonWitnessUTXO = derivationScheme.DefaultIncludeNonWitnessUtxo,
                         InputSelection = request.SelectedInputs?.Any() is true,
                         FeeSatoshiPerByte = request.FeeRate?.SatoshiPerByte,
                         NoChange = request.NoChange
@@ -558,6 +563,14 @@ namespace BTCPayServer.Controllers.Greenfield
 
             derivationScheme.RebaseKeyPaths(psbt.PSBT);
 
+            if (!request.SignWithSeed)
+            {
+                return Ok(new CreateOnChainTransactionResponse
+                {
+                    PSBT = psbt.PSBT.ToBase64()
+                });
+            }
+
             var signingContext = new SigningContextModel()
             {
                 PayJoinBIP21 =
@@ -573,7 +586,7 @@ namespace BTCPayServer.Controllers.Greenfield
                     WellknownMetadataKeys.MasterHDKey);
             if (!derivationScheme.IsHotWallet || signingKeyStr is null)
             {
-                var reason = !derivationScheme.IsHotWallet ? 
+                var reason = !derivationScheme.IsHotWallet ?
                     "You cannot send from a cold wallet" :
                     "NBXplorer doesn't have the seed of the wallet";
 
@@ -582,9 +595,13 @@ namespace BTCPayServer.Controllers.Greenfield
 
             var signingKey = ExtKey.Parse(signingKeyStr, network.NBitcoinNetwork);
 
-            var signingKeySettings = derivationScheme.GetSigningAccountKeySettings();
-            signingKeySettings.RootFingerprint ??= signingKey.GetPublicKey().GetHDFingerPrint();
-            RootedKeyPath rootedKeyPath = signingKeySettings.GetRootedKeyPath();
+            var signingKeySettings = derivationScheme.GetAccountKeySettingsFromRoot(signingKey);
+            var rootedKeyPath = signingKeySettings?.GetRootedKeyPath();
+            if (rootedKeyPath is null || signingKeySettings is null)
+            {
+                return this.CreateAPIError(503, "not-available",
+                    "The private key saved for this wallet doesn't match the derivation scheme");
+            }
             psbt.PSBT.RebaseKeyPaths(signingKeySettings.AccountKey, rootedKeyPath);
             var accountKey = signingKey.Derive(rootedKeyPath.KeyPath);
 
@@ -652,6 +669,77 @@ namespace BTCPayServer.Controllers.Greenfield
             {
                 return this.CreateAPIError("broadcast-error", broadcastResult.RPCMessage);
             }
+        }
+
+        [Authorize(Policy = Policies.CanModifyStoreSettings, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
+        [HttpPost("~/api/v1/stores/{storeId}/payment-methods/{paymentMethodId}/wallet/transactions/broadcast")]
+        public async Task<IActionResult> BroadcastOnChainTransaction(string storeId, string paymentMethodId,
+            [FromBody] BroadcastOnChainTransactionRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Transaction))
+            {
+                ModelState.AddModelError(nameof(request.Transaction), "A PSBT or raw transaction is required.");
+                return this.CreateValidationError(ModelState);
+            }
+
+            if (IsInvalidWalletRequest(paymentMethodId, out var network,
+                    out _, out var actionResult))
+                return actionResult;
+
+            if (network.ReadonlyWallet)
+            {
+                return this.CreateAPIError(503, "not-available",
+                    $"This network only support read-only features");
+            }
+
+            var explorerClient = _explorerClientProvider.GetExplorerClient(network);
+            Transaction transaction;
+            try
+            {
+                var psbt = PSBT.Parse(request.Transaction, network.NBitcoinNetwork);
+                if (!psbt.IsAllFinalized())
+                {
+                    try
+                    {
+                        psbt.Finalize();
+                    }
+                    catch (Exception)
+                    {
+                        // ignored, checked below
+                    }
+                }
+
+                if (!psbt.IsAllFinalized())
+                {
+                    ModelState.AddModelError(nameof(request.Transaction),
+                        "The PSBT is not finalized and cannot be broadcast.");
+                    return this.CreateValidationError(ModelState);
+                }
+
+                transaction = psbt.ExtractTransaction();
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    transaction = Transaction.Parse(request.Transaction, network.NBitcoinNetwork);
+                }
+                catch (Exception)
+                {
+                    ModelState.AddModelError(nameof(request.Transaction),
+                        "The transaction is not a valid PSBT or raw transaction.");
+                    return this.CreateValidationError(ModelState);
+                }
+            }
+
+            var broadcastResult = await explorerClient.BroadcastAsync(transaction);
+            if (broadcastResult.Success)
+            {
+                return await GetOnChainWalletTransaction(storeId, paymentMethodId,
+                    transaction.GetHash().ToString());
+            }
+
+            return this.CreateAPIError("broadcast-error", broadcastResult.RPCMessage);
         }
 
         [HttpGet("~/api/v1/stores/{storeId}/payment-methods/{paymentMethodId}/wallet/objects")]

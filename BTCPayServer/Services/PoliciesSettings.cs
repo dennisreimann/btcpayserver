@@ -17,7 +17,7 @@ namespace BTCPayServer.Services
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         [Display(Name = "Disable public user registration")]
         public bool LockSubscription { get; set; }
-        
+
         [JsonIgnore]
         [Display(Name = "Enable public user registration")]
         public bool EnableRegistration
@@ -38,7 +38,7 @@ namespace BTCPayServer.Services
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         [Display(Name = "Discourage search engines from indexing this site")]
         public bool DiscourageSearchEngines { get; set; }
-        
+
         [JsonIgnore]
         [Display(Name = "Search engines can index this site")]
         public bool AllowSearchEngines
@@ -63,10 +63,10 @@ namespace BTCPayServer.Services
 
         [Display(Name = "Disable stores from using the server's email settings as backup")]
         public bool DisableStoresToUseServerEmailSettings { get; set; }
-        
+
         [Display(Name = "Non-admins cannot access the User Creation API Endpoint")]
         public bool DisableNonAdminCreateUserApi { get; set; }
-        
+
         [JsonIgnore]
         [Display(Name = "Non-admins can access the User Creation API Endpoint")]
         public bool EnableNonAdminCreateUserApi
@@ -82,8 +82,6 @@ namespace BTCPayServer.Services
 
         [Display(Name = "Show plugins in pre-release")]
         public bool PluginPreReleases { get; set; }
-        [Display(Name = "Select the Default Currency during Store Creation")]
-        public string DefaultCurrency { get; set; }
 
         public bool DisableSSHService { get; set; }
 
@@ -97,9 +95,15 @@ namespace BTCPayServer.Services
         public List<DomainToAppMappingItem> DomainToAppMapping { get; set; } = new List<DomainToAppMappingItem>();
         [Display(Name = "Enable experimental features")]
         public bool Experimental { get; set; }
-        
+
         [Display(Name = "Default role for users on a new store")]
         public string DefaultRole { get; set; }
+
+        [Display(Name = "Default store template")]
+        public JObject DefaultStoreTemplate { get; set; }
+
+        [Display(Name = "Register page redirect URL")]
+        public string RegisterPageRedirect { get; set; }
 
         public class BlockExplorerOverrideItem
         {

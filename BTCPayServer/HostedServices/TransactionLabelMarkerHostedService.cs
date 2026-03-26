@@ -1,5 +1,4 @@
 #nullable enable
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,15 +6,12 @@ using System.Threading.Tasks;
 using BTCPayServer.Data;
 using BTCPayServer.Events;
 using BTCPayServer.Logging;
-using BTCPayServer.Payments;
 using BTCPayServer.Payments.Bitcoin;
 using BTCPayServer.Services;
 using BTCPayServer.Services.Apps;
 using BTCPayServer.Services.Invoices;
 using BTCPayServer.Services.PaymentRequests;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NBXplorer.DerivationStrategy;
 using Newtonsoft.Json.Linq;
 
 namespace BTCPayServer.HostedServices
@@ -24,12 +20,14 @@ namespace BTCPayServer.HostedServices
     {
         private readonly PaymentMethodHandlerDictionary _handlers;
         private readonly WalletRepository _walletRepository;
+        private readonly PaymentRequestRepository _paymentRequestRepository;
 
-        public TransactionLabelMarkerHostedService(PaymentMethodHandlerDictionary handlers, EventAggregator eventAggregator, WalletRepository walletRepository, Logs logs) :
+        public TransactionLabelMarkerHostedService(PaymentMethodHandlerDictionary handlers, EventAggregator eventAggregator, WalletRepository walletRepository, PaymentRequestRepository paymentRequestRepository, Logs logs) :
             base(eventAggregator, logs)
         {
             _handlers = handlers;
             _walletRepository = walletRepository;
+            _paymentRequestRepository = paymentRequestRepository;
         }
 
         protected override void SubscribeToEvents()
@@ -92,24 +90,20 @@ namespace BTCPayServer.HostedServices
                             {
                                 if (transactionEvent.NewTransactionEvent.Replacing is not null)
                                 {
-
                                     foreach (var replaced in transactionEvent.NewTransactionEvent.Replacing)
                                     {
                                         var replacedwoId = new WalletObjectId(wid,
                                               WalletObjectData.Types.Tx, replaced.ToString());
                                         var replacedo = await _walletRepository.GetWalletObject(replacedwoId);
                                         var replacedLinks = replacedo?.GetLinks().Where(t => t.type != WalletObjectData.Types.Tx) ?? [];
-                                        if (replacedLinks.Count() != 0)
+                                        var rbf = new WalletObjectId(wid, WalletObjectData.Types.RBF, "");
+                                        var label = WalletRepository.CreateLabel(rbf);
+                                        newObjs.Add(label.ObjectData);
+                                        links.Add(WalletRepository.NewWalletObjectLinkData(txWalletObject, label.Id));
+                                        links.Add(WalletRepository.NewWalletObjectLinkData(txWalletObject, rbf, new JObject()
                                         {
-                                            var rbf = new WalletObjectId(wid, WalletObjectData.Types.RBF, "");
-                                            var label = WalletRepository.CreateLabel(rbf);
-                                            newObjs.Add(label.ObjectData);
-                                            links.Add(WalletRepository.NewWalletObjectLinkData(txWalletObject, label.Id));
-                                            links.Add(WalletRepository.NewWalletObjectLinkData(txWalletObject, rbf, new JObject()
-                                            {
-                                                ["txs"] = JArray.FromObject(new[] { replaced.ToString() })
-                                            }));
-                                        }
+                                            ["txs"] = JArray.FromObject(new[] { replaced.ToString() })
+                                        }));
                                         foreach (var link in replacedLinks)
                                         {
                                             links.Add(WalletRepository.NewWalletObjectLinkData(new WalletObjectId(walletObjectDatas.Key, link.type, link.id), txWalletObject, link.linkdata));
@@ -145,8 +139,8 @@ namespace BTCPayServer.HostedServices
                                 // if we the tx is matching some known address and utxo, we link them to this tx
                                 {
                                     if (walletObjectData.Value.Type is WalletObjectData.Types.Utxo or WalletObjectData.Types.Address)
-                                    links.Add(
-                                        WalletRepository.NewWalletObjectLinkData(txWalletObject, walletObjectData.Key));
+                                        links.Add(
+                                            WalletRepository.NewWalletObjectLinkData(txWalletObject, walletObjectData.Key));
                                 }
                                 // if the object is an address, we also link its labels (the ones added in the wallet receive page)
                                 {
@@ -158,7 +152,7 @@ namespace BTCPayServer.HostedServices
                                                 new WalletObjectId(wid, data.Type, data.Id));
                                         foreach (var label in labels)
                                         {
-											links.Add(WalletRepository.NewWalletObjectLinkData(label, txWalletObject));
+                                            links.Add(WalletRepository.NewWalletObjectLinkData(label, txWalletObject));
                                             var attachments = neighbours.Where(data => data.Type == label.Id);
                                             foreach (var attachment in attachments)
                                             {
@@ -183,7 +177,23 @@ namespace BTCPayServer.HostedServices
                     {
                         Attachment.Invoice(invoiceEvent.Invoice.Id)
                     };
-                        labels.AddRange(PaymentRequestRepository.GetPaymentIdsFromInternalTags(invoiceEvent.Invoice).Select(Attachment.PaymentRequest));
+
+                        var paymentRequestIds = PaymentRequestRepository.GetPaymentIdsFromInternalTags(invoiceEvent.Invoice).ToArray();
+                        if (paymentRequestIds.Length > 0)
+                        {
+                            var paymentRequests = await _paymentRequestRepository.FindPaymentRequests(
+                                new PaymentRequestQuery { Ids = paymentRequestIds });
+                            var paymentRequestsById = paymentRequests.ToDictionary(pr => pr.Id);
+
+                            foreach (var prId in paymentRequestIds)
+                            {
+                                var data = paymentRequestsById.TryGetValue(prId, out var pr) && pr.Title is { } title
+                                    ? new JObject { ["title"] = title }
+                                    : null;
+                                labels.Add(Attachment.PaymentRequest(prId, data));
+                            }
+                        }
+
                         labels.AddRange(AppService.GetAppInternalTags(invoiceEvent.Invoice).Select(Attachment.App));
 
                         await _walletRepository.AddWalletTransactionAttachment(walletId, transactionId, labels);

@@ -1,15 +1,13 @@
 @using Microsoft.AspNetCore.Mvc.ModelBinding
-@using BTCPayServer.Controllers
 @using BTCPayServer.Services
-@using BTCPayServer.Components.LabelManager
-@using BTCPayServer.Components.UIExtensionPoint
 @inject BTCPayServer.Security.ContentSecurityPolicies Csp
 @model WalletSendModel
 @{
 	var walletId = Context.GetRouteValue("walletId").ToString();
 	Model.ReturnUrl ??= Url.WalletTransactions(walletId);
 	Layout = "_LayoutWizard";
-	ViewData.SetActivePage(WalletsNavPages.Send, StringLocalizer["Send {0}", Model.CryptoCode], walletId);
+    ViewData.SetLayoutModel(new LayoutModel($"{nameof(WalletsNavPages.Send)}-{Model.CryptoCode}", StringLocalizer["Send {0}", Model.CryptoCode])
+        .SetCategory(WellKnownCategories.ForWallet(Model.CryptoCode)));
 	Csp.Add("worker-src", "blob:");
 	Csp.UnsafeEval();
 }
@@ -29,6 +27,9 @@
         }
         .buttons .btn {
             flex: 1 0 45%;
+        }
+        #scanqrcode .icon {
+            margin-left: 0;
         }
     </style>
     <link href="~/vendor/tom-select/tom-select.bootstrap5.min.css" asp-append-version="true" rel="stylesheet">
@@ -94,7 +95,7 @@
                     </div>
                     <div class="input-group">
                         <input asp-for="Outputs[index].DestinationAddress" class="form-control font-monospace flex-grow-1" autocomplete="off" autofocus="@(index == Model.Outputs.Count - 1 ? "autofocus" : null)"/>
-                        <button type="button" id="scanqrcode" class="btn btn-secondary px-3 only-for-js" data-bs-toggle="modal" data-bs-target="#scanModal" title="@StringLocalizer["Scan with camera"]" data-index="@index">
+                        <button type="button" id="scanqrcode" class="btn btn-secondary px-3 d-flex align-items-center justify-content-center only-for-js" data-bs-toggle="modal" data-bs-target="#scanModal" title="@StringLocalizer["Scan with camera"]" data-index="@index">
                             <vc:icon symbol="scan-qr" />
                         </button>
                     </div>
@@ -127,7 +128,7 @@
                     </div>
                     <div class="form-text crypto-info">
                         <span text-translate="true">Your available balance is</span>
-                        <button type="button" class="crypto-balance-link btn btn-link p-0 align-baseline">@Model.CurrentBalance</button> <span>@Model.CryptoCode</span>.
+                        <button id="SweepBalance" type="button" class="crypto-balance-link btn btn-link p-0 align-baseline">@Model.CurrentBalance</button> <span>@Model.CryptoCode</span>.
                         @if (Model.ImmatureBalance > 0)
                         {
                             <span><br>@StringLocalizer["Note: {0} are still immature and require additional confirmations.", $"{Model.ImmatureBalance} {Model.CryptoCode}"]</span>
@@ -205,7 +206,7 @@
                     <input asp-for="AlwaysIncludeNonWitnessUTXO" class="btcpay-toggle me-3"/>
                     <label asp-for="AlwaysIncludeNonWitnessUTXO" class="form-check-label"></label>
                 </div>
-                
+
                 @if (!string.IsNullOrEmpty(Model.PayJoinBIP21))
                 {
                     <div class="d-flex mb-3">

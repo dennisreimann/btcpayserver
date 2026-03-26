@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using BTCPayServer.Services.Labels;
 
 namespace BTCPayServer.Models.WalletViewModels
 {
@@ -79,6 +78,7 @@ namespace BTCPayServer.Models.WalletViewModels
             public string Outpoint { get; set; }
             public string Link { get; set; }
             public long Confirmations { get; set; }
+            public DateTimeOffset? Timestamp { get; set; }
         }
     }
 }

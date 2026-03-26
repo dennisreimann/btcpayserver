@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BTCPayServer;
@@ -24,7 +23,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Payment;
-using NBitcoin.RPC;
 using NBXplorer.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -178,7 +176,7 @@ public class BitcoinLikePayoutHandler : IPayoutHandler, IHasNetwork
             await UpdatePayoutsAwaitingForPayment(newTransaction, addressTrackedSource);
         }
 
-        if ((o is NewBlockEvent nbe && nbe.PaymentMethodId == PaymentMethodId) || 
+        if ((o is NewBlockEvent nbe && nbe.PaymentMethodId == PaymentMethodId) ||
             (o is NewOnChainTransactionEvent nct && nct.PaymentMethodId == PaymentMethodId))
         {
             await UpdatePayoutsInProgress();
@@ -380,7 +378,7 @@ public class BitcoinLikePayoutHandler : IPayoutHandler, IHasNetwork
             var destinationSum =
                 newTransaction.NewTransactionEvent.Outputs.Sum(output => output.Value.GetValue(Network));
             var destination = addressTrackedSource.Address.ToString();
-            
+
 
             await using var ctx = _dbContextFactory.CreateContext();
             var payout = await ctx.Payouts
@@ -395,7 +393,6 @@ public class BitcoinLikePayoutHandler : IPayoutHandler, IHasNetwork
 
             if (payout is null)
                 return;
-            var payoutBlob = payout.GetBlob(_jsonSerializerSettings);
             if (payout.Amount is null ||
                 // The round up here is not strictly necessary, this is temporary to fix existing payout before we
                 // were properly roundup the crypto amount
