@@ -8,11 +8,19 @@
     {
         ViewData.SetLayoutModel(new LayoutModel(nameof(StoreNavPages.Emails), StringLocalizer[isEdit ? "Edit Email Rule" : "Create Email Rule"])
             .SetCategory(WellKnownCategories.Store));
+        ViewData.SetBreadcrumbs([
+            new(StringLocalizer["Emails"], Action: nameof(BTCPayServer.Plugins.Emails.Controllers.UIStoresEmailController.StoreEmailSettings), Controller: nameof(BTCPayServer.Plugins.Emails.Controllers.UIStoresEmailController), RouteValues: new { storeId }),
+            new(StringLocalizer["Email Rules"], Action: nameof(BTCPayServer.Plugins.Emails.Controllers.UIStoreEmailRulesController.StoreEmailRulesList), Controller: nameof(BTCPayServer.Plugins.Emails.Controllers.UIStoreEmailRulesController), RouteValues: new { storeId })
+        ]);
     }
     else
     {
         ViewData.SetLayoutModel(new LayoutModel("Server-" + nameof(ServerNavPages.Emails), StringLocalizer[isEdit ? "Edit Email Rule" : "Create Email Rule"])
             .SetCategory(WellKnownCategories.Server));
+        ViewData.SetBreadcrumbs([
+            new(StringLocalizer["Server Emails"], Action: nameof(BTCPayServer.Plugins.Emails.Controllers.UIServerEmailController.ServerEmailSettings), Controller: nameof(BTCPayServer.Plugins.Emails.Controllers.UIServerEmailController)),
+            new(StringLocalizer["Email Rules"], Action: nameof(BTCPayServer.Plugins.Emails.Controllers.UIServerEmailRulesController.ServerEmailRulesList), Controller: nameof(BTCPayServer.Plugins.Emails.Controllers.UIServerEmailRulesController))
+        ]);
     }
 }
 
@@ -22,32 +30,7 @@
 
 <form id="save-form" method="post">
     <div class="sticky-header">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    @if (storeId is not null)
-                    {
-                        <a asp-controller="UIStoresEmail" asp-action="StoreEmailSettings" asp-route-storeId="@storeId" text-translate="true">Emails</a>
-                    }
-                    else
-                    {
-                        <a asp-controller="UIServerEmail" asp-action="ServerEmailSettings" text-translate="true">Server Emails</a>
-                    }
-                </li>
-                <li class="breadcrumb-item">
-                    @if (storeId is not null)
-                    {
-                        <a asp-action="StoreEmailRulesList" asp-route-storeId="@storeId" text-translate="true">Email Rules</a>
-                    }
-                    else
-                    {
-                        <a asp-action="ServerEmailRulesList" text-translate="true">Email Rules</a>
-                    }
-                </li>
-                <li class="breadcrumb-item active" aria-current="page">@ViewData.GetTitle()</li>
-            </ol>
-            <h2>@ViewData.GetTitle()</h2>
-        </nav>
+        <vc:title-header />
         <div>
             <button id="page-primary" type="submit" class="btn btn-primary" text-translate="true">Save</button>
             <a asp-action="StoreEmailRulesList" asp-route-storeId="@storeId" class="btn btn-secondary" text-translate="true">Cancel</a>
@@ -55,6 +38,9 @@
     </div>
     <partial name="_StatusMessage" />
 
+    <div class="row">
+        <div class="col-xxl-constrain col-xl-8">
+            <div class="settings-section">
     <input type="hidden" asp-for="OfferingId"></input>
     <input type="hidden" asp-for="RedirectUrl"></input>
     <div class="form-group">
@@ -123,7 +109,7 @@
         <span asp-validation-for="Subject" class="text-danger"></span>
     </div>
 
-    <div class="form-group">
+    <div class="form-group mb-0">
         <label asp-for="Body" class="form-label" data-required></label>
         <textarea asp-for="Body" class="form-control richtext email-rule-body" rows="4"></textarea>
         <span asp-validation-for="Body" class="text-danger"></span>
@@ -132,6 +118,9 @@
             <table id="placeholders" class="table">
             </table>
             <span>* These fields are JSON objects. You can access properties within them using <a href="https://www.newtonsoft.com/json/help/html/SelectToken.htm#SelectTokenJSONPath" rel="noreferrer noopener" target="_blank">this syntax</a>. For example <code>{Invoice.Metadata.itemCode}</code> or <code>{Subscriber.Metadata.accessKey}</code></span>
+        </div>
+    </div>
+            </div>
         </div>
     </div>
 

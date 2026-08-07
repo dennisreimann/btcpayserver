@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
@@ -27,6 +28,10 @@ using BTCPayServer.Data;
 using BTCPayServer.HostedServices;
 using BTCPayServer.Hwi;
 using BTCPayServer.Lightning;
+using BTCPayServer.Lightning.CLightning;
+using BTCPayServer.Lightning.Eclair;
+using BTCPayServer.Lightning.LND;
+using BTCPayServer.Lightning.Phoenixd;
 using BTCPayServer.Models;
 using BTCPayServer.Models.StoreViewModels;
 using BTCPayServer.NTag424;
@@ -262,20 +267,18 @@ namespace BTCPayServer
 
         [Obsolete("Use GetDisplayName(this ILightningClient client, string connectionString) instead")]
         public static string GetDisplayName(this ILightningClient client) => GetDisplayName(client, client.ToString());
+
         public static string GetDisplayName(this ILightningClient client, string connectionString)
-        {
-            if (client is IExtendedLightningClient { DisplayName: { } displayName })
-                    return displayName;
-            var kv = client.ExtractValues(connectionString);
-            if (!kv.TryGetValue("type", out var type))
-                return "???";
-            var lncType = typeof(LightningConnectionType);
-            var fields = lncType.GetFields(BindingFlags.Public | BindingFlags.Static);
-            var field = fields.FirstOrDefault(f => f.GetValue(lncType)?.ToString() == type);
-            if (field == null) return type;
-            DisplayAttribute attr = field.GetCustomAttribute<DisplayAttribute>();
-            return attr?.Name ?? type;
-        }
+            => client switch
+            {
+                CLightningClient _ => "Core Lightning",
+                LndClient => "LND",
+                EclairLightningClient => "Eclair",
+                PhoenixdLightningClient => "Phoenix",
+                IExtendedLightningClient { DisplayName: { } n } => n,
+                _ when client.ExtractValues(connectionString).TryGetValue("type", out var t) => t,
+                _ => client.GetType().Name
+            };
 
         private static bool TryParseLegacy(string str, out Dictionary<string, string> connectionString)
         {
@@ -454,6 +457,20 @@ namespace BTCPayServer
         {
             services.TryAddSingleton<T>();
             services.AddTransient<ScheduledTask>(o => new ScheduledTask(typeof(T), every));
+            return services;
+        }
+
+        /// <summary>
+        /// Add a raw SQL migration to run when BTCPay Server starts
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="migrationId">A unique id for the migration. Migrations execute in alphabetic order, so we suggest to prefix the date of creation of the migration. (eg. 20260106_cleanupappidentities)</param>
+        /// <param name="sql">The raw SQL of the migration</param>
+        /// <returns></returns>
+        public static IServiceCollection AddMigration(this IServiceCollection services, string migrationId, string sql)
+        {
+            services.TryAddSingleton<IMigrationExecutor, MigrationExecutor<ApplicationDbContext>>();
+            services.AddSingleton<MigrationBase<ApplicationDbContext>, RawSqlMigration>(_ => new RawSqlMigration(migrationId, sql));
             return services;
         }
 
@@ -760,18 +777,18 @@ namespace BTCPayServer
         public static StoreData AddCachedStoreData(this HttpContext ctx, StoreData storeData)
         {
             if (!ctx.Items.TryGetValue("BTCPAY.CACHEDSTOREDATA", out var item) ||
-                item is not Dictionary<string, StoreData> dictionary)
+                item is not ConcurrentDictionary<string, StoreData> dictionary)
             {
-                dictionary = new Dictionary<string, StoreData>();
+                dictionary = new ConcurrentDictionary<string, StoreData>();
                 ctx.Items["BTCPAY.CACHEDSTOREDATA"] = dictionary;
             }
-            dictionary[storeData.Id] = storeData;
+            dictionary.TryAdd(storeData.Id, storeData);
             return storeData;
         }
         public static StoreData? GetCachedStoreData(this HttpContext ctx, string storeId)
         {
             if (!ctx.Items.TryGetValue("BTCPAY.CACHEDSTOREDATA", out var item) ||
-                item is not Dictionary<string, StoreData> dictionary)
+                item is not ConcurrentDictionary<string, StoreData> dictionary)
                 return null;
             dictionary.TryGetValue(storeId, out var storeData);
             return storeData;
@@ -810,7 +827,7 @@ namespace BTCPayServer
         // Give times for extensions to switch to MainNavViewModel.Store
         // or HttpContext.GetStoreDataOrNull
             => GetStoreDataOrNull(ctx) ??
-               (ctx.Items["BTCPAY.NAVRENDERING"]  is true ? null
+               (ctx.Items["BTCPAY.NAVRENDERING"]  is true ? null!
                : throw new InvalidOperationException("StoreData is not set"));
         public static void SetStoreData(this HttpContext ctx, StoreData? storeData)
             => ctx.Items["BTCPAY.STOREDATA"] = storeData;
@@ -835,6 +852,8 @@ namespace BTCPayServer
 
         public static PaymentRequestData? GetPaymentRequestDataOrNull(this HttpContext ctx)
         => ctx.Items.TryGet("BTCPAY.PAYMENTREQUESTDATA") as PaymentRequestData;
+        public static PaymentRequestData? GetPaymentRequestData(this HttpContext ctx)
+            => GetPaymentRequestDataOrNull(ctx) ?? throw new InvalidOperationException("BTCPAY.PAYMENTREQUESTDATA is not set");
 
         public static void SetPaymentRequestData(this HttpContext ctx, PaymentRequestData? paymentRequestData)
         {

@@ -179,6 +179,7 @@ async function initLabelManager (elementId) {
         async onChange (values) {
             const labels = Array.isArray(values) ? values : values.split(',');
             element.dispatchEvent(new CustomEvent("labelmanager:changed", {
+                bubbles: true,
                 detail: {
                     id: objectId,
                     type: objectType,
@@ -257,8 +258,84 @@ const reinsertSvgUseElements = () => {
     });
 };
 
+const initGlobalNavTooltips = () => {
+    const header = document.getElementById('mainMenuHead');
+    if (!header) return;
+
+    const Tooltip = window.bootstrap?.Tooltip;
+    const Dropdown = window.bootstrap?.Dropdown;
+    const tooltipSelector = '[data-global-nav-tooltip]:not([data-bs-toggle="dropdown"])';
+    const tooltipTargets = Array.from(header.querySelectorAll(tooltipSelector));
+    const getDropdownToggle = source => source.matches('[data-bs-toggle="dropdown"]')
+        ? source
+        : source.querySelector('[data-bs-toggle="dropdown"]');
+    const getTooltipLabel = target => {
+        const labelledControl = target.matches('[aria-label]')
+            ? target
+            : target.querySelector('[aria-label]');
+        return labelledControl?.getAttribute('aria-label') || '';
+    };
+    const hideAllTooltips = () => {
+        tooltipTargets.forEach(target => Tooltip?.getInstance(target)?.hide());
+    };
+
+    if (Tooltip) {
+        tooltipTargets.forEach(target => {
+            Tooltip.getOrCreateInstance(target, {
+                trigger: 'hover focus',
+                placement: 'bottom',
+                delay: 0,
+                animation: false,
+                customClass: 'globalNav-tooltip',
+                title: () => getTooltipLabel(target)
+            });
+        });
+    }
+
+    if (Dropdown) {
+        header.addEventListener('show.bs.dropdown', event => {
+            const source = event.target;
+            if (!(source instanceof Element)) return;
+
+            const currentToggle = getDropdownToggle(source);
+            if (!(currentToggle instanceof Element)) return;
+
+            const tooltipTarget = currentToggle.closest('[data-global-nav-tooltip]');
+            if (tooltipTarget instanceof Element) {
+                const tooltip = Tooltip?.getInstance(tooltipTarget);
+                tooltip?.hide();
+                tooltip?.disable();
+            }
+
+            header.querySelectorAll('[data-bs-toggle="dropdown"][aria-expanded="true"]').forEach(openToggle => {
+                if (openToggle === currentToggle) return;
+                Dropdown.getOrCreateInstance(openToggle).hide();
+            });
+        });
+        header.addEventListener('hidden.bs.dropdown', event => {
+            const source = event.target;
+            if (!(source instanceof Element)) return;
+
+            const currentToggle = getDropdownToggle(source);
+            const tooltipTarget = currentToggle?.closest('[data-global-nav-tooltip]');
+            if (tooltipTarget instanceof Element) {
+                Tooltip?.getInstance(tooltipTarget)?.enable();
+            }
+        });
+    }
+
+    header.addEventListener('click', event => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const tooltipTarget = target.closest('[data-global-nav-tooltip]');
+        if (!(tooltipTarget instanceof Element) || !tooltipTarget.matches(tooltipSelector)) return;
+        window.requestAnimationFrame(hideAllTooltips);
+    });
+};
+
 document.addEventListener("DOMContentLoaded", () => {
     reinsertSvgUseElements();
+    initGlobalNavTooltips();
     // sticky header
     const stickyHeader = document.querySelector('#mainContent > section .sticky-header');
     if (stickyHeader) {
@@ -271,13 +348,23 @@ document.addEventListener("DOMContentLoaded", () => {
         setStickyHeaderHeight();
     }
 
-    // initialize timezone offset value if field is present in page
-    const $timezoneOffset = document.getElementById("TimezoneOffset");
-    const timezoneOffset = new Date().getTimezoneOffset();
-    if ($timezoneOffset) $timezoneOffset.value = timezoneOffset;
-
     // localize all elements that have localizeDate class
-    formatDateTimes();
+    if (formatDateTimes)
+        formatDateTimes();
+
+    document.querySelectorAll("*[timezone], *[browser-timezone]").forEach($el => {
+        var formatter = $el.hasAttribute("timezone") ? getDateFormatter() : Intl.DateTimeFormat();
+        if (!formatter)
+            return;
+        if ($el.tagName === "INPUT") {
+            if (!$el.value)
+                $el.value = formatter.resolvedOptions().timeZone || '';
+        }
+        else if ($el.tagName === "SPAN") {
+            if (!$el.innerText)
+                $el.innerText = formatter.resolvedOptions().timeZone || '';
+        }
+    });
 
     initLabelManagers();
 
@@ -296,9 +383,11 @@ document.addEventListener("DOMContentLoaded", () => {
         var element = $(this);
         var fdtp = element.attr("data-fdtp");
 
+        var time24 = getDateFormatter().resolvedOptions().hourCycle === "h23";
         // support for initializing with special options per instance
         if (fdtp) {
-            var parsed = JSON.parse(fdtp);
+            var parsed = Object.assign({}, JSON.parse(fdtp), { static: true });
+            parsed.time_24hr ??= time24;
             flatpickrInstances.push(element.flatpickr(parsed));
         } else {
             var min = element.attr("min");
@@ -313,7 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 minDate: min,
                 maxDate: max,
                 defaultDate: defaultDate,
-                time_24hr: true,
+                time_24hr: time24,
                 defaultHour: 0,
                 static: true
             }));
@@ -445,8 +534,45 @@ document.addEventListener("DOMContentLoaded", () => {
         })
     }
 
-    // Menu collapses
     const mainNav = document.getElementById('mainNav')
+    const closeMobileNav = () => {
+        if (!mainNav || !window.matchMedia('(max-width: 991px)').matches || !mainNav.classList.contains('show')) return;
+        if (window.bootstrap?.Offcanvas) {
+            window.bootstrap.Offcanvas.getOrCreateInstance(mainNav).hide();
+        }
+    }
+
+    if (mainNav) {
+        delegate('click', '#mainNav a[href]', closeMobileNav)
+
+        let startX = 0;
+        let startY = 0;
+        let trackingSwipe = false;
+
+        mainNav.addEventListener('touchstart', e => {
+            if (!mainNav.classList.contains('show') || !e.touches[0]) return;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            trackingSwipe = true;
+        }, { passive: true });
+
+        mainNav.addEventListener('touchmove', e => {
+            if (!trackingSwipe || !e.touches[0]) return;
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            const deltaX = currentX - startX;
+            const deltaY = currentY - startY;
+            if (Math.abs(deltaX) < 64 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+            if (deltaX < 0) closeMobileNav();
+            trackingSwipe = false;
+        }, { passive: true });
+
+        mainNav.addEventListener('touchend', () => {
+            trackingSwipe = false;
+        }, { passive: true });
+    }
+
+    // Menu collapses
     if (mainNav) {
         const COLLAPSED_KEY = 'btcpay-nav-collapsed'
         delegate('show.bs.collapse', '#mainNav', (e) => {
@@ -500,7 +626,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const $target = e.target
         if ($target.matches('td,time,span[data-sensitive]')) {
             const $row = $target.closest('.mass-action-row');
-            $row.querySelector('.mass-action-select').click();
+            $row.querySelector('.mass-action-select')?.click();
         }
     });
 });

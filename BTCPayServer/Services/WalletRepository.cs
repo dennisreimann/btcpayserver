@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Data;
-using BTCPayServer.Models.WalletViewModels;
+using BTCPayServer.Plugins.Wallets.Views.ViewModels;
 using BTCPayServer.Services.Invoices;
 using BTCPayServer.Services.Wallets;
 using Dapper;
@@ -657,16 +657,24 @@ namespace BTCPayServer.Services
         public async Task AddWalletObjectLabels(WalletObjectId id, params string[] labels)
         {
             ArgumentNullException.ThrowIfNull(id);
-            var objs = new List<WalletObjectData>();
+            await AddWalletObjectLabels(new[] { (id, labels) });
+        }
+
+        public async Task AddWalletObjectLabels((WalletObjectId id, string[] labels)[] reqs)
+        {
+            var objs = new Dictionary<WalletObjectId, WalletObjectData>();
             var links = new List<WalletObjectLinkData>();
-            objs.Add(NewWalletObjectData(id));
-            foreach (var l in labels.Select(l => l.Trim().Truncate(MaxLabelSize)))
+            foreach (var (id, labels) in reqs)
             {
-                var label = CreateLabel(id.WalletId, l);
-                objs.Add(label.ObjectData);
-                links.Add(NewWalletObjectLinkData(label.Id, id));
+                objs.TryAdd(id, NewWalletObjectData(id));
+                foreach (var l in labels.Select(l => l.Trim().Truncate(MaxLabelSize)).Distinct())
+                {
+                    var label = CreateLabel(id.WalletId, l);
+                    objs.TryAdd(label.Id, label.ObjectData);
+                    links.Add(NewWalletObjectLinkData(label.Id, id));
+                }
             }
-            await EnsureCreated(objs, links);
+            await EnsureCreated(objs.Values.ToList(), links);
         }
         public Task AddWalletTransactionAttachment(WalletId walletId, uint256 txId, Attachment attachment)
         {
@@ -761,7 +769,7 @@ namespace BTCPayServer.Services
             ArgumentNullException.ThrowIfNull(id);
             oldLabel = oldLabel.Trim();
             newLabel = newLabel.Trim().Truncate(MaxLabelSize);
-            
+
             if (oldLabel == newLabel)
                 return true;
 
@@ -771,14 +779,14 @@ namespace BTCPayServer.Services
 
             await using var ctx = _ContextFactory.CreateContext();
             var connection = ctx.Database.GetDbConnection();
-            
+
             // Update all links from old label to new label
             var updated = await connection.ExecuteAsync(
                 """
-                UPDATE "WalletObjectLinks" 
-                SET "AId" = @NewLabel 
-                WHERE "WalletId" = @WalletId 
-                AND "AType" = @LabelType 
+                UPDATE "WalletObjectLinks"
+                SET "AId" = @NewLabel
+                WHERE "WalletId" = @WalletId
+                AND "AType" = @LabelType
                 AND "AId" = @OldLabel
                 """,
                 new { WalletId = id.ToString(), LabelType = WalletObjectData.Types.Label, OldLabel = oldLabel, NewLabel = newLabel });

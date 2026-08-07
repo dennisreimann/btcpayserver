@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 [assembly: InternalsVisibleTo("BTCPayServer.Tests")]
 
-// This help JetBrains to find partial views referenced by views in plugins
+// This helps JetBrains to find partial views referenced by views in plugins
 [assembly: JetBrains.Annotations.AspMvcAreaPartialViewLocationFormat("/Plugins/{2}/Views/Shared/{0}.cshtml")]
 
 namespace BTCPayServer
@@ -25,6 +25,9 @@ namespace BTCPayServer
     {
         static async Task Main(string[] args)
         {
+            // Some old instances were not as strict into parsing public keys
+            // we don't want to break this.
+            NBitcoin.ExtPubKey.SkipInvalidMasterExtPubKeyCheck = true;
             if (args.Length > 0 && args[0] == "run")
                 args = args.Skip(1).ToArray(); // Hack to make dotnet watch work
 

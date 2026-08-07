@@ -69,10 +69,15 @@ public class BuiltInPermissionScopeProvider(
                 // 3. Checks in walletId
                 if (storeId == null)
                 {
-                    if (routeData.Values.TryGetValue("walletId", out var walletId) &&
-                        WalletId.TryParse(walletId as string ?? "", out var w))
+                    if (routeData.Values.TryGetValue("walletId", out var walletId))
                     {
-                        storeId = w.StoreId;
+                        if (WalletId.TryParse(walletId as string ?? "", out var w))
+                            storeId = w.StoreId;
+                        else
+                        {
+                            authContext.Fail();
+                            return null;
+                        }
                     }
                 }
             }
@@ -97,13 +102,23 @@ public class BuiltInPermissionScopeProvider(
                                 return id2;
                             });
                         }
+                        // If the route is "pull-payments/DO-NOT-EXIT/edit", this will returns 403
+                        // For legacy, if the route is "stores/{storeId}/pull-payments/DO-NOT-EXIT/edit", the action itself needs to handle 404.
+                        else if (storeId is null)
+                        {
+                            authContext.Fail();
+                            return null;
+                        }
                     }
                     storeId ??= storeId2;
 
                     // Consider the route /stores/{storeId}/apps/{appId}
                     // This check is making sure that the `storeId` is matching the scope resolved from `appId`.
                     if (storeId2 != storeId)
-                        storeId2 = null;
+                    {
+                        authContext.Fail();
+                        return null;
+                    }
 
                     if (storeId2 is not null)
                         additionalScopes.Add(new AdditionalScope(i.RouteValue, id));

@@ -5,15 +5,19 @@ using System.Threading.Tasks;
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Abstractions.Models;
+using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
+using BTCPayServer.Controllers;
 using BTCPayServer.Data;
 using BTCPayServer.Data.Subscriptions;
 using BTCPayServer.Events;
+using BTCPayServer.Plugins.Emails.Services;
 using BTCPayServer.Plugins.Emails.Views;
+using BTCPayServer.Security;
 using BTCPayServer.Services;
 using BTCPayServer.Services.Apps;
 using BTCPayServer.Services.Invoices;
-using BTCPayServer.Plugins.Emails.Services;
+using BTCPayServer.Services.Stores;
 using BTCPayServer.Views.UIStoreMembership;
 using Dapper;
 using Microsoft.AspNetCore.Authorization;
@@ -29,6 +33,7 @@ namespace BTCPayServer.Plugins.Subscriptions.Controllers;
 [Authorize(Policy = SubscriptionsPolicies.CanViewOfferings, AuthenticationSchemes = AuthenticationSchemes.Cookie)]
 [Area(SubscriptionsPlugin.Area)]
 public partial class UIOfferingController(
+    StoreRepository storeRepository,
     ApplicationDbContextFactory dbContextFactory,
     IStringLocalizer stringLocalizer,
     LinkGenerator linkGenerator,
@@ -100,7 +105,9 @@ public partial class UIOfferingController(
 
     [HttpPost("stores/{storeId}/offerings/{offeringId}/Subscribers")]
     public async Task<IActionResult> SubscriberSuspend(string storeId, string offeringId, string customerId, string? command = null,
-        string? suspensionReason = null, decimal? amount = null, string? description = null)
+        string? suspensionReason = null, decimal? amount = null, string? description = null,
+        DateOnly? startDate = null, DateOnly? expirationDate = null,
+        int? timezoneOffset = null, int? expirationTimezoneOffset = null)
     {
         await using var ctx = DbContextFactory.CreateContext();
         var sub = await ctx.Subscribers.GetByCustomerId(customerId, offeringId: offeringId, storeId: storeId);
@@ -108,7 +115,7 @@ public partial class UIOfferingController(
             return NotFound();
         var permission = command switch
         {
-            "credit" or "charge" => SubscriptionsPolicies.CanCreditSubscribers,
+            "credit" or "charge" or "refund" => SubscriptionsPolicies.CanCreditSubscribers,
             _ => SubscriptionsPolicies.CanManageSubscribers
         };
         if (!(await authorizationService.AuthorizeAsync(User, storeId, permission)).Succeeded)
@@ -155,6 +162,74 @@ public partial class UIOfferingController(
                     AllowOverdraft = true
                 });
             TempData.SetStatusSuccess(message);
+        }
+        else if (command is "refund" && amount is > 0)
+        {
+            var store = storeRepository.FindStore(storeId);
+            if (!(await authorizationService.AuthorizeAsync(User, store, new PolicyRequirement(Policies.CanCreateNonApprovedPullPayments))).Succeeded)
+                return Forbid();
+
+            var autoApprove = (await authorizationService.AuthorizeAsync(User, store, new PolicyRequirement(Policies.CanCreatePullPayments))).Succeeded;
+            var pullPaymentId = await SubsService.CreateCreditRefund(sub.Id, amount.Value, Request.GetRequestBaseUrl(), autoApprove);
+            if (pullPaymentId is null)
+            {
+                TempData.SetStatusMessageModel(new()
+                {
+                    Severity = StatusMessageModel.StatusSeverity.Error,
+                    Html = StringLocalizer["Unable to create refund. Check the subscriber's credit balance."]
+                });
+                return GoToOffering(storeId, offeringId, SubscriptionSection.Subscribers);
+            }
+            var refundUrl = Url.Action(nameof(UIPullPaymentController.ViewPullPayment), "UIPullPayment", new { pullPaymentId }, Request.Scheme);
+            TempData.SetStatusSuccess(StringLocalizer["Refund pull payment created."]);
+            return Redirect(refundUrl!);
+        }
+        else if (command is "edit-dates")
+        {
+            if (startDate is null)
+            {
+                TempData.SetStatusMessageModel(new()
+                {
+                    Severity = StatusMessageModel.StatusSeverity.Error,
+                    Html = StringLocalizer["Invalid start date provided."]
+                });
+                return GoToOffering(storeId, offeringId, SubscriptionSection.Subscribers);
+            }
+
+            var startOffsetMinutes = timezoneOffset ?? 0;
+            var expOffsetMinutes = expirationTimezoneOffset ?? startOffsetMinutes;
+            if (startOffsetMinutes < -840 || startOffsetMinutes > 840 ||
+                expOffsetMinutes < -840 || expOffsetMinutes > 840)
+            {
+                TempData.SetStatusMessageModel(new()
+                {
+                    Severity = StatusMessageModel.StatusSeverity.Error,
+                    Html = StringLocalizer["Invalid timezone offset."]
+                });
+                return GoToOffering(storeId, offeringId, SubscriptionSection.Subscribers);
+            }
+
+            var parsedStart = new DateTimeOffset(startDate.Value.ToDateTime(TimeOnly.MinValue),
+                TimeSpan.FromMinutes(-startOffsetMinutes)).ToUniversalTime();
+
+            DateTimeOffset? parsedExpiration = null;
+            if (expirationDate is not null)
+            {
+                parsedExpiration = new DateTimeOffset(expirationDate.Value.ToDateTime(TimeOnly.MinValue),
+                    TimeSpan.FromMinutes(-expOffsetMinutes)).ToUniversalTime();
+                if (parsedExpiration.Value <= parsedStart)
+                {
+                    TempData.SetStatusMessageModel(new()
+                    {
+                        Severity = StatusMessageModel.StatusSeverity.Error,
+                        Html = StringLocalizer["Expiration date must be after the start date."]
+                    });
+                    return GoToOffering(storeId, offeringId, SubscriptionSection.Subscribers);
+                }
+            }
+
+            await SubsService.UpdateDates(sub.Id, parsedStart, parsedExpiration);
+            TempData.SetStatusSuccess(StringLocalizer["Subscription dates updated for {0}", subName]);
         }
 
         return GoToOffering(storeId, offeringId, SubscriptionSection.Subscribers);
@@ -433,7 +508,6 @@ public partial class UIOfferingController(
         var existingById = offering.Features
             .ToDictionary(e => e.CustomId);
 
-
         var toRemove = offering.Features
             .Where(e => !incomingById.ContainsKey(e.CustomId))
             .ToList();
@@ -520,8 +594,8 @@ public partial class UIOfferingController(
                     SelectedType = plan?.PlanChanges
                         .FirstOrDefault(pc => pc.PlanChangeId == p.Id)?
                         .Type.ToString() ?? "None",
-                    Timing = plan?.PlanChanges    
-                        .FirstOrDefault(pc => pc.PlanChangeId == p.Id)? 
+                    Timing = plan?.PlanChanges
+                        .FirstOrDefault(pc => pc.PlanChangeId == p.Id)?
                         .Timing.ToString() ?? "Immediate"
                 })
                 .OrderBy(p => p.PlanName)
@@ -601,10 +675,10 @@ public partial class UIOfferingController(
                 "Downgrade" => PlanChangeData.ChangeType.Downgrade,
                 _ => PlanChangeData.ChangeType.Downgrade
             };
-            existing.Timing = vmPC.Timing switch  
-            {                                   
-                "AtPeriodEnd" => PlanChangeData.ChangeTiming.AtPeriodEnd, 
-                _ => PlanChangeData.ChangeTiming.Immediate        
+            existing.Timing = vmPC.Timing switch
+            {
+                "AtPeriodEnd" => PlanChangeData.ChangeTiming.AtPeriodEnd,
+                _ => PlanChangeData.ChangeTiming.Immediate
             };
         }
 

@@ -19,12 +19,14 @@ using BTCPayServer.Models.PaymentRequestViewModels;
 using BTCPayServer.Payments;
 using BTCPayServer.Payments.Lightning;
 using BTCPayServer.Payouts;
+using BTCPayServer.Plugins.Wallets;
 using BTCPayServer.Plugins.Webhooks.Views;
 using BTCPayServer.Rating;
 using BTCPayServer.Services;
 using BTCPayServer.Services.Apps;
 using BTCPayServer.Services.Invoices;
 using BTCPayServer.Services.Rates;
+using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -71,12 +73,12 @@ namespace BTCPayServer.Controllers
 
         [HttpPost("invoices/{invoiceId}/deliveries/{deliveryId}/redeliver")]
         [Authorize(Policy = Policies.CanModifyStoreSettings, AuthenticationSchemes = AuthenticationSchemes.Cookie)]
-        public async Task<IActionResult> RedeliverWebhook(string storeId, string invoiceId, string deliveryId)
+        public async Task<IActionResult> RedeliverWebhook(string invoiceId, string deliveryId)
         {
             var invoice = (await _InvoiceRepository.GetInvoices(new InvoiceQuery
             {
                 InvoiceId = [invoiceId],
-                StoreId = [storeId],
+                StoreId = [this.HttpContext.GetStoreData().Id],
                 UserId = GetUserIdForInvoiceQuery()
             })).FirstOrDefault();
             if (invoice is null)
@@ -149,6 +151,7 @@ namespace BTCPayServer.Controllers
                 Events = await _InvoiceRepository.GetInvoiceLogs(invoice.Id),
                 Metadata = metaData,
                 Archived = invoice.Archived,
+                Comment = invoice.Metadata.Comment,
                 HasRefund = invoice.Refunds.Any(),
                 CanRefund = invoiceState.CanRefund(),
                 Refunds = invoice.Refunds,
@@ -200,7 +203,6 @@ namespace BTCPayServer.Controllers
             var store = await _StoreRepository.GetStoreByInvoiceId(i.Id);
             if (store is null)
                 return NotFound();
-
             if (!await ValidateAccessForArchivedInvoice(i))
                 return NotFound();
 
@@ -527,19 +529,12 @@ namespace BTCPayServer.Controllers
                 createPullPayment.Amount = Math.Round(createPullPayment.Amount - reduceByAmount, ppDivisibility);
             }
 
-            var ppId = await _paymentHostedService.CreatePullPayment(store, createPullPayment);
+            var ppId = await _paymentHostedService.CreateRefundPullPayment(store, createPullPayment, invoice.Id);
             TempData.SetStatusMessageModel(new StatusMessageModel
             {
                 Html = "Refund successfully created!<br />Share the link to this page with a customer.<br />The customer needs to enter their address and claim the refund.<br />Once a customer claims the refund, you will get a notification and would need to approve and initiate it from your Store > Payouts.",
                 Severity = StatusMessageModel.StatusSeverity.Success
             });
-
-            ctx.Refunds.Add(new RefundData
-            {
-                InvoiceDataId = invoice.Id,
-                PullPaymentDataId = ppId
-            });
-            await ctx.SaveChangesAsync(cancellationToken);
 
             // TODO: Having dedicated UI later on
             return RedirectToAction(nameof(UIPullPaymentController.ViewPullPayment),
@@ -598,29 +593,47 @@ namespace BTCPayServer.Controllers
         [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewInvoices)]
         public async Task<IActionResult> ToggleArchive(string invoiceId)
         {
-            var invoice = (await _InvoiceRepository.GetInvoices(new InvoiceQuery
-            {
-                InvoiceId = [invoiceId],
-                UserId = GetUserIdForInvoiceQuery(),
-                IncludeAddresses = false,
-                IncludeArchived = true,
-            })).FirstOrDefault();
-            if (invoice == null)
-                return NotFound();
-            await _InvoiceRepository.ToggleInvoiceArchival(invoiceId, !invoice.Archived);
+            var archived = await _InvoiceRepository.ToggleInvoiceArchival(HttpContext.GetStoreData().Id, invoiceId);
             TempData.SetStatusMessageModel(new StatusMessageModel
             {
                 Severity = StatusMessageModel.StatusSeverity.Success,
-                Message = invoice.Archived
-                    ? StringLocalizer["The invoice has been unarchived and will appear in the invoice list by default again."].Value
-                    : StringLocalizer["The invoice has been archived and will no longer appear in the invoice list by default."].Value
+                Message = archived
+                    ? StringLocalizer["The invoice has been archived and will no longer appear in the invoice list by default."].Value
+                    : StringLocalizer["The invoice has been unarchived and will appear in the invoice list by default again."].Value
             });
-            return RedirectToAction(nameof(invoice), new { invoiceId });
+            return RedirectToAction(nameof(Invoice), new { invoiceId });
         }
 
-        [HttpPost]
+        [HttpPost("invoices/{invoiceId}/comment")]
+        [HttpPost("/stores/{storeId}/invoices/{invoiceId}/comment")]
         [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewInvoices)]
-        public async Task<IActionResult> MassAction(string command, string[] selectedItems, string? storeId = null)
+        public async Task<IActionResult> Comment(string invoiceId, string comment, string? returnUrl = null)
+        {
+            var invoice = (await _InvoiceRepository.GetInvoices(new InvoiceQuery
+            {
+                InvoiceId = [invoiceId],
+                StoreId = [HttpContext.GetStoreData().Id],
+                UserId = GetUserIdForInvoiceQuery()
+            })).FirstOrDefault();
+            if (invoice is null)
+                return NotFound();
+
+            await _InvoiceRepository.UpdateInvoiceMetadata(invoiceId, "comment", string.IsNullOrWhiteSpace(comment?.Trim()) ? null : comment.Trim());
+            TempData.SetStatusMessageModel(new StatusMessageModel
+            {
+                Severity = StatusMessageModel.StatusSeverity.Success,
+                Message = string.IsNullOrWhiteSpace(comment)
+                    ? StringLocalizer["The comment has been removed."].Value
+                    : StringLocalizer["The comment has been saved."].Value
+            });
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
+            return RedirectToAction(nameof(Invoice), new { invoiceId });
+        }
+
+        [HttpPost("/stores/{storeId}/invoices/mass-action")]
+        [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewInvoices)]
+        public async Task<IActionResult> MassAction(string command, string[] selectedItems, string storeId)
         {
             IActionResult NotSupported(string err)
             {
@@ -635,19 +648,19 @@ namespace BTCPayServer.Controllers
             switch (command)
             {
                 case "archive":
-                    await _InvoiceRepository.MassArchive(selectedItems);
+                    await _InvoiceRepository.MassArchive(storeId, selectedItems);
                     TempData[WellKnownTempData.SuccessMessage] = selectedItems.Length == 1
                         ? StringLocalizer["{0} invoice archived.", selectedItems.Length].Value
                         : StringLocalizer["{0} invoices archived.", selectedItems.Length].Value;
                     break;
 
                 case "unarchive":
-                    await _InvoiceRepository.MassArchive(selectedItems, false);
+                    await _InvoiceRepository.MassArchive(storeId, selectedItems, false);
                     TempData[WellKnownTempData.SuccessMessage] = selectedItems.Length == 1
                         ? StringLocalizer["{0} invoice unarchived.", selectedItems.Length].Value
                         : StringLocalizer["{0} invoices unarchived.", selectedItems.Length].Value;
                     break;
-                case "cpfp" when storeId is not null:
+                case "cpfp":
                     var network = _NetworkProvider.DefaultNetwork;
                     var explorer = network is null ? null : _ExplorerClients.GetExplorerClient(network);
                     if (explorer is null || network is null)
@@ -659,7 +672,7 @@ namespace BTCPayServer.Controllers
                     if (derivationScheme is null)
                         return NotSupported("This feature is only available to BTC wallets");
                     var btc = PaymentTypes.CHAIN.GetPaymentMethodId("BTC");
-                    var bumpableAddresses = await GetAddresses(btc, selectedItems);
+                    var bumpableAddresses = await GetAddresses(btc, storeId, selectedItems);
                     var utxos = await explorer.GetUTXOsAsync(derivationScheme);
                     var bumpableUTXOs = utxos.GetUnspentUTXOs().Where(u => u.Confirmations == 0 && bumpableAddresses.Contains(u.ScriptPubKey.Hash.ToString())).ToArray();
                     if (bumpableUTXOs.Length == 0)
@@ -674,6 +687,7 @@ namespace BTCPayServer.Controllers
                         AspController = "UIWallets",
                         AspAction = nameof(UIWalletsController.WalletBumpFee),
                         RouteParameters = {
+                            { "area", WalletsPlugin.Area },
                             { "walletId", new WalletId(storeId, network.CryptoCode).ToString() },
                             { "returnUrl", Url.Action(nameof(ListInvoices), new { storeId }) }
                         },
@@ -683,10 +697,23 @@ namespace BTCPayServer.Controllers
             return RedirectToAction(nameof(ListInvoices), new { storeId });
         }
 
-        private async Task<HashSet<string>> GetAddresses(PaymentMethodId paymentMethodId, string[] selectedItems)
+        private async Task<HashSet<string>> GetAddresses(PaymentMethodId paymentMethodId, string storeId, string[] selectedItems)
         {
-            using var ctx = _dbContextFactory.CreateContext();
-            return new HashSet<string>(await ctx.AddressInvoices.Where(i => selectedItems.Contains(i.InvoiceDataId) && i.PaymentMethodId == paymentMethodId.ToString()).Select(i => i.Address).ToArrayAsync());
+            await using var ctx = _dbContextFactory.CreateContext();
+            var conn = ctx.Database.GetDbConnection();
+            var addresses = await conn.QueryAsync<string>(
+                """
+                SELECT ai."Address"
+                     FROM unnest(@selectedItems) AS s("InvoiceDataId")
+                     INNER JOIN "AddressInvoices" ai
+                         ON ai."InvoiceDataId" = s."InvoiceDataId"
+                     INNER JOIN "Invoices" i
+                         ON ai."InvoiceDataId" = i."Id"
+                     WHERE ai."PaymentMethodId" = @paymentMethodId
+                       AND i."StoreDataId" = @storeId
+                """,
+                new { selectedItems, paymentMethodId = paymentMethodId.ToString(), storeId });
+            return new HashSet<string>(addresses);
         }
 
         [HttpGet("i/{invoiceId}")]
@@ -757,10 +784,6 @@ namespace BTCPayServer.Controllers
                 displayedPaymentMethods.Remove(lnId);
                 displayedPaymentMethods.Remove(lnurlId);
             }
-
-            // BOLT11 doesn't really support payment without amount
-            if (invoice.IsUnsetTopUp())
-                displayedPaymentMethods.Remove(lnId);
 
             // Exclude lnurl if bolt11 is available
             if (displayedPaymentMethods.Contains(lnId) && displayedPaymentMethods.Contains(lnurlId))
@@ -985,6 +1008,7 @@ namespace BTCPayServer.Controllers
         [HttpGet("invoice/{invoiceId}/status")]
         [HttpGet("invoice/{invoiceId}/{implicitPaymentMethodId}/status")]
         [HttpGet("invoice/status")]
+        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> GetStatus(string invoiceId, string? paymentMethodId = null, string? implicitPaymentMethodId = null, [FromQuery] string? lang = null)
         {
             if (string.IsNullOrEmpty(paymentMethodId))
@@ -1000,6 +1024,7 @@ namespace BTCPayServer.Controllers
         [Route("invoice/{invoiceId}/status/ws")]
         [Route("invoice/{invoiceId}/{paymentMethodId}/status")]
         [Route("invoice/status/ws")]
+        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> GetStatusWebSocket(string invoiceId, CancellationToken cancellationToken)
         {
             if (!HttpContext.WebSockets.IsWebSocketRequest)
@@ -1051,14 +1076,13 @@ namespace BTCPayServer.Controllers
         }
 
         [HttpGet("/stores/{storeId}/invoices")]
-        [HttpGet("invoices")]
         [Authorize(AuthenticationSchemes = AuthenticationSchemes.Cookie, Policy = Policies.CanViewInvoices)]
         public async Task<IActionResult> ListInvoices(InvoicesModel? model = null)
         {
-            model = this.ParseListQuery(model ?? new InvoicesModel());
-            var timezoneOffset = model.TimezoneOffset ?? 0;
-            var searchTerm = string.IsNullOrEmpty(model.SearchText) ? model.SearchTerm : $"{model.SearchText},{model.SearchTerm}";
-            var fs = new SearchString(searchTerm, timezoneOffset);
+            model ??= new InvoicesModel();
+            var fs = model.GetSearch();
+            if (model.FilterCommand is not null)
+                return model.Redirect(Request);
             string? storeId = model.StoreId;
             var storeIds = new HashSet<string>();
             if (storeId is not null)
@@ -1070,11 +1094,8 @@ namespace BTCPayServer.Controllers
                 foreach (var i in l)
                     storeIds.Add(i);
             }
-            model.Search = fs;
-            model.SearchText = fs.TextCombined;
-
-            var apps = await _appService.GetAllApps(User.GetIdOrNull(), false, storeId);
-            InvoiceQuery invoiceQuery = GetInvoiceQuery(fs, apps, timezoneOffset);
+            var apps =  await _appService.GetAllApps(User.GetIdOrNull(), false, storeId);
+            InvoiceQuery invoiceQuery = GetInvoiceQuery(fs, apps);
             invoiceQuery.StoreId = storeIds.ToArray();
             invoiceQuery.Take = model.Count;
             invoiceQuery.Skip = model.Skip;
@@ -1103,18 +1124,25 @@ namespace BTCPayServer.Controllers
                     RedirectUrl = invoice.RedirectURL?.AbsoluteUri ?? string.Empty,
                     Amount = invoice.Price,
                     Currency = invoice.Currency,
+                    Comment = invoice.Metadata.Comment ?? string.Empty,
                     CanMarkInvalid = state.CanMarkInvalid(),
                     CanMarkSettled = state.CanMarkComplete(),
                     Details = InvoicePopulatePayments(invoice),
                     HasRefund = invoice.Refunds.Any()
                 });
             }
+
+            ViewData.SetPageTimeZone(fs);
             return View(model);
         }
 
-        private InvoiceQuery GetInvoiceQuery(SearchString fs, ListAppsViewModel.ListAppViewModel[] apps, int timezoneOffset = 0)
+        private InvoiceQuery GetInvoiceQuery(SearchString fs, ListAppsViewModel.ListAppViewModel[] apps)
         {
-            var textSearch = fs.TextSearch;
+            var query = new InvoiceQuery()
+            {
+                UserId = GetUserIdForInvoiceQuery()
+            };
+            query.FillFromSearchText(fs);
             if (fs.GetFilterArray("appid") is { } appIds)
             {
                 var appsById = apps.ToDictionary(a => a.Id);
@@ -1122,22 +1150,10 @@ namespace BTCPayServer.Controllers
                     .Select(a => AppService.GetAppSearchTerm(a!.AppType, a.Id))
                     .ToList();
                 searchTexts.Add(fs.TextSearch);
-                textSearch = string.Join(' ', searchTexts.Where(t => !string.IsNullOrEmpty(t)).ToList());
+                var textSearch = string.Join(' ', searchTexts.Where(t => !string.IsNullOrEmpty(t)).ToList());
+                query.TextSearch = textSearch;
             }
-            return new InvoiceQuery
-            {
-                TextSearch = textSearch,
-                UserId = GetUserIdForInvoiceQuery(),
-                Unusual = fs.GetFilterBool("unusual"),
-                IncludeArchived = fs.GetFilterBool("includearchived") ?? false,
-                Status = fs.GetFilterArray("status"),
-                ExceptionStatus = fs.GetFilterArray("exceptionstatus"),
-                StoreId = fs.GetFilterArray("storeid"),
-                ItemCode = fs.GetFilterArray("itemcode"),
-                OrderId = fs.GetFilterArray("orderid"),
-                StartDate = fs.GetFilterDate("startdate", timezoneOffset),
-                EndDate = fs.GetFilterDate("enddate", timezoneOffset)
-            };
+            return query;
         }
 
         [HttpGet("/stores/{storeId}/invoices/create")]
@@ -1310,7 +1326,7 @@ namespace BTCPayServer.Controllers
             object text = _NetworkProvider.DefaultNetwork?.CryptoCode switch
             {
                 null => StringLocalizer["To create an invoice, you need to setup a wallet first"],
-                {} cryptoCode => ViewLocalizer["To create an invoice, you need to <a href='{0}'>setup a wallet</a> first", Url.Action(nameof(UIStoresController.SetupWallet), "UIStores", new { cryptoCode, storeId })!]
+                {} cryptoCode => ViewLocalizer["To create an invoice, you need to <a href='{0}'>setup a wallet</a> first", Url.Action(nameof(UIStoreOnChainWalletsController.SetupWallet), "UIStoreOnChainWallets", new { area = WalletsPlugin.Area, cryptoCode, storeId })!]
             };
             TempData.SetStatusMessageModel(new StatusMessageModel
             {

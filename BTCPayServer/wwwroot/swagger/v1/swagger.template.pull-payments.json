@@ -306,33 +306,17 @@
                     "Pull payments (Public)"
                 ],
                 "security": []
-            }
-        },
-        "/api/v1/stores/{storeId}/pull-payments/{pullPaymentId}": {
-            "parameters": [
-                {
-                    "$ref": "#/components/parameters/StoreId"
-                },
-                {
-                    "name": "pullPaymentId",
-                    "in": "path",
-                    "required": true,
-                    "description": "The ID of the pull payment",
-                    "schema": {
-                        "type": "string"
-                    }
-                }
-            ],
+            },
             "delete": {
                 "operationId": "PullPayments_ArchivePullPayment",
                 "summary": "Archive a pull payment",
-                "description": "Archive this pull payment (Will cancel all payouts awaiting for payment)",
+                "description": "Archive this pull payment (Will cancel all payouts awaiting for payment). The store is resolved automatically from the pull payment.",
                 "responses": {
                     "200": {
                         "description": "The pull payment has been archived"
                     },
                     "404": {
-                        "description": "The pull payment has not been found, or does not belong to this store"
+                        "description": "The pull payment has not been found. Well-known error code is: `pullpayment-not-found`"
                     }
                 },
                 "tags": [
@@ -647,11 +631,8 @@
                 "security": []
             }
         },
-        "/api/v1/stores/{storeId}/payouts/{payoutId}": {
+        "/api/v1/payouts/{payoutId}": {
             "parameters": [
-                {
-                    "$ref": "#/components/parameters/StoreId"
-                },
                 {
                     "name": "payoutId",
                     "in": "path",
@@ -790,11 +771,8 @@
                 ]
             }
         },
-        "/api/v1/stores/{storeId}/payouts/{payoutId}/mark-paid": {
+        "/api/v1/payouts/{payoutId}/mark-paid": {
             "parameters": [
-                {
-                    "$ref": "#/components/parameters/StoreId"
-                },
                 {
                     "name": "payoutId",
                     "in": "path",
@@ -850,11 +828,8 @@
                 ]
             }
         },
-        "/api/v1/stores/{storeId}/payouts/{payoutId}/mark": {
+        "/api/v1/payouts/{payoutId}/mark": {
             "parameters": [
-                {
-                    "$ref": "#/components/parameters/StoreId"
-                },
                 {
                     "name": "payoutId",
                     "in": "path",

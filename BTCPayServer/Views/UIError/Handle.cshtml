@@ -3,13 +3,13 @@
 @using BTCPayServer.Controllers
 @model int?
 @{
-    Layout = "_LayoutError";
-    ViewData["Title"] = "Generic Error occurred";
+    Layout = "_LayoutError.cshtml";
+    ViewData.SetTitle("Generic Error occurred");
     if (Model.HasValue)
     {
         var httpCode = (HttpStatusCode)Model.Value;
         var name = Regex.Replace(httpCode.ToString(), @"(\B[A-Z])", @" $1");
-        ViewData["Title"] = $"{(int)httpCode} - {name}";
+        ViewData.SetTitle($"{(int)httpCode} - {name}");
     }
     this.Context.Items.TryGetValue(UIErrorController.ErrorDetailsKey, out var errorDetails);
 }

@@ -15,12 +15,12 @@ using BTCPayServer.HostedServices;
 using BTCPayServer.Plugins.Emails.HostedServices;
 using BTCPayServer.Plugins.Subscriptions;
 using BTCPayServer.Tests.PMO;
+using BTCPayServer.Views.Stores;
 using Microsoft.Playwright;
 using NBitcoin;
 using NBXplorer;
 using Newtonsoft.Json.Linq;
 using Xunit;
-using Xunit.Abstractions;
 using static Microsoft.Playwright.Assertions;
 
 namespace BTCPayServer.Tests;
@@ -277,6 +277,20 @@ public class SubscriptionTests(ITestOutputHelper testOutputHelper) : UnitTestBas
             expectedBalance = 0m;
             await portal.AssertCredit(creditBalance: $"${expectedBalance.ToString("F2", CultureInfo.InvariantCulture)}");
         }
+        await s.GoToStore(s.StoreId);
+        await s.GoToStore(s.StoreId, StoreNavPages.Reporting);
+
+        await Expect(s.Page.Locator("#ReportViewOptionsToggle")).ToHaveTextAsync("Report: Invoices");
+        await s.Page.ClickAsync("#ReportViewOptionsToggle");
+        await s.Page.ClickAsync("#ReportViewDropdown button:has-text('Subscribers')");
+
+        await Expect(s.Page.Locator("#ReportViewOptionsToggle")).ToHaveTextAsync("Report: Subscribers");
+        await s.Page.WaitForSelectorAsync("#raw-data-table table");
+
+        await s.Page.ClickAsync("#ReportViewOptionsToggle");
+        await s.Page.ClickAsync("#ReportViewDropdown button:has-text('Credit History')");
+        await Expect(s.Page.Locator("#ReportViewOptionsToggle")).ToHaveTextAsync("Report: Credit History");
+        await s.Page.WaitForSelectorAsync("#raw-data-table table");
     }
 
     [Fact]
@@ -346,6 +360,86 @@ public class SubscriptionTests(ITestOutputHelper testOutputHelper) : UnitTestBas
         await portal.AssertNoScheduledChange();
     }
 
+    [Fact]
+    [Trait("Playwright", "Playwright-2")]
+    public async Task CanRefundCreditFromMerchant()
+    {
+        await using var s = CreatePlaywrightTester();
+        await s.StartAsync();
+        await s.RegisterNewUser();
+        await s.CreateNewStore();
+        await s.AddDerivationScheme();
+
+        var offering = await CreateNewSubscription(s);
+        await offering.NewSubscriber("Enterprise Plan", "enterprise@example.com", true);
+        await offering.GoToSubscribers();
+
+        await using (var portal = await offering.GoToPortal("enterprise@example.com"))
+        {
+            await portal.ClickCallToAction();
+            await s.Server.WaitForEvent<SubscriptionEvent.SubscriberCredited>(async () =>
+            {
+                await s.PayInvoice(mine: true);
+            });
+            await s.ClickCheckoutRedirect();
+            await portal.AssertNoCallToAction();
+
+            await portal.AddCredit("150");
+            await s.Server.WaitForEvent<SubscriptionEvent.SubscriberCredited>(async () =>
+            {
+                await s.PayInvoice(mine: true);
+            });
+            await s.ClickCheckoutRedirect();
+            await portal.AssertCredit(creditBalance: "$150.00");
+        }
+
+        await offering.GoToSubscribers();
+        var refundedEvt = await s.Server.WaitForEvent<SubscriptionEvent.CreditRefunded>(async () =>
+        {
+            await offering.Refund("enterprise@example.com", 100m);
+        });
+        Assert.Equal(100m, refundedEvt.Amount);
+        await s.FastReloadAsync();
+        var creditText = await s.Page.Locator($"tr[data-subscriber-email='enterprise@example.com'] .subscriber-credit-col").InnerTextAsync();
+        Assert.Contains("50.00", creditText);
+    }
+
+    [Fact]
+    [Trait("Playwright", "Playwright-2")]
+    public async Task CanUpdateNotificationEmail()
+    {
+        await using var s = CreatePlaywrightTester();
+        await s.StartAsync();
+        await s.RegisterNewUser();
+        await s.CreateNewStore();
+        await s.AddDerivationScheme();
+
+        var offering = await CreateNewSubscription(s);
+        await offering.NewSubscriber("Enterprise Plan", "enterprise@example.com", true);
+        await offering.GoToSubscribers();
+
+        await using var portal = await offering.GoToPortal("enterprise@example.com");
+
+        await portal.ClickCallToAction();
+        await s.Server.WaitForEvent<SubscriptionEvent.SubscriberCredited>(async () =>
+        {
+            await s.PayInvoice(mine: true);
+        });
+        await s.ClickCheckoutRedirect();
+        await portal.AssertNoCallToAction();
+
+        await portal.UpdateNotificationEmail("notify@example.com");
+        await s.FindAlertMessage(partialText: "Notification email updated");
+
+        var notifEmail = await s.Page.Locator("input[name='NotificationEmail']").InputValueAsync();
+        Assert.Equal("notify@example.com", notifEmail);
+
+        await portal.UpdateNotificationEmail("");
+        await s.FindAlertMessage(partialText: "Notification email updated");
+        notifEmail = await s.Page.Locator("input[name='NotificationEmail']").InputValueAsync();
+        Assert.Equal("", notifEmail);
+    }
+
     private static decimal GetUnusedPeriodValue(int usedDays, decimal planPrice, int daysInPeriod)
     {
         var unused = (daysInPeriod - usedDays) / (double)daysInPeriod;
@@ -396,15 +490,64 @@ public class SubscriptionTests(ITestOutputHelper testOutputHelper) : UnitTestBas
             Price = 10m,
             Features = ["can-access"]
         });
+        Assert.Contains("can-access", plan.Features);
+        plan = await client.UpdateOfferingPlan(user.StoreId, offering.Id, plan.Id, new()
+        {
+            Name = "NewPlanV2",
+            Description = "Updated plan",
+            Price = 10m,
+            Features = []
+        });
+        Assert.Equal(("NewPlanV2", 10m), (plan.Name, plan.Price));
+        Assert.Equal("Updated plan", plan.Description);
+        Assert.DoesNotContain("can-access", plan.Features);
+        plan = await client.UpdateOfferingPlan(user.StoreId, offering.Id, plan.Id, new()
+        {
+            Name = "NewPlanV2",
+            Description = "Updated plan",
+            Price = 10m,
+            Features = ["can-access"]
+        });
+        Assert.Contains("can-access", plan.Features);
+        await AssertEx.AssertValidationError(new[] { "Features" }, () => client.UpdateOfferingPlan(user.StoreId, offering.Id, plan.Id, new()
+        {
+            Name = "NewPlanV2",
+            Description = "Updated plan",
+            Price = 10m,
+            Features = ["can-access2222"]
+        }));
+
         await client.CreateOfferingPlan(user.StoreId, offering.Id, new()
         {
             Name = "2NewPlan2",
             Price = 100m,
             Features = ["can-access2"]
         });
-        Assert.Equal(("NewPlan", 10m, "USD"), (plan.Name, plan.Price, plan.Currency));
+
+        offering = await client.UpdateOffering(user.StoreId, offering.Id, new OfferingModel()
+        {
+            AppName = "Test Updated",
+            SuccessRedirectUrl = "https://example.com/ok",
+            Metadata = new JObject()
+            {
+                ["subscription"] = "updated"
+            },
+            Features =
+            [
+                new() { Id = "can-access", Description = "Can access the subscription API v2" },
+                new() { Id = "can-access3", Description = "Can access premium endpoints" }
+            ]
+        });
+
+        Assert.Equal("Test Updated", offering.AppName);
+        Assert.Equal("https://example.com/ok", offering.SuccessRedirectUrl);
+        Assert.Equal("updated", offering.Metadata["subscription"]?.ToString());
+        Assert.Equal(2, offering.Features.Count);
+        Assert.Contains(offering.Features, f => f.Id == "can-access3");
+
+        Assert.Equal(("NewPlanV2", 10m, "USD"), (plan.Name, plan.Price, plan.Currency));
         plan = await client.GetOfferingPlan(user.StoreId, offering.Id, plan.Id);
-        Assert.Equal(("NewPlan", 10m, "USD"), (plan.Name, plan.Price, plan.Currency));
+        Assert.Equal(("NewPlanV2", 10m, "USD"), (plan.Name, plan.Price, plan.Currency));
         Assert.Contains("can-access", plan.Features);
 
         offering = await client.GetOffering(offering.StoreId, offering.Id);
@@ -439,7 +582,7 @@ public class SubscriptionTests(ITestOutputHelper testOutputHelper) : UnitTestBas
         await AssertEx.AssertApiError(400, "invoice-creation-error", () => client.ProceedPlanCheckout(planCheckout.Id));
         await user.RegisterDerivationSchemeAsync("BTC", importKeysToNBX: true);
         planCheckout = await client.ProceedPlanCheckout(planCheckout.Id);
-        var invoice = await client.GetInvoice(user.StoreId, planCheckout.InvoiceId);
+        var invoice = await client.GetInvoice(planCheckout.InvoiceId);
         Assert.NotNull(invoice);
         Assert.Equal("test@gmail.com", invoice.Metadata["buyerEmail"]?.ToString());
         Assert.Equal("invtest", invoice.Metadata["inv"]?.ToString());
@@ -450,7 +593,7 @@ public class SubscriptionTests(ITestOutputHelper testOutputHelper) : UnitTestBas
         var oldInvoiceId = invoice.Id;
         planCheckout = await client.ProceedPlanCheckout(planCheckout.Id);
         Assert.Equal(oldInvoiceId, planCheckout.InvoiceId);
-        invoice = await client.GetInvoice(user.StoreId, planCheckout.InvoiceId);
+        invoice = await client.GetInvoice(planCheckout.InvoiceId);
         Assert.Null(planCheckout.Subscriber);
 
         await s.ExplorerNode.GenerateAsync(1);
@@ -485,6 +628,24 @@ public class SubscriptionTests(ITestOutputHelper testOutputHelper) : UnitTestBas
         Assert.True(subscriber.IsActive);
         Assert.False(subscriber.IsSuspended);
         Assert.Null(subscriber.SuspensionReason);
+
+        var newExpiration = DateTimeOffset.UtcNow.AddDays(90);
+        subscriber = await client.UpdateSubscriberDates(user.StoreId, offering.Id,
+            planCheckout.Subscriber.Customer.Id,
+            new UpdateSubscriberDatesRequest { ExpirationDate = newExpiration });
+        Assert.Equal(newExpiration.ToUnixTimeSeconds(), subscriber.PeriodEnd!.Value.ToUnixTimeSeconds());
+        Assert.True(subscriber.IsActive);
+
+        await AssertEx.AssertApiError(400, "invalid-dates", () => client.UpdateSubscriberDates(
+            user.StoreId, offering.Id, planCheckout.Subscriber.Customer.Id,
+            new UpdateSubscriberDatesRequest
+            {
+                StartDate = DateTimeOffset.UtcNow.AddDays(10),
+                ExpirationDate = DateTimeOffset.UtcNow.AddDays(5)
+            }));
+        var noOpResult = await client.UpdateSubscriberDates(user.StoreId, offering.Id,
+            planCheckout.Subscriber.Customer.Id, new UpdateSubscriberDatesRequest());
+        Assert.Equal(newExpiration.ToUnixTimeSeconds(), noOpResult.PeriodEnd!.Value.ToUnixTimeSeconds());
 
         var session = await client.CreatePortalSession(new()
         {
@@ -709,7 +870,7 @@ public class SubscriptionTests(ITestOutputHelper testOutputHelper) : UnitTestBas
         Assert.Equal("basic2@example.com", invoice.Metadata["buyerEmail"]?.ToString());
 
         var waiting = offering.WaitEvent<SubscriptionEvent.SubscriberDisabled>();
-        await api.MarkInvoiceStatus(storeId, invoiceId, new()
+        await api.MarkInvoiceStatus(invoiceId, new()
         {
             Status = InvoiceStatus.Invalid
         });
@@ -1045,6 +1206,15 @@ public class SubscriptionTests(ITestOutputHelper testOutputHelper) : UnitTestBas
             await s.Page.ClickAsync(SubscriberRowSelector(subscriber) + " .subscriber-email-col .dropdown-toggle");
             await s.Page.ClickAsync(SubscriberRowSelector(subscriber) + " .subscriber-email-col button");
         }
+        public async Task Refund(string subscriberEmail, decimal amount)
+        {
+            await s.Page.Locator($"{SubscriberRowSelector(subscriberEmail)} .subscriber-credit-col .dropdown-toggle").ClickAsync();
+            await s.Page.Locator($"{SubscriberRowSelector(subscriberEmail)} .subscriber-credit-col a[data-action='refund']").ClickAsync();
+            await s.Page.FillAsync("#updateCreditModal input[name='amount']", amount.ToString(CultureInfo.InvariantCulture));
+            await s.Page.Locator("#updateCreditModal button.refund-mode").ClickAsync();
+            await s.Page.WaitForURLAsync("**/pull-payments/**");
+            await s.Page.GoBackAsync();
+        }
     }
 
     public class PortalPMO(PlaywrightTester s, IAsyncDisposable? disposable) : IAsyncDisposable
@@ -1190,6 +1360,12 @@ public class SubscriptionTests(ITestOutputHelper testOutputHelper) : UnitTestBas
         {
             await s.Page.ClickAsync(".scheduled-change-banner button[value='cancel-scheduled-change']");
             await s.FindAlertMessage(partialText: "cancelled");
+        }
+
+        public async Task UpdateNotificationEmail(string email)
+        {
+            await s.Page.FillAsync("input[name='NotificationEmail']", email);
+            await s.Page.ClickAsync("button[value='update-notification-email']");
         }
     }
 

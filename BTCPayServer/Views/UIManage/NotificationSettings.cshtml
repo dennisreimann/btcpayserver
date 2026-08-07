@@ -2,19 +2,12 @@
 @{
     ViewData.SetLayoutModel(new LayoutModel(nameof(ManageNavPages.Notifications), StringLocalizer["Notification Settings"])
         .SetCategory(nameof(ManageNavPages)));
+    ViewData.SetBreadcrumbs([new(StringLocalizer["Notifications"], Action: nameof(BTCPayServer.Controllers.UINotificationsController.Index), Controller: nameof(BTCPayServer.Controllers.UINotificationsController))]);
 }
 
 <form method="post" asp-action="NotificationSettings">
     <div class="sticky-header">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a asp-controller="UINotifications" asp-action="Index" text-translate="true">Notifications</a>
-                </li>
-                <li class="breadcrumb-item active" aria-current="page">@ViewData["Title"]</li>
-            </ol>
-            <h2>@ViewData["Title"]</h2>
-        </nav>
+		<vc:title-header />
 		<button id="page-primary" type="submit" class="btn btn-primary" name="command" value="update" text-translate="true">Save</button>
     </div>
     <partial name="_StatusMessage" />
@@ -34,7 +27,7 @@
                     <div class="d-flex align-items-center my-3">
                         <input type="hidden" asp-for="DisabledNotifications[index].Value" />
                         <input type="checkbox" asp-for="DisabledNotifications[index].Selected" class="btcpay-toggle me-3" />
-                        <label class="form-check-label cursor-pointer" asp-for="DisabledNotifications[index].Selected" text-translate="true">@item.Text</label>
+                        <label class="form-check-label cursor-pointer" asp-for="DisabledNotifications[index].Selected">@item.Text</label>
                     </div>
                 }
                 <div class="mt-4">
@@ -58,4 +51,3 @@
         label.textContent = isChecked ? 'Disable All' : 'Enable All';
     }
 </script>
-

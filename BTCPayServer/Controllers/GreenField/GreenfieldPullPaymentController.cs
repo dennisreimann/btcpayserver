@@ -582,8 +582,9 @@ retry:
         }
 
         [HttpDelete("~/api/v1/stores/{storeId}/pull-payments/{pullPaymentId}")]
+        [HttpDelete("~/api/v1/pull-payments/{pullPaymentId}")]
         [Authorize(Policy = Policies.CanArchivePullPayments, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
-        public async Task<IActionResult> ArchivePullPayment(string storeId, string pullPaymentId)
+        public async Task<IActionResult> ArchivePullPayment(string? storeId, string pullPaymentId)
         {
             var pp = HttpContext.GetPullPaymentDataOrNull();
             if (pp is null)
@@ -591,8 +592,6 @@ retry:
             await _pullPaymentService.Cancel(new PullPaymentHostedService.CancelRequest(pp.Id));
             return Ok();
         }
-
-
 
         [HttpGet("~/api/v1/stores/{storeId}/payouts")]
         [Authorize(Policy = Policies.CanViewPayouts, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
@@ -609,17 +608,24 @@ retry:
                 .Select(ToModel).ToArray());
         }
 
+        // The payout is guaranteed to belong to CurrentStoreId: the CanManagePayouts policy is
+        // resolved against the payout's store (see the payoutId route->store scope registered in
+        // BTCPayServerServices), so a key can only reach payouts of a store it is authorized on.
+        private string CurrentStoreId => HttpContext.GetStoreData().Id;
+
         [HttpDelete("~/api/v1/stores/{storeId}/payouts/{payoutId}")]
+        [HttpDelete("~/api/v1/payouts/{payoutId}")]
         [Authorize(Policy = Policies.CanManagePayouts, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
-        public async Task<IActionResult> CancelPayout(string storeId, string payoutId)
+        public async Task<IActionResult> CancelPayout(string payoutId)
         {
-            var res = await _pullPaymentService.Cancel(new PullPaymentHostedService.CancelRequest(new[] { payoutId }, new[] { storeId }));
+            var res = await _pullPaymentService.Cancel(new PullPaymentHostedService.CancelRequest(new[] { payoutId }, new[] { CurrentStoreId }));
             return MapResult(res.First().Value);
         }
 
         [HttpPost("~/api/v1/stores/{storeId}/payouts/{payoutId}")]
+        [HttpPost("~/api/v1/payouts/{payoutId}")]
         [Authorize(Policy = Policies.CanManagePayouts, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
-        public async Task<IActionResult> ApprovePayout(string storeId, string payoutId, ApprovePayoutRequest approvePayoutRequest, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> ApprovePayout(string payoutId, ApprovePayoutRequest approvePayoutRequest, CancellationToken cancellationToken = default)
         {
             using var ctx = _dbContextFactory.CreateContext();
             ctx.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
@@ -630,7 +636,7 @@ retry:
             }
             if (!ModelState.IsValid)
                 return this.CreateValidationError(ModelState);
-            var payout = await ctx.Payouts.GetPayout(payoutId, storeId, true, true);
+            var payout = await ctx.Payouts.GetPayout(payoutId, CurrentStoreId, true, true);
             if (payout is null)
                 return PayoutNotFound();
             RateResult? rateResult = null;
@@ -657,7 +663,7 @@ retry:
             switch (result)
             {
                 case PullPaymentHostedService.PayoutApproval.Result.Ok:
-                    return Ok(ToModel(await ctx.Payouts.GetPayout(payoutId, storeId, true)));
+                    return Ok(ToModel(await ctx.Payouts.GetPayout(payoutId, CurrentStoreId, true)));
                 case PullPaymentHostedService.PayoutApproval.Result.InvalidState:
                     return this.CreateAPIError("invalid-state", errorMessage);
                 case PullPaymentHostedService.PayoutApproval.Result.TooLowAmount:
@@ -672,10 +678,11 @@ retry:
         }
 
         [HttpPost("~/api/v1/stores/{storeId}/payouts/{payoutId}/mark-paid")]
+        [HttpPost("~/api/v1/payouts/{payoutId}/mark-paid")]
         [Authorize(Policy = Policies.CanManagePayouts, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
-        public async Task<IActionResult> MarkPayoutPaid(string storeId, string payoutId, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> MarkPayoutPaid(string payoutId, CancellationToken cancellationToken = default)
         {
-            return await MarkPayout(storeId, payoutId, new Client.Models.MarkPayoutRequest()
+            return await MarkPayout(payoutId, new Client.Models.MarkPayoutRequest()
             {
                 State = PayoutState.Completed,
                 PaymentProof = null
@@ -683,14 +690,15 @@ retry:
         }
 
         [HttpPost("~/api/v1/stores/{storeId}/payouts/{payoutId}/mark")]
+        [HttpPost("~/api/v1/payouts/{payoutId}/mark")]
         [Authorize(Policy = Policies.CanManagePayouts, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
-        public async Task<IActionResult> MarkPayout(string storeId, string payoutId, Client.Models.MarkPayoutRequest request)
+        public async Task<IActionResult> MarkPayout(string payoutId, Client.Models.MarkPayoutRequest request)
         {
             request ??= new();
 
             if (request.State == PayoutState.Cancelled)
             {
-                return await CancelPayout(storeId, payoutId);
+                return await CancelPayout(payoutId);
             }
             if (request.PaymentProof is not null &&
                 !BitcoinLikePayoutHandler.TryParseProofType(request.PaymentProof, out string _))
@@ -710,14 +718,15 @@ retry:
         }
 
         [HttpGet("~/api/v1/stores/{storeId}/payouts/{payoutId}")]
+        [HttpGet("~/api/v1/payouts/{payoutId}")]
         [Authorize(Policy = Policies.CanViewPayouts, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
-        public async Task<IActionResult> GetStorePayout(string storeId, string payoutId)
+        public async Task<IActionResult> GetStorePayout(string payoutId)
         {
             await using var ctx = _dbContextFactory.CreateContext();
 
             var payout = (await _pullPaymentService.GetPayouts(new PullPaymentHostedService.PayoutQuery()
             {
-                Stores = new[] { storeId },
+                Stores = new[] { CurrentStoreId },
                 PayoutIds = new[] { payoutId }
             })).FirstOrDefault();
 

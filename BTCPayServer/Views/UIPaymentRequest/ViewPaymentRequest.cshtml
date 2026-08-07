@@ -5,7 +5,7 @@
 @inject BTCPayServer.Services.BTCPayServerEnvironment Env
 @inject BTCPayServer.Security.ContentSecurityPolicies Csp
 @{
-	ViewData["Title"] = Model.Title;
+	ViewData.SetTitle(Model.Title);
     ViewData["StoreBranding"] = Model.StoreBranding;
 	Csp.UnsafeEval();
 	Layout = null;
@@ -317,7 +317,7 @@
         </main>
         <footer class="store-footer">
             <div permission="@Policies.CanModifyStoreSettings" class="d-print-none">
-                <form asp-action="EditPaymentRequest" asp-route-storeId="@Model.StoreId" asp-route-payReqId="@Model.Id" method="get">
+                <form asp-action="EditPaymentRequest" asp-route-payReqId="@Model.Id" method="get">
                     <button type="submit" class="btn btn-link" text-translate="true">Edit payment request</button>
                 </form>
             </div>

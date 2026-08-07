@@ -3,11 +3,16 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using BTCPayServer.Abstractions.Models;
+using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
 using BTCPayServer.HostedServices;
 using BTCPayServer.Plugins.Emails.Views;
+using BTCPayServer.Plugins.GlobalSearch;
+using BTCPayServer.Plugins.Translations.Controllers;
+using BTCPayServer.Plugins.Webhooks.Controllers;
 using BTCPayServer.Plugins.Webhooks.HostedServices;
 using BTCPayServer.Plugins.Webhooks.TriggerProviders;
+using BTCPayServer.Security;
 using BTCPayServer.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -28,6 +33,9 @@ public class WebhooksPlugin : BaseBTCPayServerPlugin
         services.AddSingleton<IHostedService, WebhookSender>(o => o.GetRequiredService<WebhookSender>());
         services.AddScheduledTask<CleanupWebhookDeliveriesTask>(TimeSpan.FromHours(6.0));
         services.AddScheduledTask<DbPeriodicTask>(TimeSpan.FromHours(1.0));
+        services.AddSingleton(new BuiltInPermissionScopeProvider.RouteValueToStoreIdQuery(
+            "webhookId", "SELECT \"StoreId\" FROM \"StoreWebhooks\" WHERE \"WebhookId\"=@id"
+        ));
 
         services.AddHttpClient(WebhookSender.OnionNamedClient)
             .ConfigurePrimaryHttpMessageHandler<Socks5HttpClientHandler>();
@@ -47,7 +55,18 @@ public class WebhooksPlugin : BaseBTCPayServerPlugin
                 });
         }
 
-        // Add built in webhooks
+        services.AddStaticSearch(new ActionResultItemViewModel()
+        {
+            RequiredPolicy = Policies.CanViewStoreSettings,
+            Title = "Configure webhooks",
+            Action = nameof(UIStoreWebhooksController.Webhooks),
+            Controller = "UIStoreWebhooks",
+            Values = ctx => new { area = Area, storeId = ctx.Store!.Id },
+            Category = "Store",
+            Keywords = ["Webhooks", "Configure"]
+        });
+
+        // Add built-in webhooks
         AddInvoiceWebhooks(services);
         AddPayoutWebhooks(services);
         AddPaymentRequestWebhooks(services);
@@ -59,13 +78,13 @@ public class WebhooksPlugin : BaseBTCPayServerPlugin
         services.AddWebhookTriggerProvider<PendingTransactionTriggerProvider>();
         var pendingTransactionsPlaceholders = new List<EmailTriggerViewModel.PlaceHolder>()
         {
-            new("{PendingTransaction.Id}", "The id of the pending transaction"),
-            new("{PendingTransaction.TrimmedId}", "The trimmed id of the pending transaction"),
+            new("{PendingTransaction.Id}", "The id of the pending transaction (if available)"),
+            new("{PendingTransaction.TrimmedId}", "The trimmed id of the pending transaction (if available)"),
             new("{PendingTransaction.StoreId}", "The store id of the pending transaction"),
             new("{PendingTransaction.SignaturesCollected}", "The number of signatures collected"),
             new("{PendingTransaction.SignaturesNeeded}", "The number of signatures needed"),
             new("{PendingTransaction.SignaturesTotal}", "The total number of signatures"),
-            new("{PendingTransaction.Link}", "The link to the wallet transaction list")
+            new("{PendingTransaction.Link}", "The link to the pending transaction or wallet transaction list")
         };
 
         var pendingTransactionTriggers = new List<EmailTriggerViewModel>()
@@ -259,6 +278,7 @@ public class WebhooksPlugin : BaseBTCPayServerPlugin
     {
         services.AddWebhookTriggerProvider<InvoiceTriggerProvider>();
         var invoicePlaceholders = InvoiceTriggerProvider.GetInvoicePlaceholders();
+        var refundPlaceholders = InvoiceTriggerProvider.GetRefundPlaceholders();
         var emailTriggers = new List<EmailTriggerViewModel>()
         {
             new()
@@ -369,6 +389,18 @@ public class WebhooksPlugin : BaseBTCPayServerPlugin
                     CanIncludeCustomerEmail = true
                 },
                 PlaceHolders = invoicePlaceholders
+            },
+            new()
+            {
+                Trigger = WebhookEventType.InvoiceRefund,
+                Description = "Invoice - Refund Created",
+                DefaultEmail = new()
+                {
+                    Subject = "Refund available for Invoice {Invoice.Id}",
+                    Body = "A refund has been created for Invoice {Invoice.Id} (Order Id: {Invoice.OrderId}).\nClaim your refund here: {PullPayment.Link}",
+                    CanIncludeCustomerEmail = true
+                },
+                PlaceHolders = refundPlaceholders
             }
         };
         services.AddWebhookTriggerViewModels(emailTriggers);

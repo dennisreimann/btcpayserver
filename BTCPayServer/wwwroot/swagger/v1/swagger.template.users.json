@@ -70,6 +70,11 @@
                                         "type": "string",
                                         "description": "The new password of the user",
                                         "nullable": true
+                                    },
+                                    "allowGreenfieldBasicAuth": {
+                                        "type": "boolean",
+                                        "description": "Whether to allow Basic authentication for the Greenfield API",
+                                        "nullable": true
                                     }
                                 }
                             }
@@ -547,6 +552,11 @@
                         "type": "boolean",
                         "description": "True if the instance requires approval to log in"
                     },
+                    "storeQuota": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "Per-user override for the max number of stores this user can create. Null means the server default applies"
+                    },
                     "created": {
                         "type": "number",
                         "nullable": true,
@@ -560,6 +570,10 @@
                     "disabled": {
                         "type": "boolean",
                         "description": "True if an admin has disabled the user"
+                    },
+                    "allowGreenfieldBasicAuth": {
+                        "type": "boolean",
+                        "description": "Whether Basic authentication is allowed for the Greenfield API"
                     },
                     "roles": {
                         "type": "array",

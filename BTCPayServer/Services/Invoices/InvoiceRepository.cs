@@ -77,6 +77,18 @@ namespace BTCPayServer.Services.Invoices
             return row is null ? null : ToEntity(row);
         }
 
+        public async Task AddAddressInvoice(string invoiceId, PaymentMethodId paymentMethodId, string address)
+        {
+            await using var context = _applicationDbContextFactory.CreateContext();
+            await UpsertAddressInvoice(context, invoiceId, paymentMethodId.ToString(), address);
+        }
+
+        private static async Task UpsertAddressInvoice(ApplicationDbContext context, string invoiceId, string paymentMethodId, string address)
+        {
+            await context.Database.ExecuteSqlInterpolatedAsync(
+                $"""INSERT INTO "AddressInvoices" ("Address", "PaymentMethodId", "InvoiceDataId") VALUES ({address}, {paymentMethodId}, {invoiceId}) ON CONFLICT ("Address", "PaymentMethodId") DO NOTHING""");
+        }
+
         /// <summary>
         /// Returns all invoices which either:
         /// * Have the <paramref name="paymentMethodId"/> activated and are pending
@@ -330,7 +342,9 @@ retry:
                 }
             }
         }
-        public async Task UpdatePrompt(string invoiceId, PaymentPrompt prompt)
+        public Task UpdatePrompt(string invoiceId, PaymentPrompt prompt)
+        => UpdatePrompt(invoiceId, prompt, null);
+        public async Task UpdatePrompt(string invoiceId, PaymentPrompt prompt, IEnumerable<string> trackedDestinations)
         {
 retry:
             using (var context = _applicationDbContextFactory.CreateContext())
@@ -346,7 +360,20 @@ retry:
                         return;
                     invoiceEntity.SetPaymentPrompt(prompt.PaymentMethodId, prompt);
                     invoice.SetBlob(invoiceEntity);
+                    // Persist the blob update first, on its own SaveChanges.
+                    // A DbUpdateConcurrencyException here must propagate so the
+                    // outer catch can retry; a unique-key violation on
+                    // AddressInvoices must not be able to roll this back.
                     await context.SaveChangesAsync();
+
+                    if (trackedDestinations is not null)
+                    {
+                        var pmi = prompt.PaymentMethodId.ToString();
+                        foreach (var tracked in trackedDestinations)
+                        {
+                            await UpsertAddressInvoice(context, invoiceId, pmi, tracked);
+                        }
+                    }
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -367,14 +394,10 @@ retry:
                 var existing = invoiceEntity.GetPaymentPrompt(prompt.PaymentMethodId);
                 if (existing.Destination != prompt.Destination && prompt.Activated && prompt.Destination is not null)
                 {
+                    var pmi = paymentPromptContext.PaymentMethodId.ToString();
                     foreach (var tracked in paymentPromptContext.TrackedDestinations)
                     {
-                        await context.AddressInvoices.AddAsync(new AddressInvoiceData()
-                        {
-                            InvoiceDataId = invoiceId,
-                            Address = tracked,
-                            PaymentMethodId = paymentPromptContext.PaymentMethodId.ToString()
-                        });
+                        await UpsertAddressInvoice(context, invoiceId, pmi, tracked);
                     }
                     AddToTextSearch(context, invoice, prompt.Destination);
                 }
@@ -426,14 +449,6 @@ retry:
             context.AddRange(filteredTerms);
         }
 
-        public static void RemoveFromTextSearch(ApplicationDbContext context, InvoiceData invoice,
-            string term)
-        {
-            var query = context.InvoiceSearches.AsQueryable();
-            var filteredQuery = query.Where(st => st.InvoiceDataId.Equals(invoice.Id) && st.Value.Equals(term));
-            context.InvoiceSearches.RemoveRange(filteredQuery);
-        }
-
         public async Task UpdateInvoiceStatus(string invoiceId, InvoiceState invoiceState)
         {
             using var context = _applicationDbContextFactory.CreateContext();
@@ -471,58 +486,92 @@ retry:
             }
         }
 
-        public async Task MassArchive(string[] invoiceIds, bool archive = true)
+        public async Task MassArchive(string storeId, string[] invoiceIds, bool archive = true)
         {
-            using var context = _applicationDbContextFactory.CreateContext();
-            var items = context.Invoices.Where(a => invoiceIds.Contains(a.Id));
-            foreach (InvoiceData invoice in items)
+            await using var context = _applicationDbContextFactory.CreateContext();
+            var conn = context.Database.GetDbConnection();
+            await conn.ExecuteAsync(
+                """
+                UPDATE "Invoices" i
+                SET "Archived" = @archive
+                FROM unnest(@invoiceIds) AS ids("Id")
+                WHERE i."StoreDataId" = @storeId
+                  AND i."Id" = ids."Id"
+                  AND i."Archived" IS DISTINCT FROM @archive;
+                """,
+                new { archive, storeId, invoiceIds });
+        }
+
+        public async Task<bool> ToggleInvoiceArchival(string storeId, string invoiceId, bool? archived = null)
+        {
+            await using var context = _applicationDbContextFactory.CreateContext();
+            var conn = context.Database.GetDbConnection();
+            if (archived is null)
             {
-                invoice.Archived = archive;
+                return await conn.ExecuteScalarAsync<bool>(
+                    """
+                    UPDATE "Invoices" i
+                    SET "Archived" = NOT "Archived"
+                    WHERE i."StoreDataId" = @storeId
+                      AND i."Id" = @invoiceId
+                    RETURNING "Archived";
+                    """,
+                    new { storeId, invoiceId });
             }
-
-            await context.SaveChangesAsync();
+            else
+            {
+                await conn.ExecuteAsync(
+                    """
+                    UPDATE "Invoices" i
+                    SET "Archived" = @archived
+                    WHERE i."StoreDataId" = @storeId
+                      AND i."Id" = @invoiceId
+                      AND i."Archived" IS DISTINCT FROM @archived;
+                    """,
+                    new { storeId, invoiceId, archived });
+                return archived.Value;
+            }
         }
 
-        public async Task ToggleInvoiceArchival(string invoiceId, bool archived, string storeId = null)
+        [Obsolete("The storeId parameter is now ignored. This method is deprecated and will be removed in a future release.")]
+        public Task<InvoiceEntity> UpdateInvoiceMetadata(string invoiceId, string storeId, JObject metadata)
+            => UpdateInvoiceMetadata(invoiceId, metadata);
+
+        [Obsolete("This method replace the whole metadata, and thus is subject to racing condition issues. Use 'UpdateInvoiceMetadata(string invoiceId, string metadataKey, JToken metadataValue)' or 'UpdateInvoiceMetadata(string invoiceId, Func<InvoiceMetadata, InvoiceMetadata> modifyMetadata)' instead")]
+        public async Task<InvoiceEntity> UpdateInvoiceMetadata(string invoiceId, JObject metadata)
         {
-            using var context = _applicationDbContextFactory.CreateContext();
-            var invoiceData = await context.FindAsync<InvoiceData>(invoiceId).ConfigureAwait(false);
-            if (invoiceData == null || invoiceData.Archived == archived ||
-                (storeId != null &&
-                 !invoiceData.StoreDataId.Equals(storeId, StringComparison.InvariantCultureIgnoreCase)))
-                return;
-            invoiceData.Archived = archived;
-            await context.SaveChangesAsync().ConfigureAwait(false);
+            ArgumentNullException.ThrowIfNull(invoiceId);
+            ArgumentNullException.ThrowIfNull(metadata);
+            await UpdateInvoiceMetadata(invoiceId, _ => InvoiceMetadata.FromJObject(metadata));
+            return await GetInvoice(invoiceId);
         }
-        public async Task<InvoiceEntity> UpdateInvoiceMetadata(string invoiceId, string storeId, JObject metadata)
+
+        /// <summary>
+        /// Updates the metadata of an invoice using a function that modifies the existing metadata.
+        /// This method handles concurrency conflicts automatically by retrying the operation.
+        /// </summary>
+        /// <param name="invoiceId">The unique identifier of the invoice to update.</param>
+        /// <param name="modifyMetadata">A function that takes the current InvoiceMetadata and returns the modified InvoiceMetadata. This function should not be null.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <remarks>
+        /// This method retrieves the invoice, applies the modification function to its metadata,
+        /// and saves the changes. If a concurrency conflict occurs during save, the operation is automatically retried.
+        /// If the invoice is not found, the method returns without making any changes.
+        /// </remarks>
+        public async Task UpdateInvoiceMetadata(string invoiceId, Func<InvoiceMetadata, InvoiceMetadata> modifyMetadata)
         {
-retry:
-            using (var context = _applicationDbContextFactory.CreateContext())
+            ArgumentNullException.ThrowIfNull(invoiceId);
+            ArgumentNullException.ThrowIfNull(modifyMetadata);
+            retry:
+            await using (var context = _applicationDbContextFactory.CreateContext())
             {
                 var invoiceData = await GetInvoiceRaw(invoiceId, context);
-                if (invoiceData == null || (storeId != null &&
-                                            !invoiceData.StoreDataId.Equals(storeId,
-                                                StringComparison.InvariantCultureIgnoreCase)))
-                    return null;
+                if (invoiceData is null)
+                    return;
                 var blob = invoiceData.GetBlob();
-
-                var newMetadata = InvoiceMetadata.FromJObject(metadata);
-                var oldOrderId = blob.Metadata.OrderId;
-                var newOrderId = newMetadata.OrderId;
-
-                if (newOrderId != oldOrderId)
-                {
-                    if (oldOrderId != null && (newOrderId is null || !newOrderId.Equals(oldOrderId, StringComparison.InvariantCulture)))
-                    {
-                        RemoveFromTextSearch(context, invoiceData, oldOrderId);
-                    }
-                    if (newOrderId != null)
-                    {
-                        AddToTextSearch(context, invoiceData, new[] { newOrderId });
-                    }
-                }
-
-                blob.Metadata = newMetadata;
+                var initialMetadata = blob.Metadata;
+                var result = modifyMetadata(initialMetadata);
+                blob.Metadata = result;
                 invoiceData.SetBlob(blob);
                 try
                 {
@@ -532,9 +581,52 @@ retry:
                 {
                     goto retry;
                 }
-                return ToEntity(invoiceData);
             }
         }
+
+        /// <summary>
+        /// Updates a specific metadata key-value pair for an invoice using a direct SQL update.
+        /// This method is optimized for single-key updates and does not require loading the entire invoice blob.
+        /// </summary>
+        /// <param name="invoiceId">The unique identifier of the invoice to update. Cannot be null.</param>
+        /// <param name="metadataKey">The metadata key to update or remove. Cannot be null or whitespace.</param>
+        /// <param name="metadataValue">The value to set for the metadata key. If null, the key will be removed from the metadata.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <remarks>
+        /// This method uses PostgreSQL's jsonb_set function to update metadata efficiently.
+        /// When metadataValue is null, the key is removed from the metadata object.
+        /// When metadataValue is provided, it is serialized to JSON and added/updated in the metadata.
+        /// </remarks>
+        public async Task UpdateInvoiceMetadata(string invoiceId, string metadataKey, object metadataValue)
+        {
+            ArgumentNullException.ThrowIfNull(invoiceId);
+            ArgumentNullException.ThrowIfNull(metadataKey);
+            if (string.IsNullOrWhiteSpace(metadataKey))
+                throw new ArgumentException("Metadata key must not be empty.", nameof(metadataKey));
+
+            await using var context = _applicationDbContextFactory.CreateContext();
+
+            var value = metadataValue is null ? null : JsonConvert.SerializeObject(metadataValue);
+            var sql = value is null
+                ? """
+                  UPDATE "Invoices"
+                  SET "Blob2" = jsonb_set(COALESCE("Blob2", '{}'::jsonb), '{metadata}', COALESCE("Blob2"->'metadata', '{}'::jsonb) - @metadataKey, true)
+                  WHERE "Id" = @invoiceId
+                  """
+                : """
+                  UPDATE "Invoices"
+                  SET "Blob2" = jsonb_set(COALESCE("Blob2", '{}'::jsonb), '{metadata}', COALESCE("Blob2"->'metadata', '{}'::jsonb) || jsonb_build_object(@metadataKey, @value::jsonb), true)
+                  WHERE "Id" = @invoiceId
+                  """;
+
+            await context.Database.GetDbConnection().ExecuteAsync(sql, new
+            {
+                invoiceId,
+                metadataKey,
+                value
+            });
+        }
+
         public async Task<bool> MarkInvoiceStatus(string invoiceId, InvoiceStatus status)
         {
             using (var context = _applicationDbContextFactory.CreateContext())
@@ -589,6 +681,8 @@ retry:
             var res = await GetInvoiceRaw(id, context, includeAddressData);
             return res == null ? null : ToEntity(res);
         }
+
+        [Obsolete("This method is deprecated and will be removed in a future release.")]
         public async Task<InvoiceEntity[]> GetInvoices(string[] invoiceIds)
         {
             var invoiceIdSet = invoiceIds.ToHashSet();
@@ -1016,6 +1110,21 @@ retry:
         public bool IncludeArchived { get; set; } = true;
         public bool IncludeRefunds { get; set; }
         public bool OrderByDesc { get; set; } = true;
+
+        public void FillFromSearchText(SearchString fs)
+        {
+            var p = fs.GetDateRange(TimeZoneInfo.Utc);
+            TextSearch = fs.TextSearch;
+            Unusual = fs.GetFilterBool("unusual");
+            IncludeArchived = fs.GetFilterBool("includearchived") ?? false;
+            Status = fs.GetFilterArray("status");
+            ExceptionStatus = fs.GetFilterArray("exceptionstatus");
+            StoreId = fs.GetFilterArray("storeid");
+            ItemCode = fs.GetFilterArray("itemcode");
+            OrderId = fs.GetFilterArray("orderid");
+            StartDate = p.StartDate;
+            EndDate = p.EndDate;
+        }
     }
 
     public class InvoiceStatistics : Dictionary<string, InvoiceStatistics.Contribution>

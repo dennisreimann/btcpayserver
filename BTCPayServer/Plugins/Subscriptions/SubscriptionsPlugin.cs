@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -34,6 +34,8 @@ public class SubscriptionsPlugin : BaseBTCPayServerPlugin
         services.AddScheduledTask<SubscriptionHostedService>(TimeSpan.FromMinutes(5));
         services.AddSingleton<SubscriptionHostedService>();
         services.AddSingleton<IHostedService>(s => s.GetRequiredService<SubscriptionHostedService>());
+        services.AddReportProvider<SubscribersReportProvider>();
+        services.AddReportProvider<SubscriberCreditHistoryReportProvider>();
 
         services.AddSingleton(new BuiltInPermissionScopeProvider.RouteValueToStoreIdQuery(
             "offeringId", "SELECT a.\"StoreDataId\" FROM \"Apps\" a JOIN subs_offerings o ON o.app_id=a.\"Id\" WHERE o.id=@id"
@@ -68,7 +70,6 @@ public class SubscriptionsPlugin : BaseBTCPayServerPlugin
              )
             SELECT COUNT(*) FROM deleted_plan_checkout;
             """);
-
 
         AddSubscriptionsWebhooks(services);
         AddPolicies(services);
@@ -227,6 +228,18 @@ public class SubscriptionsPlugin : BaseBTCPayServerPlugin
                     To = ["{Subscriber.Email}"],
                     Subject = "Your subscription needs to be upgraded",
                     Body = "Hello {Customer.Name},\n\nYour subscription needs to be upgraded to continue using our service.\n\nRegards,\n{Store.Name}"
+                },
+                PlaceHolders = placeHolders
+            },
+            new()
+            {
+                Trigger = WebhookSubscriptionEvent.CreditRefunded,
+                Description = "Subscription - Credit refund issued",
+                DefaultEmail = new()
+                {
+                    To = ["{Subscriber.Email}"],
+                    Subject = "Your credit refund is ready to claim",
+                    Body = "Hello {Customer.Name},<br/><br/>A credit refund of {Refund.Amount} {Refund.Currency} has been issued for your subscription.<br/><br/><a href=\"{Refund.ClaimUrl}\">Claim your refund here</a><br/><br/>Regards,<br/>{Store.Name}"
                 },
                 PlaceHolders = placeHolders
             },

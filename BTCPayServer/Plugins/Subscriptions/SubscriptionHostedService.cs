@@ -29,6 +29,7 @@ namespace BTCPayServer.Plugins.Subscriptions;
 
 public class SubscriptionHostedService(
     EventAggregator eventAggregator,
+    PullPaymentHostedService pullPaymentService,
     ApplicationDbContextFactory applicationDbContextFactory,
     SettingsRepository settingsRepository,
     IServiceScopeFactory scopeFactory,
@@ -134,7 +135,41 @@ public class SubscriptionHostedService(
             await ctx.SaveChangesAsync();
             await UpdateSubscriptionStates(subCtx, move.MemberSelector);
         }
+        else if (evt is UpdateDatesRequest datesRequest)
+        {
+            var ctx = subCtx.Context;
+            var sub = await ctx.Subscribers.IncludeAll().FirstOrDefaultAsync(s => s.Id == datesRequest.SubId, cancellationToken);
+            if (sub is null)
+                throw new InvalidOperationException("Subscriber not found");
+
+            sub.PlanStarted = datesRequest.StartDate;
+            sub.PaymentReminded = false;
+
+            if (datesRequest.ExpirationDate is { } expDate)
+            {
+                if (sub.TrialEnd is not null)
+                {
+                    sub.TrialEnd = expDate;
+                    sub.ReminderDate = expDate - TimeSpan.FromDays(sub.PaymentReminderDaysOrDefault);
+                }
+                else if (sub.Plan.RecurringType != PlanData.RecurringInterval.Lifetime)
+                {
+                    sub.PeriodEnd = expDate;
+                    sub.TrialEnd = null;
+                    sub.GracePeriodEnd = sub.Plan.GracePeriodDays > 0 ? expDate.AddDays(sub.Plan.GracePeriodDays) : (DateTimeOffset?)null;
+                    sub.ReminderDate = expDate - TimeSpan.FromDays(sub.PaymentReminderDaysOrDefault);
+                }
+            }
+
+            await ctx.SaveChangesAsync(cancellationToken);
+            await UpdateSubscriptionStates(subCtx, datesRequest.SubId);
+        }
     }
+
+    record UpdateDatesRequest(long SubId, DateTimeOffset StartDate, DateTimeOffset? ExpirationDate);
+
+    public Task UpdateDates(long subId, DateTimeOffset startDate, DateTimeOffset? expirationDate)
+        => RunEvent(new UpdateDatesRequest(subId, startDate, expirationDate));
 
     SubscriptionContext CreateContext() => CreateContext(CancellationToken);
 
@@ -324,6 +359,37 @@ public class SubscriptionHostedService(
         }
     }
 
+    public async Task<string?> CreateCreditRefund(long subscriberId, decimal amount, RequestBaseUrl requestBaseUrl, bool autoApprove)
+    {
+        await using var subCtx = CreateContext(CancellationToken);
+        var ctx = subCtx.Context;
+        var sub = await ctx.Subscribers.GetById(subscriberId);
+        if (sub is null)
+            return null;
+
+        var credit = sub.GetCredit();
+        if (amount <= 0 || amount > credit)
+            return null;
+
+        var store = await ctx.Stores.FindAsync(sub.Plan.Offering.App.StoreDataId);
+        if (store is null)
+            return null;
+
+        var debitResult = await subCtx.TryCreditDebitSubscriber(sub, $"Credit refund (Subscriber Id: {subscriberId})", 0m, amount);
+        if (debitResult is null)
+            return null;
+
+        var pullPaymentId = await pullPaymentService.CreatePullPayment(store, new CreatePullPaymentRequest
+        {
+            Name = $"Credit refund for {sub.Customer.GetPrimaryIdentity()}",
+            Amount = amount,
+            Currency = sub.Plan.Currency,
+            AutoApproveClaims = autoApprove
+        });
+        subCtx.AddEvent(new SubscriptionEvent.CreditRefunded(sub, amount, sub.Plan.Currency, pullPaymentId, requestBaseUrl));
+        return pullPaymentId;
+    }
+
     private static HashSet<string> GetActiveMemberChangedPlans(SubscriptionContext subCtx)
     {
         HashSet<string> plansToUpdate = new();
@@ -344,7 +410,9 @@ public class SubscriptionHostedService(
             {
                 var expired = pc.PreviousPhase is PhaseTypes.Expired;
                 var newExpired = pc.Subscriber.Phase is PhaseTypes.Expired;
-                if (expired != newExpired)
+                var wasTrial = pc.PreviousPhase is PhaseTypes.Trial;
+                var isTrial = pc.Subscriber.Phase is PhaseTypes.Trial;
+                if (expired != newExpired || wasTrial != isTrial)
                     plansToUpdate.Add(evt.Subscriber.PlanId);
             }
         }
@@ -569,7 +637,7 @@ public class SubscriptionHostedService(
                                                                         WHEN 'Quarterly' THEN sp.price / 3.0::numeric
                                                                         WHEN 'Yearly' THEN sp.price / 12.0::numeric
                                                                         WHEN 'Lifetime' THEN 0
-                                                                      END) AS monthly_revenue
+                                                                      END) FILTER (WHERE ss.phase != 'Trial') AS monthly_revenue
                               FROM subs_subscribers ss
                               JOIN subs_plans sp ON ss.plan_id = sp.id
                               WHERE ss.plan_id = @id AND ss.active
